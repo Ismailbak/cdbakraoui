@@ -9,6 +9,8 @@ import MedicalActsPage from './pages/MedicalActs';
 import AssistantPage from './pages/Assistant';
 import AnalyticsPage from './pages/Analytics';
 import NotificationsPage from './pages/Notifications';
+import ProfilePage from './pages/Profile';
+import { TermsPage, PrivacyPage } from './pages/Legal';
 
 function App() {
   return (
@@ -23,6 +25,9 @@ function App() {
         <Route path="/assistant" element={<AssistantPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
     </BrowserRouter>
   );

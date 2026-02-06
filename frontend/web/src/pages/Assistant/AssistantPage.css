@@ -1,9 +1,10 @@
 .assistant-page {
   display: flex;
   gap: 0;
-  height: calc(100vh - 100px);
-  margin: -20px;
+  height: 100%;
+  margin: 0;
   background: #F9FAFB;
+  overflow: hidden;
 }
 
 /* Sidebar */
@@ -135,6 +136,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
 }
 
 /* Chat Header */

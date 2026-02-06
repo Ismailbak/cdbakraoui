@@ -8,7 +8,8 @@ import {
   FiMessageSquare,
   FiBarChart2,
   FiBell,
-  FiLogOut 
+  FiLogOut,
+  FiUser 
 } from 'react-icons/fi';
 import logo from '../../assets/images/logo.png';
 import './Sidebar.css';
@@ -53,8 +54,11 @@ function Sidebar() {
           })}
         </nav>
 
-        {/* Logout */}
+        {/* Profile & Logout */}
         <div className="sidebar-footer">
+          <NavLink to="/profile" className="nav-item profile" title="Mon Profil">
+            <FiUser size={22} />
+          </NavLink>
           <NavLink to="/" className="nav-item logout" title="Déconnexion">
             <FiLogOut size={22} />
           </NavLink>

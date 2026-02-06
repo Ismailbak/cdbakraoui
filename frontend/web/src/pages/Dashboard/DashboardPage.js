@@ -34,7 +34,7 @@ function DashboardPage() {
             <p className="welcome-subtitle">Bonjour, <strong>{userName}</strong> - Bienvenue</p>
             <h1 className="welcome-title">Tableau de Bord</h1>
             <p className="welcome-text">
-              <span className="status-icon">📊</span> Vue d'ensemble de votre activité
+              <span className="status-icon"> </span> Vue d'ensemble de votre activité
             </p>
           </div>
 

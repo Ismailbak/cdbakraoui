@@ -74,6 +74,13 @@
 
 .sidebar-footer {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item.profile:hover {
+  color: #3B82F6;
 }
 
 .nav-item.logout:hover {

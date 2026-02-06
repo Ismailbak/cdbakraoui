@@ -9,3 +9,10 @@
   padding: 30px;
   min-height: calc(100vh - 70px);
 }
+
+.main-content.no-scroll {
+  height: calc(100vh - 70px);
+  min-height: unset;
+  overflow: hidden;
+  padding: 0;
+}
