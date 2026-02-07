@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiFileText, FiPlus, FiSearch, FiFilter, FiEye, FiEdit2, FiTrash2, FiDownload, FiPrinter, FiClipboard, FiActivity, FiUser } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
+import { SkeletonCard, SkeletonTableRow } from '../../components/common';
 import './MedicalActsPage.css';
 
 // Sample medical acts data
@@ -94,6 +95,12 @@ function MedicalActsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedAct, setSelectedAct] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filteredActs = medicalActsData.filter(act => {
     const matchesSearch = act.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -140,34 +147,45 @@ function MedicalActsPage() {
 
         {/* Stats Cards */}
         <div className="medical-acts-stats">
-          <StatCard 
-            icon={<FiFileText />}
-            label="Total Actes"
-            percentage="Ce mois"
-            value="89"
-            color="blue"
-          />
-          <StatCard 
-            icon={<FiClipboard />}
-            label="Consultations"
-            percentage="Ce mois"
-            value="45"
-            color="green"
-          />
-          <StatCard 
-            icon={<FiActivity />}
-            label="Interventions"
-            percentage="Ce mois"
-            value="12"
-            color="pink"
-          />
-          <StatCard 
-            icon={<FiUser />}
-            label="Patients traités"
-            percentage="Ce mois"
-            value="67"
-            color="yellow"
-          />
+          {isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <StatCard 
+                icon={<FiFileText />}
+                label="Total Actes"
+                percentage="Ce mois"
+                value="89"
+                color="blue"
+              />
+              <StatCard 
+                icon={<FiClipboard />}
+                label="Consultations"
+                percentage="Ce mois"
+                value="45"
+                color="green"
+              />
+              <StatCard 
+                icon={<FiActivity />}
+                label="Interventions"
+                percentage="Ce mois"
+                value="12"
+                color="pink"
+              />
+              <StatCard 
+                icon={<FiUser />}
+                label="Patients traités"
+                percentage="Ce mois"
+                value="67"
+                color="yellow"
+              />
+            </>
+          )}
         </div>
 
         {/* Search and Filter Bar */}
@@ -196,10 +214,26 @@ function MedicalActsPage() {
 
         {/* Medical Acts Grid */}
         <div className="medical-acts-grid">
-          {filteredActs.map(act => (
-            <div key={act.id} className="act-card">
-              <div className="act-card-header">
-                <span className={`act-category ${getCategoryColor(act.category)}`}>
+          {isLoading ? (
+            <>
+              <div className="act-card skeleton-act-card">
+                <SkeletonCard />
+              </div>
+              <div className="act-card skeleton-act-card">
+                <SkeletonCard />
+              </div>
+              <div className="act-card skeleton-act-card">
+                <SkeletonCard />
+              </div>
+              <div className="act-card skeleton-act-card">
+                <SkeletonCard />
+              </div>
+            </>
+          ) : (
+            filteredActs.map(act => (
+              <div key={act.id} className="act-card">
+                <div className="act-card-header">
+                  <span className={`act-category ${getCategoryColor(act.category)}`}>
                   {act.category}
                 </span>
                 <span className={`act-status ${act.status}`}>
@@ -236,7 +270,8 @@ function MedicalActsPage() {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Add Act Modal */}

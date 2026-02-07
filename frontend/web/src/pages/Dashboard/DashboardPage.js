@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
+import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
 import './DashboardPage.css';
 
 // Sample data for charts
@@ -24,7 +25,14 @@ const diagnosisData = [
 
 function DashboardPage() {
   const userName = "Dr. Martin";
-  
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate data loading
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <Layout>
       <div className="dashboard">
@@ -39,101 +47,128 @@ function DashboardPage() {
           </div>
 
           {/* Line Chart */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <h3>Rendez-vous</h3>
-              <span className="chart-date">Janvier 2026 ▼</span>
+          {isLoading ? (
+            <SkeletonChart height="220px" />
+          ) : (
+            <div className="chart-card">
+              <div className="chart-header">
+                <h3>Rendez-vous</h3>
+                <span className="chart-date">Janvier 2026 ▼</span>
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={appointmentData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
+                  <YAxis stroke="#9CA3AF" fontSize={12} />
+                  <Tooltip />
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#EF4444" 
+                    strokeWidth={2}
+                    dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={appointmentData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#EF4444" 
-                  strokeWidth={2}
-                  dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          )}
         </div>
 
         {/* Stat Cards */}
         <div className="stats-grid">
-          <StatCard 
-            icon={<FiUsers />}
-            label="Patients"
-            percentage="Total"
-            value="245 patients"
-            color="pink"
-          />
-          <StatCard 
-            icon={<FiCalendar />}
-            label="Rendez-vous Aujourd'hui"
-            percentage="Planifiés"
-            value="12 rdv"
-            color="blue"
-          />
-          <StatCard 
-            icon={<FiFileText />}
-            label="Actes Médicaux"
-            percentage="Ce mois"
-            value="89 actes"
-            color="green"
-          />
-          <StatCard 
-            icon={<FiActivity />}
-            label="Consultations"
-            percentage="Cette semaine"
-            value="34 consultations"
-            color="yellow"
-          />
-          <StatCard 
-            icon={<FiHeart />}
-            label="Nouveaux Patients"
-            percentage="Ce mois"
-            value="18 nouveaux"
-            color="purple"
-          />
+          {isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <StatCard 
+                icon={<FiUsers />}
+                label="Patients"
+                percentage="Total"
+                value="245 patients"
+                color="pink"
+              />
+              <StatCard 
+                icon={<FiCalendar />}
+                label="Rendez-vous Aujourd'hui"
+                percentage="Planifiés"
+                value="12 rdv"
+                color="blue"
+              />
+              <StatCard 
+                icon={<FiFileText />}
+                label="Actes Médicaux"
+                percentage="Ce mois"
+                value="89 actes"
+                color="green"
+              />
+              <StatCard 
+                icon={<FiActivity />}
+                label="Consultations"
+                percentage="Cette semaine"
+                value="34 consultations"
+                color="yellow"
+              />
+              <StatCard 
+                icon={<FiHeart />}
+                label="Nouveaux Patients"
+                percentage="Ce mois"
+                value="18 nouveaux"
+                color="purple"
+              />
+            </>
+          )}
         </div>
 
         {/* Bottom Section */}
         <div className="bottom-grid">
           {/* Recent Activity */}
-          <div className="activity-card">
-            <h3>Activité Récente</h3>
-            <div className="activity-list">
-              <div className="activity-item">
-                <div className="activity-icon patient">👤</div>
-                <div className="activity-info">
-                  <p className="activity-title">Nouveau patient ajouté</p>
-                  <p className="activity-subtitle">Mohamed Alami</p>
-                </div>
-                <span className="activity-time">Il y a 2h</span>
-              </div>
-              <div className="activity-item">
-                <div className="activity-icon appointment">📅</div>
-                <div className="activity-info">
-                  <p className="activity-title">Rendez-vous confirmé</p>
-                  <p className="activity-subtitle">Fatima Benali - 14:30</p>
-                </div>
-                <span className="activity-time">Il y a 3h</span>
-              </div>
-              <div className="activity-item">
-                <div className="activity-icon medical">📋</div>
-                <div className="activity-info">
-                  <p className="activity-title">Acte médical créé</p>
-                  <p className="activity-subtitle">Consultation rhumatologie</p>
-                </div>
-                <span className="activity-time">Hier</span>
+          {isLoading ? (
+            <div className="activity-card">
+              <h3>Activité Récente</h3>
+              <div className="activity-list">
+                <SkeletonListItem />
+                <SkeletonListItem />
+                <SkeletonListItem />
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="activity-card">
+              <h3>Activité Récente</h3>
+              <div className="activity-list">
+                <div className="activity-item">
+                  <div className="activity-icon patient">👤</div>
+                  <div className="activity-info">
+                    <p className="activity-title">Nouveau patient ajouté</p>
+                    <p className="activity-subtitle">Mohamed Alami</p>
+                  </div>
+                  <span className="activity-time">Il y a 2h</span>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon appointment">📅</div>
+                  <div className="activity-info">
+                    <p className="activity-title">Rendez-vous confirmé</p>
+                    <p className="activity-subtitle">Fatima Benali - 14:30</p>
+                  </div>
+                  <span className="activity-time">Il y a 3h</span>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon medical">📋</div>
+                  <div className="activity-info">
+                    <p className="activity-title">Acte médical créé</p>
+                    <p className="activity-subtitle">Consultation rhumatologie</p>
+                  </div>
+                  <span className="activity-time">Hier</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Assistant AI Promo */}
           <div className="assistant-promo-card">

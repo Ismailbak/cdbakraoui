@@ -26,6 +26,12 @@
   gap: 25px;
 }
 
+.profile-sidebar-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 /* Profile Cards */
 .profile-card {
   background: #fff;

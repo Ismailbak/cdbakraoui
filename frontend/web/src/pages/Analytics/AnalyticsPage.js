@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
@@ -8,6 +8,7 @@ import {
   FiActivity, FiPieChart, FiBarChart2, FiFileText, FiFilter 
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
+import { SkeletonCard, SkeletonChart } from '../../components/common';
 import './AnalyticsPage.css';
 
 // Sample data for charts
@@ -65,6 +66,12 @@ const topTreatmentsData = [
 function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('6months');
   const [activeTab, setActiveTab] = useState('overview');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const totalRevenue = monthlyRevenueData.reduce((sum, m) => sum + m.revenue, 0);
   const totalPatients = monthlyRevenueData.reduce((sum, m) => sum + m.patients, 0);
@@ -127,70 +134,84 @@ function AnalyticsPage() {
 
         {/* Summary Stats */}
         <div className="stats-summary">
-          <div className="summary-card">
-            <div className="summary-icon blue">
-              <FiDollarSign />
-            </div>
-            <div className="summary-info">
-              <span className="summary-value">{totalRevenue.toLocaleString()} DH</span>
-              <span className="summary-label">Revenus totaux</span>
-            </div>
-            <span className="summary-trend positive">+12.5%</span>
-          </div>
-          <div className="summary-card">
-            <div className="summary-icon green">
-              <FiUsers />
-            </div>
-            <div className="summary-info">
-              <span className="summary-value">{totalPatients}</span>
-              <span className="summary-label">Patients traités</span>
-            </div>
-            <span className="summary-trend positive">+8.3%</span>
-          </div>
-          <div className="summary-card">
-            <div className="summary-icon purple">
-              <FiFileText />
-            </div>
-            <div className="summary-info">
-              <span className="summary-value">468</span>
-              <span className="summary-label">Actes médicaux</span>
-            </div>
-            <span className="summary-trend positive">+15.2%</span>
-          </div>
-          <div className="summary-card">
-            <div className="summary-icon orange">
-              <FiTrendingUp />
-            </div>
-            <div className="summary-info">
-              <span className="summary-value">{avgRevenue.toLocaleString()} DH</span>
-              <span className="summary-label">Moyenne mensuelle</span>
-            </div>
-            <span className="summary-trend positive">+5.7%</span>
-          </div>
+          {isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <div className="summary-card">
+                <div className="summary-icon blue">
+                  <FiDollarSign />
+                </div>
+                <div className="summary-info">
+                  <span className="summary-value">{totalRevenue.toLocaleString()} DH</span>
+                  <span className="summary-label">Revenus totaux</span>
+                </div>
+                <span className="summary-trend positive">+12.5%</span>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon green">
+                  <FiUsers />
+                </div>
+                <div className="summary-info">
+                  <span className="summary-value">{totalPatients}</span>
+                  <span className="summary-label">Patients traités</span>
+                </div>
+                <span className="summary-trend positive">+8.3%</span>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon purple">
+                  <FiFileText />
+                </div>
+                <div className="summary-info">
+                  <span className="summary-value">468</span>
+                  <span className="summary-label">Actes médicaux</span>
+                </div>
+                <span className="summary-trend positive">+15.2%</span>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon orange">
+                  <FiTrendingUp />
+                </div>
+                <div className="summary-info">
+                  <span className="summary-value">{avgRevenue.toLocaleString()} DH</span>
+                  <span className="summary-label">Moyenne mensuelle</span>
+                </div>
+                <span className="summary-trend positive">+5.7%</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Charts Grid */}
         <div className="charts-grid">
           {/* Revenue Chart */}
-          <div className="chart-card large">
-            <div className="chart-header">
-              <div>
-                <h3>Évolution des Revenus</h3>
-                <p className="chart-subtitle">Revenus et nombre de patients par mois</p>
+          {isLoading ? (
+            <SkeletonChart height="350px" />
+          ) : (
+            <div className="chart-card large">
+              <div className="chart-header">
+                <div>
+                  <h3>Évolution des Revenus</h3>
+                  <p className="chart-subtitle">Revenus et nombre de patients par mois</p>
+                </div>
+                <div className="chart-legend">
+                  <span className="legend-item"><span className="dot blue"></span> Revenus (DH)</span>
+                  <span className="legend-item"><span className="dot green"></span> Patients</span>
+                </div>
               </div>
-              <div className="chart-legend">
-                <span className="legend-item"><span className="dot blue"></span> Revenus (DH)</span>
-                <span className="legend-item"><span className="dot green"></span> Patients</span>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={monthlyRevenueData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={monthlyRevenueData}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
                 <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
@@ -224,6 +245,7 @@ function AnalyticsPage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
 
           {/* Diagnosis Distribution */}
           <div className="chart-card">

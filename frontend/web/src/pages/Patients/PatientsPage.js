@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTrash2, FiEye, FiPhone, FiMail, FiCalendar } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTrash2, FiEye, FiPhone, FiMail, FiCalendar, FiX, FiAlertTriangle } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
+import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
 import './PatientsPage.css';
 
 // Sample patients data
-const patientsData = [
+const initialPatientsData = [
   {
     id: 1,
     name: 'Mohamed Alami',
@@ -87,11 +89,58 @@ const patientsData = [
 ];
 
 function PatientsPage() {
+  const navigate = useNavigate();
+  const [patients, setPatients] = useState(initialPatientsData);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Tous');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
 
-  const filteredPatients = patientsData.filter(patient => {
+  // Add patient form state
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    birthDate: '',
+    phone: '',
+    email: '',
+    gender: '',
+    diagnosis: '',
+    notes: '',
+    appointmentDate: '',
+    appointmentTime: '',
+    consultationType: '',
+    duration: '60',
+    appointmentReason: ''
+  });
+
+  const resetAddForm = () => {
+    setAddFormData({
+      name: '',
+      birthDate: '',
+      phone: '',
+      email: '',
+      gender: '',
+      diagnosis: '',
+      notes: '',
+      appointmentDate: '',
+      appointmentTime: '',
+      consultationType: '',
+      duration: '60',
+      appointmentReason: ''
+    });
+  };
+
+  // Simulate data loading
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const filteredPatients = patients.filter(patient => {
     const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          patient.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = selectedFilter === 'Tous' || patient.status === selectedFilter;
@@ -102,6 +151,93 @@ function PatientsPage() {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Handle Edit
+  const handleEditClick = (patient) => {
+    setSelectedPatient(patient);
+    setEditFormData({
+      name: patient.name,
+      age: patient.age,
+      gender: patient.gender,
+      phone: patient.phone,
+      email: patient.email,
+      diagnosis: patient.diagnosis,
+      status: patient.status,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    setPatients(patients.map(p => 
+      p.id === selectedPatient.id 
+        ? { ...p, ...editFormData }
+        : p
+    ));
+    setShowEditModal(false);
+    setSelectedPatient(null);
+    toast.success(`Patient ${editFormData.name} modifié avec succès`);
+  };
+
+  // Handle Delete
+  const handleDeleteClick = (patient) => {
+    setSelectedPatient(patient);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    const patientName = selectedPatient.name;
+    setPatients(patients.filter(p => p.id !== selectedPatient.id));
+    setShowDeleteModal(false);
+    setSelectedPatient(null);
+    toast.success(`Patient ${patientName} supprimé avec succès`);
+  };
+
+  // Handle Add Patient
+  const handleAddFormChange = (e) => {
+    const { name, value } = e.target;
+    setAddFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const calculateAge = (birthDate) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!addFormData.name || !addFormData.birthDate || !addFormData.gender || !addFormData.diagnosis) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    const newPatient = {
+      id: Date.now(),
+      name: addFormData.name,
+      age: calculateAge(addFormData.birthDate),
+      gender: addFormData.gender === 'homme' ? 'Homme' : 'Femme',
+      phone: addFormData.phone || '-',
+      email: addFormData.email || '-',
+      diagnosis: addFormData.diagnosis,
+      lastVisit: null,
+      nextAppointment: addFormData.appointmentDate || null,
+      status: 'Actif',
+      avatar: addFormData.gender === 'homme' ? '👨' : '👩'
+    };
+
+    setPatients([newPatient, ...patients]);
+    setShowAddModal(false);
+    resetAddForm();
+    toast.success(`Patient ${addFormData.name} ajouté avec succès`);
   };
 
   return (
@@ -121,34 +257,45 @@ function PatientsPage() {
 
         {/* Stats Cards */}
         <div className="patients-stats">
-          <StatCard 
-            icon={<FiUsers />}
-            label="Total Patients"
-            percentage="Tous"
-            value="245"
-            color="blue"
-          />
-          <StatCard 
-            icon={<FiUserPlus />}
-            label="Nouveaux ce mois"
-            percentage="+12%"
-            value="18"
-            color="green"
-          />
-          <StatCard 
-            icon={<FiCalendar />}
-            label="RDV Aujourd'hui"
-            percentage="Planifiés"
-            value="8"
-            color="pink"
-          />
-          <StatCard 
-            icon={<FiUsers />}
-            label="En attente"
-            percentage="À revoir"
-            value="5"
-            color="yellow"
-          />
+          {isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <StatCard 
+                icon={<FiUsers />}
+                label="Total Patients"
+                percentage="Tous"
+                value="245"
+                color="blue"
+              />
+              <StatCard 
+                icon={<FiUserPlus />}
+                label="Nouveaux ce mois"
+                percentage="+12%"
+                value="18"
+                color="green"
+              />
+              <StatCard 
+                icon={<FiCalendar />}
+                label="RDV Aujourd'hui"
+                percentage="Planifiés"
+                value="8"
+                color="pink"
+              />
+              <StatCard 
+                icon={<FiUsers />}
+                label="En attente"
+                percentage="À revoir"
+                value="5"
+                color="yellow"
+              />
+            </>
+          )}
         </div>
 
         {/* Search and Filter Bar */}
@@ -196,61 +343,71 @@ function PatientsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredPatients.map(patient => (
-                  <tr key={patient.id}>
-                    <td>
-                      <div className="patient-info">
-                        <div className="patient-avatar">{patient.avatar}</div>
-                        <div className="patient-details">
-                          <span className="patient-name">{patient.name}</span>
-                          <span className="patient-meta">{patient.age} ans • {patient.gender}</span>
+                {isLoading ? (
+                  <>
+                    <SkeletonTableRow columns={7} />
+                    <SkeletonTableRow columns={7} />
+                    <SkeletonTableRow columns={7} />
+                    <SkeletonTableRow columns={7} />
+                    <SkeletonTableRow columns={7} />
+                  </>
+                ) : (
+                  filteredPatients.map(patient => (
+                    <tr key={patient.id} className="patient-row" onClick={() => navigate(`/patients/${patient.id}`)}>
+                      <td>
+                        <div className="patient-info">
+                          <div className="patient-avatar">{patient.avatar}</div>
+                          <div className="patient-details">
+                            <span className="patient-name">{patient.name}</span>
+                            <span className="patient-meta">{patient.age} ans • {patient.gender}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="contact-info">
-                        <span className="contact-item"><FiPhone /> {patient.phone}</span>
-                        <span className="contact-item"><FiMail /> {patient.email}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="diagnosis-badge">{patient.diagnosis}</span>
-                    </td>
-                    <td>{formatDate(patient.lastVisit)}</td>
-                    <td>
-                      {patient.nextAppointment ? (
-                        <span className="next-appointment">{formatDate(patient.nextAppointment)}</span>
-                      ) : (
-                        <span className="no-appointment">Non planifié</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${patient.status === 'Actif' ? 'active' : 'pending'}`}>
-                        {patient.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="action-btn view" title="Voir le dossier">
-                          <FiEye />
-                        </button>
-                        <button className="action-btn edit" title="Modifier">
-                          <FiEdit2 />
-                        </button>
-                        <button className="action-btn delete" title="Supprimer">
-                          <FiTrash2 />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="contact-info">
+                          <span className="contact-item"><FiPhone /> {patient.phone}</span>
+                          <span className="contact-item"><FiMail /> {patient.email}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="diagnosis-badge">{patient.diagnosis}</span>
+                      </td>
+                      <td>{formatDate(patient.lastVisit)}</td>
+                      <td>
+                        {patient.nextAppointment ? (
+                          <span className="next-appointment">{formatDate(patient.nextAppointment)}</span>
+                        ) : (
+                          <span className="no-appointment">Non planifié</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`status-badge ${patient.status === 'Actif' ? 'active' : 'pending'}`}>
+                          {patient.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                          <button className="action-btn view" title="Voir le dossier" onClick={() => navigate(`/patients/${patient.id}`)}>
+                            <FiEye />
+                          </button>
+                          <button className="action-btn edit" title="Modifier" onClick={() => handleEditClick(patient)}>
+                            <FiEdit2 />
+                          </button>
+                          <button className="action-btn delete" title="Supprimer" onClick={() => handleDeleteClick(patient)}>
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
           <div className="table-pagination">
-            <span className="pagination-info">Affichage 1-{filteredPatients.length} sur {patientsData.length}</span>
+            <span className="pagination-info">Affichage 1-{filteredPatients.length} sur {patients.length}</span>
             <div className="pagination-buttons">
               <button className="pagination-btn" disabled>← Précédent</button>
               <button className="pagination-btn active">1</button>
@@ -263,72 +420,123 @@ function PatientsPage() {
 
         {/* Add Patient Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>Nouveau Patient</h2>
-                <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+                <button className="modal-close" onClick={() => { setShowAddModal(false); resetAddForm(); }}>×</button>
               </div>
-              <form className="patient-form">
+              <form className="patient-form" onSubmit={handleAddSubmit}>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Nom complet</label>
-                    <input type="text" placeholder="Entrez le nom complet" />
+                    <label>Nom complet <span className="required">*</span></label>
+                    <input 
+                      type="text" 
+                      name="name"
+                      value={addFormData.name}
+                      onChange={handleAddFormChange}
+                      placeholder="Entrez le nom complet" 
+                      required
+                    />
                   </div>
                   <div className="form-group">
-                    <label>Date de naissance</label>
-                    <input type="date" />
+                    <label>Date de naissance <span className="required">*</span></label>
+                    <input 
+                      type="date" 
+                      name="birthDate"
+                      value={addFormData.birthDate}
+                      onChange={handleAddFormChange}
+                      required
+                    />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Téléphone</label>
-                    <input type="tel" placeholder="+212 6 XX XX XX XX" />
+                    <input 
+                      type="tel" 
+                      name="phone"
+                      value={addFormData.phone}
+                      onChange={handleAddFormChange}
+                      placeholder="+212 6 XX XX XX XX" 
+                    />
                   </div>
                   <div className="form-group">
                     <label>Email</label>
-                    <input type="email" placeholder="email@example.com" />
+                    <input 
+                      type="email" 
+                      name="email"
+                      value={addFormData.email}
+                      onChange={handleAddFormChange}
+                      placeholder="email@example.com" 
+                    />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Genre</label>
-                    <select>
+                    <label>Genre <span className="required">*</span></label>
+                    <select 
+                      name="gender"
+                      value={addFormData.gender}
+                      onChange={handleAddFormChange}
+                      required
+                    >
                       <option value="">Sélectionner</option>
                       <option value="homme">Homme</option>
                       <option value="femme">Femme</option>
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Diagnostic initial</label>
-                    <select>
+                    <label>Diagnostic initial <span className="required">*</span></label>
+                    <select 
+                      name="diagnosis"
+                      value={addFormData.diagnosis}
+                      onChange={handleAddFormChange}
+                      required
+                    >
                       <option value="">Sélectionner un diagnostic</option>
-                      <option value="polyarthrite">Polyarthrite rhumatoïde</option>
-                      <option value="lupus">Lupus érythémateux</option>
-                      <option value="arthrose">Arthrose</option>
-                      <option value="fibromyalgie">Fibromyalgie</option>
-                      <option value="spondylarthrite">Spondylarthrite</option>
-                      <option value="autre">Autre</option>
+                      <option value="Polyarthrite rhumatoïde">Polyarthrite rhumatoïde</option>
+                      <option value="Lupus érythémateux">Lupus érythémateux</option>
+                      <option value="Arthrose">Arthrose</option>
+                      <option value="Fibromyalgie">Fibromyalgie</option>
+                      <option value="Spondylarthrite">Spondylarthrite</option>
+                      <option value="Sclérodermie">Sclérodermie</option>
+                      <option value="Goutte">Goutte</option>
+                      <option value="Autre">Autre</option>
                     </select>
                   </div>
                 </div>
                 <div className="form-group full-width">
                   <label>Notes médicales</label>
-                  <textarea placeholder="Antécédents, allergies, observations..."></textarea>
+                  <textarea 
+                    name="notes"
+                    value={addFormData.notes}
+                    onChange={handleAddFormChange}
+                    placeholder="Antécédents, allergies, observations..."
+                  ></textarea>
                 </div>
 
                 {/* Appointment Section */}
                 <div className="form-section-divider">
-                  <span>Rendez-vous</span>
+                  <span>Rendez-vous (optionnel)</span>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Date du rendez-vous</label>
-                    <input type="date" />
+                    <input 
+                      type="date" 
+                      name="appointmentDate"
+                      value={addFormData.appointmentDate}
+                      onChange={handleAddFormChange}
+                    />
                   </div>
                   <div className="form-group">
                     <label>Heure</label>
-                    <select>
+                    <select 
+                      name="appointmentTime"
+                      value={addFormData.appointmentTime}
+                      onChange={handleAddFormChange}
+                    >
                       <option value="">Sélectionner l'heure</option>
                       <option value="08:00">08:00</option>
                       <option value="08:30">08:30</option>
@@ -351,7 +559,11 @@ function PatientsPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Type de consultation</label>
-                    <select>
+                    <select 
+                      name="consultationType"
+                      value={addFormData.consultationType}
+                      onChange={handleAddFormChange}
+                    >
                       <option value="">Sélectionner le type</option>
                       <option value="premiere">Première consultation</option>
                       <option value="suivi">Consultation de suivi</option>
@@ -361,21 +573,30 @@ function PatientsPage() {
                   </div>
                   <div className="form-group">
                     <label>Durée estimée</label>
-                    <select>
+                    <select 
+                      name="duration"
+                      value={addFormData.duration}
+                      onChange={handleAddFormChange}
+                    >
                       <option value="30">30 minutes</option>
                       <option value="45">45 minutes</option>
-                      <option value="60" selected>1 heure</option>
+                      <option value="60">1 heure</option>
                       <option value="90">1h30</option>
                     </select>
                   </div>
                 </div>
                 <div className="form-group full-width">
                   <label>Motif du rendez-vous</label>
-                  <textarea placeholder="Décrivez le motif de la consultation..."></textarea>
+                  <textarea 
+                    name="appointmentReason"
+                    value={addFormData.appointmentReason}
+                    onChange={handleAddFormChange}
+                    placeholder="Décrivez le motif de la consultation..."
+                  ></textarea>
                 </div>
 
                 <div className="form-actions">
-                  <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>
+                  <button type="button" className="btn-cancel" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
                     Annuler
                   </button>
                   <button type="submit" className="btn-submit">
@@ -383,6 +604,126 @@ function PatientsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Patient Modal */}
+        {showEditModal && selectedPatient && (
+          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Modifier le patient</h2>
+                <button className="modal-close" onClick={() => setShowEditModal(false)}>
+                  <FiX />
+                </button>
+              </div>
+              <form className="patient-form" onSubmit={handleEditSubmit}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Nom complet</label>
+                    <input 
+                      type="text" 
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Âge</label>
+                    <input 
+                      type="number" 
+                      value={editFormData.age}
+                      onChange={(e) => setEditFormData({...editFormData, age: parseInt(e.target.value)})}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Téléphone</label>
+                    <input 
+                      type="tel" 
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input 
+                      type="email" 
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Genre</label>
+                    <select 
+                      value={editFormData.gender}
+                      onChange={(e) => setEditFormData({...editFormData, gender: e.target.value})}
+                    >
+                      <option value="Homme">Homme</option>
+                      <option value="Femme">Femme</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Statut</label>
+                    <select 
+                      value={editFormData.status}
+                      onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
+                    >
+                      <option value="Actif">Actif</option>
+                      <option value="En attente">En attente</option>
+                      <option value="Inactif">Inactif</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group full-width">
+                  <label>Diagnostic</label>
+                  <select 
+                    value={editFormData.diagnosis}
+                    onChange={(e) => setEditFormData({...editFormData, diagnosis: e.target.value})}
+                  >
+                    <option value="Polyarthrite rhumatoïde">Polyarthrite rhumatoïde</option>
+                    <option value="Lupus érythémateux">Lupus érythémateux</option>
+                    <option value="Arthrose">Arthrose</option>
+                    <option value="Fibromyalgie">Fibromyalgie</option>
+                    <option value="Spondylarthrite">Spondylarthrite</option>
+                    <option value="Arthrite juvénile">Arthrite juvénile</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>
+                    Annuler
+                  </button>
+                  <button type="submit" className="btn-submit">
+                    Enregistrer les modifications
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedPatient && (
+          <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+            <div className="modal-content delete-modal" onClick={e => e.stopPropagation()}>
+              <div className="delete-icon">
+                <FiAlertTriangle />
+              </div>
+              <h2>Supprimer le patient</h2>
+              <p>Êtes-vous sûr de vouloir supprimer <strong>{selectedPatient.name}</strong> ?</p>
+              <p className="delete-warning">Cette action est irréversible. Toutes les données du patient seront définitivement supprimées.</p>
+              <div className="delete-actions">
+                <button className="btn-cancel" onClick={() => setShowDeleteModal(false)}>
+                  Annuler
+                </button>
+                <button className="btn-delete" onClick={handleDeleteConfirm}>
+                  Supprimer
+                </button>
+              </div>
             </div>
           </div>
         )}

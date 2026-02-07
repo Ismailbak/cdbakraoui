@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiCalendar, FiClock, FiUser, FiPlus, FiChevronLeft, FiChevronRight, FiCheck, FiX, FiEdit2, FiPhone } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
+import { SkeletonCard, SkeletonListItem, useToast } from '../../components/common';
 import './AppointmentsPage.css';
 
+// Patient data for selection
+const patientsData = [
+  { id: 1, name: 'Mohamed Alami', phone: '+212 6 12 34 56 78' },
+  { id: 2, name: 'Fatima Benali', phone: '+212 6 23 45 67 89' },
+  { id: 3, name: 'Ahmed Tazi', phone: '+212 6 34 56 78 90' },
+  { id: 4, name: 'Khadija Mansouri', phone: '+212 6 45 67 89 01' },
+  { id: 5, name: 'Youssef El Idrissi', phone: '+212 6 56 78 90 12' },
+  { id: 6, name: 'Salma Berrada', phone: '+212 6 67 89 01 23' },
+];
+
 // Sample appointments data
-const appointmentsData = [
+const initialAppointmentsData = [
   {
     id: 1,
     patientName: 'Mohamed Alami',
@@ -107,10 +118,39 @@ const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 function AppointmentsPage() {
+  const [appointments, setAppointments] = useState(initialAppointmentsData);
   const [currentDate, setCurrentDate] = useState(new Date(2026, 1, 5)); // February 5, 2026
   const [selectedDate, setSelectedDate] = useState(new Date(2026, 1, 5));
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+  const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
+
+  // Add appointment form state
+  const [addFormData, setAddFormData] = useState({
+    patientId: '',
+    date: '2026-02-05',
+    time: '',
+    type: '',
+    duration: '60',
+    notes: ''
+  });
+
+  const resetAddForm = () => {
+    setAddFormData({
+      patientId: '',
+      date: selectedDate.toISOString().split('T')[0],
+      time: '',
+      type: '',
+      duration: '60',
+      notes: ''
+    });
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
   
@@ -124,7 +164,7 @@ function AppointmentsPage() {
 
   const getAppointmentsForDate = (date) => {
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return appointmentsData.filter(apt => apt.date === dateStr);
+    return appointments.filter(apt => apt.date === dateStr);
   };
 
   const selectedDateAppointments = getAppointmentsForDate(selectedDate);
@@ -150,7 +190,58 @@ function AppointmentsPage() {
   const hasAppointments = (day, currentMonth) => {
     if (!currentMonth) return false;
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return appointmentsData.some(apt => apt.date === dateStr);
+    return appointments.some(apt => apt.date === dateStr);
+  };
+
+  // Handle form change
+  const handleAddFormChange = (e) => {
+    const { name, value } = e.target;
+    setAddFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle confirm appointment
+  const handleConfirmAppointment = (id) => {
+    setAppointments(appointments.map(apt => 
+      apt.id === id ? { ...apt, status: 'confirmed' } : apt
+    ));
+    toast.success('Rendez-vous confirmé');
+  };
+
+  // Handle cancel appointment
+  const handleCancelAppointment = (id) => {
+    setAppointments(appointments.map(apt => 
+      apt.id === id ? { ...apt, status: 'cancelled' } : apt
+    ));
+    toast.info('Rendez-vous annulé');
+  };
+
+  // Handle add appointment
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!addFormData.patientId || !addFormData.date || !addFormData.time || !addFormData.type) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    const patient = patientsData.find(p => p.id === parseInt(addFormData.patientId));
+    
+    const newAppointment = {
+      id: Date.now(),
+      patientName: patient.name,
+      patientPhone: patient.phone,
+      type: addFormData.type,
+      date: addFormData.date,
+      time: addFormData.time,
+      duration: parseInt(addFormData.duration),
+      status: 'pending',
+      notes: addFormData.notes
+    };
+
+    setAppointments([...appointments, newAppointment]);
+    setShowAddModal(false);
+    resetAddForm();
+    toast.success(`Rendez-vous créé pour ${patient.name}`);
   };
 
   const isToday = (day, currentMonth) => {
@@ -201,34 +292,45 @@ function AppointmentsPage() {
 
         {/* Stats Cards */}
         <div className="appointments-stats">
-          <StatCard 
-            icon={<FiCalendar />}
-            label="RDV Aujourd'hui"
-            percentage="Planifiés"
-            value="8"
-            color="blue"
-          />
-          <StatCard 
-            icon={<FiClock />}
-            label="Cette semaine"
-            percentage="Total"
-            value="32"
-            color="green"
-          />
-          <StatCard 
-            icon={<FiCheck />}
-            label="Confirmés"
-            percentage="Ce mois"
-            value="45"
-            color="pink"
-          />
-          <StatCard 
-            icon={<FiUser />}
-            label="En attente"
-            percentage="À confirmer"
-            value="12"
-            color="yellow"
-          />
+          {isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <StatCard 
+                icon={<FiCalendar />}
+                label="RDV Aujourd'hui"
+                percentage="Planifiés"
+                value="8"
+                color="blue"
+              />
+              <StatCard 
+                icon={<FiClock />}
+                label="Cette semaine"
+                percentage="Total"
+                value="32"
+                color="green"
+              />
+              <StatCard 
+                icon={<FiCheck />}
+                label="Confirmés"
+                percentage="Ce mois"
+                value="45"
+                color="pink"
+              />
+              <StatCard 
+                icon={<FiUser />}
+                label="En attente"
+                percentage="À confirmer"
+                value="12"
+                color="yellow"
+              />
+            </>
+          )}
         </div>
 
         {/* Main Content Grid */}
@@ -321,10 +423,10 @@ function AppointmentsPage() {
                     <div className="appointment-actions">
                       {appointment.status === 'pending' && (
                         <>
-                          <button className="action-btn confirm" title="Confirmer">
+                          <button className="action-btn confirm" title="Confirmer" onClick={() => handleConfirmAppointment(appointment.id)}>
                             <FiCheck />
                           </button>
-                          <button className="action-btn cancel" title="Annuler">
+                          <button className="action-btn cancel" title="Annuler" onClick={() => handleCancelAppointment(appointment.id)}>
                             <FiX />
                           </button>
                         </>
@@ -342,33 +444,46 @@ function AppointmentsPage() {
 
         {/* Add Appointment Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>Nouveau Rendez-vous</h2>
-                <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+                <button className="modal-close" onClick={() => { setShowAddModal(false); resetAddForm(); }}>×</button>
               </div>
-              <form className="appointment-form">
+              <form className="appointment-form" onSubmit={handleAddSubmit}>
                 <div className="form-group">
-                  <label>Patient</label>
-                  <select>
+                  <label>Patient <span className="required">*</span></label>
+                  <select 
+                    name="patientId"
+                    value={addFormData.patientId}
+                    onChange={handleAddFormChange}
+                    required
+                  >
                     <option value="">Sélectionner un patient</option>
-                    <option value="1">Mohamed Alami</option>
-                    <option value="2">Fatima Benali</option>
-                    <option value="3">Ahmed Tazi</option>
-                    <option value="4">Khadija Mansouri</option>
-                    <option value="5">Youssef El Idrissi</option>
-                    <option value="6">Salma Berrada</option>
+                    {patientsData.map(patient => (
+                      <option key={patient.id} value={patient.id}>{patient.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Date</label>
-                    <input type="date" defaultValue="2026-02-05" />
+                    <label>Date <span className="required">*</span></label>
+                    <input 
+                      type="date" 
+                      name="date"
+                      value={addFormData.date}
+                      onChange={handleAddFormChange}
+                      required
+                    />
                   </div>
                   <div className="form-group">
-                    <label>Heure</label>
-                    <select>
+                    <label>Heure <span className="required">*</span></label>
+                    <select 
+                      name="time"
+                      value={addFormData.time}
+                      onChange={handleAddFormChange}
+                      required
+                    >
                       <option value="">Sélectionner</option>
                       <option value="08:00">08:00</option>
                       <option value="08:30">08:30</option>
@@ -390,18 +505,27 @@ function AppointmentsPage() {
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Type de consultation</label>
-                    <select>
+                    <label>Type de consultation <span className="required">*</span></label>
+                    <select 
+                      name="type"
+                      value={addFormData.type}
+                      onChange={handleAddFormChange}
+                      required
+                    >
                       <option value="">Sélectionner</option>
-                      <option value="premiere">Première consultation</option>
-                      <option value="suivi">Consultation de suivi</option>
-                      <option value="urgence">Consultation urgente</option>
-                      <option value="controle">Contrôle</option>
+                      <option value="Première consultation">Première consultation</option>
+                      <option value="Consultation de suivi">Consultation de suivi</option>
+                      <option value="Consultation urgente">Consultation urgente</option>
+                      <option value="Contrôle">Contrôle</option>
                     </select>
                   </div>
                   <div className="form-group">
                     <label>Durée</label>
-                    <select>
+                    <select 
+                      name="duration"
+                      value={addFormData.duration}
+                      onChange={handleAddFormChange}
+                    >
                       <option value="30">30 minutes</option>
                       <option value="45">45 minutes</option>
                       <option value="60">1 heure</option>
@@ -411,10 +535,15 @@ function AppointmentsPage() {
                 </div>
                 <div className="form-group">
                   <label>Motif / Notes</label>
-                  <textarea placeholder="Décrivez le motif de la consultation..."></textarea>
+                  <textarea 
+                    name="notes"
+                    value={addFormData.notes}
+                    onChange={handleAddFormChange}
+                    placeholder="Décrivez le motif de la consultation..."
+                  ></textarea>
                 </div>
                 <div className="form-actions">
-                  <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>
+                  <button type="button" className="btn-cancel" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
                     Annuler
                   </button>
                   <button type="submit" className="btn-submit">

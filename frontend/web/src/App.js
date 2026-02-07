@@ -1,9 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ToastProvider } from './components/common';
 import LoginPage from './pages/Login';
 import SignupPage from './pages/Signup';
 import DashboardPage from './pages/Dashboard';
 import PatientPage from './pages/Patients';
+import PatientDetailPage from './pages/Patients/PatientDetailPage';
 import AppointmentsPage from './pages/Appointments';
 import MedicalActsPage from './pages/MedicalActs';
 import AssistantPage from './pages/Assistant';
@@ -15,11 +17,13 @@ import { TermsPage, PrivacyPage } from './pages/Legal';
 function App() {
   return (
     <BrowserRouter>
+      <ToastProvider>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/patients" element={<PatientPage />} />
+        <Route path="/patients/:id" element={<PatientDetailPage />} />
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/medical-acts" element={<MedicalActsPage />} />
         <Route path="/assistant" element={<AssistantPage />} />
@@ -29,6 +33,7 @@ function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

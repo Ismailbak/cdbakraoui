@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiUser, FiMail, FiPhone, FiLock, FiCamera, FiSave, 
   FiEdit2, FiShield, FiClock, FiActivity 
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
+import { SkeletonCard, useToast } from '../../components/common';
 import './ProfilePage.css';
 
 function ProfilePage() {
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
     firstName: 'Dr. Ahmed',
@@ -24,6 +26,13 @@ function ProfilePage() {
     confirm: ''
   });
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const toast = useToast();
+
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfile(prev => ({ ...prev, [name]: value }));
@@ -36,14 +45,13 @@ function ProfilePage() {
 
   const handleSaveProfile = () => {
     setIsEditing(false);
-    // API call would go here
+    toast.success('Profil mis à jour avec succès');
   };
 
   const handleChangePassword = (e) => {
     e.preventDefault();
-    // API call would go here
     setPasswords({ current: '', new: '', confirm: '' });
-    alert('Mot de passe modifié avec succès !');
+    toast.success('Mot de passe modifié avec succès');
   };
 
   return (
@@ -54,6 +62,15 @@ function ProfilePage() {
           <p>Gérez vos informations personnelles et paramètres de sécurité</p>
         </div>
 
+        {isLoading ? (
+          <div className="profile-content">
+            <SkeletonCard height="400px" />
+            <div className="profile-sidebar-skeleton">
+              <SkeletonCard height="250px" />
+              <SkeletonCard height="200px" />
+            </div>
+          </div>
+        ) : (
         <div className="profile-content">
           {/* Profile Card */}
           <div className="profile-card main-profile">
@@ -233,6 +250,7 @@ function ProfilePage() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </Layout>
   );

@@ -199,10 +199,11 @@
 
 .patients-table tbody tr {
   transition: background 0.2s ease;
+  cursor: pointer;
 }
 
 .patients-table tbody tr:hover {
-  background: #F9FAFB;
+  background: #EEF2FF;
 }
 
 /* Patient Info Cell */
@@ -509,6 +510,11 @@
   color: #374151;
 }
 
+.form-group label .required {
+  color: #EF4444;
+  margin-left: 2px;
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -572,6 +578,76 @@
 .btn-submit:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Delete Modal */
+.delete-modal {
+  max-width: 420px;
+  text-align: center;
+  padding: 40px;
+}
+
+.delete-icon {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 20px;
+  background: #FEE2E2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-icon svg {
+  font-size: 32px;
+  color: #DC2626;
+}
+
+.delete-modal h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1E2A4A;
+  margin: 0 0 15px 0;
+}
+
+.delete-modal p {
+  font-size: 15px;
+  color: #6B7280;
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+.delete-warning {
+  font-size: 13px !important;
+  color: #DC2626 !important;
+  background: #FEF2F2;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 15px !important;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 25px;
+  justify-content: center;
+}
+
+.btn-delete {
+  padding: 12px 28px;
+  background: #DC2626;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+  background: #B91C1C;
+  transform: translateY(-1px);
 }
 
 /* Responsive */

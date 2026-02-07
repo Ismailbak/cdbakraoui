@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiBell, FiCalendar, FiUser, FiFileText, FiAlertCircle, FiCheckCircle, 
   FiClock, FiTrash2, FiCheck, FiFilter, FiSettings, FiMail, FiPhone,
   FiActivity, FiHeart, FiMessageSquare
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
+import { SkeletonListItem, useToast } from '../../components/common';
 import './NotificationsPage.css';
 
 // Sample notifications data - personalized for Dr. Martin
@@ -134,6 +135,14 @@ function NotificationsPage() {
   const [notifications, setNotifications] = useState(notificationsData);
   const [selectedFilter, setSelectedFilter] = useState('Toutes');
   const [showSettings, setShowSettings] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const toast = useToast();
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -156,10 +165,12 @@ function NotificationsPage() {
 
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    toast.success('Toutes les notifications marquées comme lues');
   };
 
   const deleteNotification = (id) => {
     setNotifications(notifications.filter(n => n.id !== id));
+    toast.info('Notification supprimée');
   };
 
   const getIcon = (iconType) => {
@@ -244,7 +255,16 @@ function NotificationsPage() {
 
         {/* Notifications List */}
         <div className="notifications-container">
-          {Object.keys(groupedNotifications).length === 0 ? (
+          {isLoading ? (
+            <div className="notification-group">
+              <div className="skeleton-date" style={{ width: '100px', height: '20px', background: '#e9ecef', borderRadius: '4px', marginBottom: '16px' }}></div>
+              <div className="notification-list">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <SkeletonListItem key={i} />
+                ))}
+              </div>
+            </div>
+          ) : Object.keys(groupedNotifications).length === 0 ? (
             <div className="no-notifications">
               <FiBell className="no-notif-icon" />
               <h3>Aucune notification</h3>
