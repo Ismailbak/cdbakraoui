@@ -4,6 +4,7 @@ import {
   FiMail, FiLock, FiEye, FiEyeOff, FiActivity, 
   FiAlertCircle, FiUser, FiPhone, FiCheckCircle 
 } from 'react-icons/fi';
+import '../Login/LoginPage.css';
 import './SignupPage.css';
 
 function SignupPage() {
@@ -178,7 +179,9 @@ function SignupPage() {
                   <div className="form-group">
                     <label htmlFor="firstName">Prénom *</label>
                     <div className="input-with-icon">
-                      <FiUser className="input-icon" />
+                      <div className="input-icon-slot" aria-hidden="true">
+                        <FiUser className="input-icon" />
+                      </div>
                       <input
                         id="firstName"
                         name="firstName"
@@ -193,7 +196,9 @@ function SignupPage() {
                   <div className="form-group">
                     <label htmlFor="lastName">Nom *</label>
                     <div className="input-with-icon">
-                      <FiUser className="input-icon" />
+                      <div className="input-icon-slot" aria-hidden="true">
+                        <FiUser className="input-icon" />
+                      </div>
                       <input
                         id="lastName"
                         name="lastName"
@@ -210,7 +215,9 @@ function SignupPage() {
                 <div className="form-group">
                   <label htmlFor="email">Adresse email *</label>
                   <div className="input-with-icon">
-                    <FiMail className="input-icon" />
+                    <div className="input-icon-slot" aria-hidden="true">
+                      <FiMail className="input-icon" />
+                    </div>
                     <input
                       id="email"
                       name="email"
@@ -226,7 +233,9 @@ function SignupPage() {
                 <div className="form-group">
                   <label htmlFor="phone">Téléphone</label>
                   <div className="input-with-icon">
-                    <FiPhone className="input-icon" />
+                    <div className="input-icon-slot" aria-hidden="true">
+                      <FiPhone className="input-icon" />
+                    </div>
                     <input
                       id="phone"
                       name="phone"
@@ -267,7 +276,9 @@ function SignupPage() {
                 <div className="form-group">
                   <label htmlFor="password">Mot de passe *</label>
                   <div className="input-with-icon">
-                    <FiLock className="input-icon" />
+                    <div className="input-icon-slot" aria-hidden="true">
+                      <FiLock className="input-icon" />
+                    </div>
                     <input
                       id="password"
                       name="password"
@@ -281,6 +292,7 @@ function SignupPage() {
                       type="button" 
                       className="toggle-password"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     >
                       {showPassword ? <FiEyeOff /> : <FiEye />}
                     </button>
@@ -306,7 +318,9 @@ function SignupPage() {
                 <div className="form-group">
                   <label htmlFor="confirmPassword">Confirmer le mot de passe *</label>
                   <div className="input-with-icon">
-                    <FiLock className="input-icon" />
+                    <div className="input-icon-slot" aria-hidden="true">
+                      <FiLock className="input-icon" />
+                    </div>
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
@@ -320,6 +334,7 @@ function SignupPage() {
                       type="button" 
                       className="toggle-password"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     >
                       {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                     </button>

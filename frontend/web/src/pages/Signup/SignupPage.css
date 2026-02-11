@@ -4,6 +4,8 @@
   max-width: 480px;
 }
 
+/* Input-with-icon uses icon slot from LoginPage.css - no override needed */
+
 /* Progress Steps */
 .signup-progress {
   display: flex;
