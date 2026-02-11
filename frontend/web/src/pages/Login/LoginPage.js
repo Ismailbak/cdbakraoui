@@ -13,13 +13,10 @@ function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
+  const performDemoLogin = (role, rememberEmail, emailToRemember) => {
     setIsLoading(true);
-
-    // Mode démo - connexion sans backend
-    if (email === 'demo@churochd.ma' && password === 'demo123') {
+    setError('');
+    if (role === 'medecin') {
       setTimeout(() => {
         localStorage.setItem('token', 'demo-token-rhumatoai-2026');
         localStorage.setItem('user', JSON.stringify({
@@ -29,12 +26,56 @@ function LoginPage() {
           role: 'medecin',
           specialty: 'Rhumatologie'
         }));
-        if (rememberMe) {
-          localStorage.setItem('rememberEmail', email);
-        }
+        if (rememberEmail) localStorage.setItem('rememberEmail', emailToRemember);
         setIsLoading(false);
         navigate('/dashboard');
-      }, 800);
+      }, 600);
+    } else {
+      setTimeout(() => {
+        localStorage.setItem('token', 'demo-token-admin-2026');
+        localStorage.setItem('user', JSON.stringify({
+          id: 0,
+          name: 'Admin Demo',
+          email: 'admin@churochd.ma',
+          role: 'admin',
+          is_admin: true
+        }));
+        if (rememberEmail) localStorage.setItem('rememberEmail', emailToRemember);
+        setIsLoading(false);
+        navigate('/admin');
+      }, 600);
+    }
+  };
+
+  const handleDemoUser = () => {
+    setEmail('demo@churochd.ma');
+    setPassword('demo123');
+    setError('');
+    performDemoLogin('medecin', rememberMe, 'demo@churochd.ma');
+  };
+
+  const handleDemoAdmin = () => {
+    setEmail('admin@churochd.ma');
+    setPassword('adminpass2026');
+    setError('');
+    performDemoLogin('admin', rememberMe, 'admin@churochd.ma');
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+
+    // Mode démo - connexion sans backend (médecin)
+    if (email === 'demo@churochd.ma' && password === 'demo123') {
+      performDemoLogin('medecin', rememberMe, email);
+      return;
+    }
+
+    // Mode démo - connexion sans backend (admin)
+    if (email === 'admin@churochd.ma' && password === 'adminpass2026') {
+      performDemoLogin('admin', rememberMe, email);
       return;
     }
 
@@ -42,10 +83,21 @@ function LoginPage() {
     try {
       const res = await login(email, password);
       localStorage.setItem('token', res.data.access_token);
+      // Fetch user info after login
+      const userRes = await fetch('http://localhost:8000/api/auth/me', {
+        headers: { Authorization: `Bearer ${res.data.access_token}` }
+      });
+      const userData = await userRes.json();
+      localStorage.setItem('user', JSON.stringify(userData.user || userData));
       if (rememberMe) {
         localStorage.setItem('rememberEmail', email);
       }
-      navigate('/dashboard');
+      // Redirect based on admin status
+      if ((userData.user && userData.user.is_admin) || userData.is_admin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch {
       setError('Email ou mot de passe incorrect');
     } finally {
@@ -115,7 +167,9 @@ function LoginPage() {
             <div className="form-group">
               <label htmlFor="email">Adresse email</label>
               <div className="input-with-icon">
-                <FiMail className="input-icon" />
+                <div className="input-icon-slot" aria-hidden="true">
+                  <FiMail className="input-icon" />
+                </div>
                 <input
                   id="email"
                   type="email"
@@ -130,7 +184,9 @@ function LoginPage() {
             <div className="form-group">
               <label htmlFor="password">Mot de passe</label>
               <div className="input-with-icon">
-                <FiLock className="input-icon" />
+                <div className="input-icon-slot" aria-hidden="true">
+                  <FiLock className="input-icon" />
+                </div>
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -143,6 +199,7 @@ function LoginPage() {
                   type="button" 
                   className="toggle-password"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                 >
                   {showPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
@@ -181,18 +238,17 @@ function LoginPage() {
             <span>ou</span>
           </div>
 
+
           <div className="demo-login">
             <p>Compte de démonstration :</p>
-            <button 
-              type="button"
-              className="demo-btn"
-              onClick={() => {
-                setEmail('demo@churochd.ma');
-                setPassword('demo123');
-              }}
-            >
-              Utiliser le compte démo
-            </button>
+            <div className="demo-login-buttons">
+              <button type="button" className="demo-btn" onClick={handleDemoUser}>
+                Utiliser le compte démo
+              </button>
+              <button type="button" className="demo-btn" onClick={handleDemoAdmin}>
+                Utiliser le compte admin
+              </button>
+            </div>
           </div>
 
           <div className="auth-footer">

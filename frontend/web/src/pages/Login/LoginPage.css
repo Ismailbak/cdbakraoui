@@ -198,34 +198,52 @@
   color: #374151;
 }
 
+/* Field: icon has its own slot, input fills the rest */
 .input-with-icon {
   position: relative;
   display: flex;
+  align-items: stretch;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-with-icon:focus-within {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input-icon-slot {
+  width: 48px;
+  min-width: 48px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  background: #F9FAFB;
+  border-right: 1px solid #E5E7EB;
+  flex-shrink: 0;
 }
 
 .input-icon {
-  position: absolute;
-  left: 14px;
   font-size: 18px;
   color: #9CA3AF;
-  pointer-events: none;
 }
 
 .input-with-icon input {
-  width: 100%;
-  padding: 14px 45px 14px 45px;
-  border: 1px solid #E5E7EB;
-  border-radius: 12px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  padding: 14px 16px;
   font-size: 15px;
   color: #374151;
-  transition: all 0.2s ease;
+  background: transparent;
+  outline: none;
 }
 
-.input-with-icon input:focus {
-  outline: none;
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.input-with-icon:has(.toggle-password) input {
+  padding-right: 44px;
 }
 
 .input-with-icon input::placeholder {
@@ -234,20 +252,24 @@
 
 .toggle-password {
   position: absolute;
-  right: 14px;
-  background: none;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  background: transparent;
   border: none;
+  border-left: 1px solid #E5E7EB;
   cursor: pointer;
   color: #9CA3AF;
-  padding: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
 }
 
 .toggle-password:hover {
   color: #374151;
+  background: #F9FAFB;
 }
 
 .toggle-password svg {
@@ -398,9 +420,15 @@
   margin: 0 0 12px 0;
 }
 
+.demo-login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .demo-btn {
   width: 100%;
-  padding: 13px;
+  padding: 13px 16px;
   background: #F3F4F6;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
@@ -414,6 +442,10 @@
 .demo-btn:hover {
   background: #E5E7EB;
   border-color: #D1D5DB;
+}
+
+.demo-btn:active {
+  transform: scale(0.98);
 }
 
 /* Footer */
