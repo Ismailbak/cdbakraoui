@@ -5,9 +5,22 @@ from app.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Mock user for development
+# Mock users for development
 MOCK_USERS = {
-    "doctor": {"username": "doctor", "password": pwd_context.hash("password123")}
+    "doctor": {
+        "username": "doctor",
+        # password123
+        "password": "$2b$12$LS103GoXA9t8YgPaxHsy9Oc9F/H.nmNhXe/vrs3YQf6ZVjeZIaMBS",
+        "role": "doctor",
+        "is_admin": False
+    },
+    "admin@churochd.ma": {
+        "username": "admin@churochd.ma",
+        # adminpass2026
+        "password": "$2b$12$aZ/mGUKkfailHQa2pppG9.9InvkOc1SJwTEx5gIsRphBaut9pqqkW",
+        "role": "admin",
+        "is_admin": True
+    }
 }
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
