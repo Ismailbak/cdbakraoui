@@ -175,7 +175,7 @@ function DashboardPage() {
             <div className="promo-content">
               <h3>Assistant IA</h3>
               <p>Obtenez des résumés de dossiers patients et des suggestions médicales en temps réel.</p>
-              <button className="promo-btn">Essayer maintenant →</button>
+              <button className="promo-btn" onClick={() => window.location.href = '/assistant'}>Essayer maintenant →</button>
             </div>
             <div className="promo-illustration">🤖</div>
           </div>
