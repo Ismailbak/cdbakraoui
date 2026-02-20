@@ -554,3 +554,118 @@
   color: #9CA3AF;
   font-size: 14px;
 }
+
+.patient-quick-info .clickable-phone,
+.patient-quick-info .clickable-email {
+  color: #3B82F6;
+  text-decoration: none;
+}
+
+.patient-quick-info .clickable-phone:hover,
+.patient-quick-info .clickable-email:hover {
+  text-decoration: underline;
+}
+
+/* Acts tab (patient detail) */
+.acts-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.acts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.acts-section .act-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  background: #F9FAFB;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.acts-section .act-date {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.acts-section .act-date .day {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.acts-section .act-date .month {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.acts-section .act-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.acts-section .act-info h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E2A4A;
+  margin: 0 0 6px 0;
+}
+
+.acts-section .act-report {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.acts-section .act-doctor {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.acts-section .act-status {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.acts-section .act-status.completed {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.acts-section .act-status.pending {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.acts-section .empty-state .link-btn {
+  background: none;
+  border: none;
+  color: #3B82F6;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.notes-admin {
+  border-left: 3px solid #6B7280;
+}

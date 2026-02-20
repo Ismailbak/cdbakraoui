@@ -20,12 +20,14 @@ const patientsDatabase = {
     phone: '+212 6 12 34 56 78',
     email: 'mohamed.alami@email.com',
     address: '123 Rue Mohammed V, Casablanca',
+    city: 'Casablanca',
     bloodType: 'A+',
     allergies: ['Pénicilline', 'Aspirine'],
     diagnosis: 'Polyarthrite rhumatoïde',
     status: 'Actif',
     avatar: '👨',
     insurance: 'CNSS - Carte N° 12345678',
+    notesAdmin: '',
     emergencyContact: {
       name: 'Fatima Alami',
       relation: 'Épouse',
@@ -54,6 +56,10 @@ const patientsDatabase = {
       { date: '2026-02-03', test: 'Créatinine', value: '0.9 mg/dL', status: 'Normal' },
     ],
     notes: 'Patient coopératif, bonne observance du traitement. Surveiller fonction hépatique.',
+    acts: [
+      { id: 1, date: '2026-02-05', type: 'Consultation', report: 'Suivi PR - DAS28: 3.2. Traitement maintenu.', doctor: 'Dr. Martin', status: 'completed' },
+      { id: 2, date: '2026-01-10', type: 'Consultation', report: 'Ajustement Prednisone 5mg.', doctor: 'Dr. Martin', status: 'completed' },
+    ],
   },
   2: {
     id: 2,
@@ -64,6 +70,7 @@ const patientsDatabase = {
     phone: '+212 6 23 45 67 89',
     email: 'fatima.benali@email.com',
     address: '45 Avenue Hassan II, Rabat',
+    city: 'Rabat',
     bloodType: 'O+',
     allergies: ['Sulfamides'],
     diagnosis: 'Lupus érythémateux',
@@ -92,6 +99,10 @@ const patientsDatabase = {
       { date: '2026-02-01', test: 'C3/C4', value: 'Bas', status: 'Anormal' },
     ],
     notes: 'Patiente stable, éviter exposition solaire.',
+    notesAdmin: '',
+    acts: [
+      { id: 3, date: '2026-02-01', type: 'Consultation', report: 'Suivi Lupus - stable.', doctor: 'Dr. Martin', status: 'completed' },
+    ],
   },
 };
 
@@ -117,6 +128,8 @@ const defaultPatient = (id) => ({
   appointments: [],
   labResults: [],
   notes: 'Aucune note',
+  notesAdmin: '',
+  acts: [],
 });
 
 function PatientDetailPage() {
@@ -192,15 +205,15 @@ function PatientDetailPage() {
           <div className="patient-quick-info">
             <div className="quick-info-item">
               <FiPhone />
-              <span>{patient.phone}</span>
+              <a href={`tel:${(patient.phone || '').replace(/\s/g, '')}`} className="clickable-phone" title="Appeler">{patient.phone}</a>
             </div>
             <div className="quick-info-item">
               <FiMail />
-              <span>{patient.email}</span>
+              <a href={`mailto:${patient.email}`} className="clickable-email">{patient.email}</a>
             </div>
             <div className="quick-info-item">
               <FiMapPin />
-              <span>{patient.address}</span>
+              <span>{patient.address || '-'}{patient.city && !(patient.address || '').includes(patient.city) ? ` • Ville: ${patient.city}` : ''}</span>
             </div>
           </div>
 
@@ -241,6 +254,12 @@ function PatientDetailPage() {
             onClick={() => setActiveTab('labs')}
           >
             <FiClipboard /> Résultats
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'acts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('acts')}
+          >
+            <FiFileText /> Actes
           </button>
         </div>
 
@@ -298,6 +317,12 @@ function PatientDetailPage() {
                 <h3><FiFileText /> Notes médicales</h3>
                 <p className="notes-content">{patient.notes}</p>
               </div>
+              {patient.notesAdmin && (
+                <div className="info-card full-width notes-admin">
+                  <h3><FiFileText /> Notes administratives</h3>
+                  <p className="notes-content">{patient.notesAdmin}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -409,6 +434,38 @@ function PatientDetailPage() {
               {patient.labResults.length === 0 && (
                 <p className="empty-state">Aucun résultat disponible</p>
               )}
+            </div>
+          )}
+
+          {activeTab === 'acts' && (
+            <div className="acts-section">
+              <div className="section-header">
+                <h3>Actes médicaux / Consultations</h3>
+                <button className="add-btn" onClick={() => navigate(`/medical-acts?patientId=${patient.id}&new=1`)}>
+                  <FiPlusCircle /> Nouvel acte
+                </button>
+              </div>
+              <div className="acts-list">
+                {(patient.acts || []).map((act) => (
+                  <div key={act.id} className="act-card">
+                    <div className="act-date">
+                      <span className="day">{new Date(act.date).getDate()}</span>
+                      <span className="month">{new Date(act.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                    </div>
+                    <div className="act-info">
+                      <h4>{act.type}</h4>
+                      <p className="act-report">{act.report}</p>
+                      <span className="act-doctor">{act.doctor}</span>
+                    </div>
+                    <span className={`act-status ${act.status === 'completed' ? 'completed' : 'pending'}`}>
+                      {act.status === 'completed' ? 'Terminé' : 'En attente'}
+                    </span>
+                  </div>
+                ))}
+                {(patient.acts || []).length === 0 && (
+                  <p className="empty-state">Aucun acte enregistré. <button type="button" className="link-btn" onClick={() => navigate(`/medical-acts?patientId=${patient.id}&new=1`)}>Ajouter un acte</button></p>
+                )}
+              </div>
             </div>
           )}
         </div>

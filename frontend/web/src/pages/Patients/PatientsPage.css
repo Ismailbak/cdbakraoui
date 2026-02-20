@@ -261,6 +261,17 @@
 }
 
 /* Diagnosis Badge */
+.ipp-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #F3F4F6;
+  color: #374151;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: monospace;
+}
+
 .diagnosis-badge {
   display: inline-block;
   padding: 6px 12px;

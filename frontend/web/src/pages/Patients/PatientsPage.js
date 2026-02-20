@@ -6,86 +6,26 @@ import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
 import './PatientsPage.css';
 
+// Insurance / Mutuelle types for dropdown
+const INSURANCE_OPTIONS = [
+  { value: '', label: 'Sélectionner une assurance' },
+  { value: 'CNSS', label: 'CNSS' },
+  { value: 'CNOPS', label: 'CNOPS' },
+  { value: 'RAMED', label: 'RAMED' },
+  { value: 'FAR', label: 'FAR' },
+  { value: 'Assurance privée', label: 'Assurance privée' },
+  { value: 'Sans assurance', label: 'Sans assurance' },
+  { value: 'Autre', label: 'Autre' },
+];
+
 // Sample patients data
 const initialPatientsData = [
-  {
-    id: 1,
-    name: 'Mohamed Alami',
-    age: 45,
-    gender: 'Homme',
-    phone: '+212 6 12 34 56 78',
-    email: 'mohamed.alami@email.com',
-    diagnosis: 'Polyarthrite rhumatoïde',
-    lastVisit: '2026-02-03',
-    nextAppointment: '2026-02-15',
-    status: 'Actif',
-    avatar: '👨'
-  },
-  {
-    id: 2,
-    name: 'Fatima Benali',
-    age: 38,
-    gender: 'Femme',
-    phone: '+212 6 23 45 67 89',
-    email: 'fatima.benali@email.com',
-    diagnosis: 'Lupus érythémateux',
-    lastVisit: '2026-02-01',
-    nextAppointment: '2026-02-12',
-    status: 'Actif',
-    avatar: '👩'
-  },
-  {
-    id: 3,
-    name: 'Ahmed Tazi',
-    age: 62,
-    gender: 'Homme',
-    phone: '+212 6 34 56 78 90',
-    email: 'ahmed.tazi@email.com',
-    diagnosis: 'Arthrose',
-    lastVisit: '2026-01-28',
-    nextAppointment: '2026-02-20',
-    status: 'Actif',
-    avatar: '👨'
-  },
-  {
-    id: 4,
-    name: 'Khadija Mansouri',
-    age: 55,
-    gender: 'Femme',
-    phone: '+212 6 45 67 89 01',
-    email: 'khadija.mansouri@email.com',
-    diagnosis: 'Fibromyalgie',
-    lastVisit: '2026-01-25',
-    nextAppointment: null,
-    status: 'En attente',
-    avatar: '👩'
-  },
-  {
-    id: 5,
-    name: 'Youssef El Idrissi',
-    age: 41,
-    gender: 'Homme',
-    phone: '+212 6 56 78 90 12',
-    email: 'youssef.idrissi@email.com',
-    diagnosis: 'Spondylarthrite',
-    lastVisit: '2026-02-04',
-    nextAppointment: '2026-02-18',
-    status: 'Actif',
-    avatar: '👨'
-  },
-  {
-    id: 6,
-    name: 'Salma Berrada',
-    age: 29,
-    gender: 'Femme',
-    phone: '+212 6 67 89 01 23',
-    email: 'salma.berrada@email.com',
-    diagnosis: 'Arthrite juvénile',
-    lastVisit: '2026-01-30',
-    nextAppointment: '2026-02-10',
-    status: 'Actif',
-    avatar: '👩'
-  },
+  { id: 1, ipp: 'PAT-001', name: 'Mohamed Alami', age: 45, gender: 'Homme', phone: '+212 6 12 34 56 78', email: 'mohamed.alami@email.com', city: 'Casablanca', insurance: 'CNSS', diagnosis: 'Polyarthrite rhumatoïde', lastVisit: '2026-02-03', nextAppointment: '2026-02-15', status: 'Actif', avatar: '👨' },
+  { id: 2, ipp: 'PAT-002', name: 'Fatima Benali', age: 38, gender: 'Femme', phone: '+212 6 23 45 67 89', email: 'fatima.benali@email.com', city: 'Rabat', insurance: 'CNOPS', diagnosis: 'Lupus érythémateux', lastVisit: '2026-02-01', nextAppointment: '2026-02-12', status: 'Actif', avatar: '👩' },
+  { id: 3, ipp: 'PAT-003', name: 'Ahmed Tazi', age: 62, gender: 'Homme', phone: '+212 6 34 56 78 90', email: 'ahmed.tazi@email.com', city: 'Marrakech', insurance: 'RAMED', diagnosis: 'Arthrose', lastVisit: '2026-01-28', nextAppointment: '2026-02-20', status: 'Actif', avatar: '👨' },
+  { id: 4, ipp: 'PAT-004', name: 'Khadija Mansouri', age: 55, gender: 'Femme', phone: '+212 6 45 67 89 01', email: 'khadija.mansouri@email.com', city: 'Fès', insurance: 'Assurance privée', diagnosis: 'Fibromyalgie', lastVisit: '2026-01-25', nextAppointment: null, status: 'En attente', avatar: '👩' },
+  { id: 5, ipp: 'PAT-005', name: 'Youssef El Idrissi', age: 41, gender: 'Homme', phone: '+212 6 56 78 90 12', email: 'youssef.idrissi@email.com', city: 'Tanger', insurance: 'CNSS', diagnosis: 'Spondylarthrite', lastVisit: '2026-02-04', nextAppointment: '2026-02-18', status: 'Actif', avatar: '👨' },
+  { id: 6, ipp: 'PAT-006', name: 'Salma Berrada', age: 29, gender: 'Femme', phone: '+212 6 67 89 01 23', email: 'salma.berrada@email.com', city: 'Casablanca', insurance: 'CNOPS', diagnosis: 'Arthrite juvénile', lastVisit: '2026-01-30', nextAppointment: '2026-02-10', status: 'Actif', avatar: '👩' },
 ];
 
 function PatientsPage() {
@@ -103,13 +43,18 @@ function PatientsPage() {
 
   // Add patient form state
   const [addFormData, setAddFormData] = useState({
+    ipp: '',
     name: '',
     birthDate: '',
     phone: '',
     email: '',
+    city: '',
     gender: '',
+    insurance: '',
+    insuranceNumber: '',
     diagnosis: '',
     notes: '',
+    notesAdmin: '',
     appointmentDate: '',
     appointmentTime: '',
     consultationType: '',
@@ -119,13 +64,18 @@ function PatientsPage() {
 
   const resetAddForm = () => {
     setAddFormData({
+      ipp: '',
       name: '',
       birthDate: '',
       phone: '',
       email: '',
+      city: '',
       gender: '',
+      insurance: '',
+      insuranceNumber: '',
       diagnosis: '',
       notes: '',
+      notesAdmin: '',
       appointmentDate: '',
       appointmentTime: '',
       consultationType: '',
@@ -141,8 +91,13 @@ function PatientsPage() {
   }, []);
 
   const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term ||
+      (patient.ipp && patient.ipp.toLowerCase().includes(term)) ||
+      (patient.name && patient.name.toLowerCase().includes(term)) ||
+      (patient.phone && patient.phone.replace(/\s/g, '').includes(term.replace(/\s/g, ''))) ||
+      (patient.diagnosis && patient.diagnosis.toLowerCase().includes(term)) ||
+      (patient.city && patient.city.toLowerCase().includes(term));
     const matchesFilter = selectedFilter === 'Tous' || patient.status === selectedFilter;
     return matchesSearch && matchesFilter;
   });
@@ -157,13 +112,19 @@ function PatientsPage() {
   const handleEditClick = (patient) => {
     setSelectedPatient(patient);
     setEditFormData({
+      ipp: patient.ipp || '',
       name: patient.name,
       age: patient.age,
       gender: patient.gender,
-      phone: patient.phone,
-      email: patient.email,
+      phone: patient.phone || '',
+      email: patient.email || '',
+      city: patient.city || '',
+      insurance: patient.insurance || '',
+      insuranceNumber: patient.insuranceNumber || '',
       diagnosis: patient.diagnosis,
       status: patient.status,
+      notes: patient.notes || '',
+      notesAdmin: patient.notesAdmin || '',
     });
     setShowEditModal(true);
   };
@@ -222,12 +183,18 @@ function PatientsPage() {
 
     const newPatient = {
       id: Date.now(),
+      ipp: addFormData.ipp || `PAT-${String(Date.now()).slice(-6)}`,
       name: addFormData.name,
       age: calculateAge(addFormData.birthDate),
       gender: addFormData.gender === 'homme' ? 'Homme' : 'Femme',
       phone: addFormData.phone || '-',
       email: addFormData.email || '-',
+      city: addFormData.city || '',
+      insurance: addFormData.insurance || '',
+      insuranceNumber: addFormData.insuranceNumber || '',
       diagnosis: addFormData.diagnosis,
+      notes: addFormData.notes || '',
+      notesAdmin: addFormData.notesAdmin || '',
       lastVisit: null,
       nextAppointment: addFormData.appointmentDate || null,
       status: 'Actif',
@@ -304,7 +271,7 @@ function PatientsPage() {
             <FiSearch className="search-icon" />
             <input 
               type="text" 
-              placeholder="Rechercher un patient par nom ou diagnostic..."
+              placeholder="Rechercher par IPP, nom, téléphone, diagnostic, ville..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -333,8 +300,10 @@ function PatientsPage() {
             <table className="patients-table">
               <thead>
                 <tr>
+                  <th>IPP</th>
                   <th>Patient</th>
                   <th>Contact</th>
+                  <th>Ville</th>
                   <th>Diagnostic</th>
                   <th>Dernière visite</th>
                   <th>Prochain RDV</th>
@@ -345,15 +314,16 @@ function PatientsPage() {
               <tbody>
                 {isLoading ? (
                   <>
-                    <SkeletonTableRow columns={7} />
-                    <SkeletonTableRow columns={7} />
-                    <SkeletonTableRow columns={7} />
-                    <SkeletonTableRow columns={7} />
-                    <SkeletonTableRow columns={7} />
+                    <SkeletonTableRow columns={9} />
+                    <SkeletonTableRow columns={9} />
+                    <SkeletonTableRow columns={9} />
+                    <SkeletonTableRow columns={9} />
+                    <SkeletonTableRow columns={9} />
                   </>
                 ) : (
                   filteredPatients.map(patient => (
                     <tr key={patient.id} className="patient-row" onClick={() => navigate(`/patients/${patient.id}`)}>
+                      <td><span className="ipp-badge">{patient.ipp || '-'}</span></td>
                       <td>
                         <div className="patient-info">
                           <div className="patient-avatar">{patient.avatar}</div>
@@ -369,6 +339,7 @@ function PatientsPage() {
                           <span className="contact-item"><FiMail /> {patient.email}</span>
                         </div>
                       </td>
+                      <td>{patient.city || '-'}</td>
                       <td>
                         <span className="diagnosis-badge">{patient.diagnosis}</span>
                       </td>
@@ -429,6 +400,16 @@ function PatientsPage() {
               <form className="patient-form" onSubmit={handleAddSubmit}>
                 <div className="form-row">
                   <div className="form-group">
+                    <label>IPP</label>
+                    <input 
+                      type="text" 
+                      name="ipp"
+                      value={addFormData.ipp}
+                      onChange={handleAddFormChange}
+                      placeholder="Ex: PAT-001 (optionnel)" 
+                    />
+                  </div>
+                  <div className="form-group">
                     <label>Nom complet <span className="required">*</span></label>
                     <input 
                       type="text" 
@@ -471,6 +452,16 @@ function PatientsPage() {
                       placeholder="email@example.com" 
                     />
                   </div>
+                  <div className="form-group">
+                    <label>Ville</label>
+                    <input 
+                      type="text" 
+                      name="city"
+                      value={addFormData.city}
+                      onChange={handleAddFormChange}
+                      placeholder="Ville" 
+                    />
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -486,6 +477,30 @@ function PatientsPage() {
                       <option value="femme">Femme</option>
                     </select>
                   </div>
+                  <div className="form-group">
+                    <label>Assurance / Mutuelle</label>
+                    <select 
+                      name="insurance"
+                      value={addFormData.insurance}
+                      onChange={handleAddFormChange}
+                    >
+                      {INSURANCE_OPTIONS.map(opt => (
+                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>N° carte assurance</label>
+                    <input 
+                      type="text" 
+                      name="insuranceNumber"
+                      value={addFormData.insuranceNumber}
+                      onChange={handleAddFormChange}
+                      placeholder="N° carte" 
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
                   <div className="form-group">
                     <label>Diagnostic initial <span className="required">*</span></label>
                     <select 
@@ -513,6 +528,15 @@ function PatientsPage() {
                     value={addFormData.notes}
                     onChange={handleAddFormChange}
                     placeholder="Antécédents, allergies, observations..."
+                  ></textarea>
+                </div>
+                <div className="form-group full-width">
+                  <label>Notes administratives</label>
+                  <textarea 
+                    name="notesAdmin"
+                    value={addFormData.notesAdmin}
+                    onChange={handleAddFormChange}
+                    placeholder="Notes internes, rappels admin..."
                   ></textarea>
                 </div>
 
@@ -621,57 +645,51 @@ function PatientsPage() {
               <form className="patient-form" onSubmit={handleEditSubmit}>
                 <div className="form-row">
                   <div className="form-group">
+                    <label>IPP</label>
+                    <input type="text" value={editFormData.ipp} onChange={(e) => setEditFormData({...editFormData, ipp: e.target.value})} />
+                  </div>
+                  <div className="form-group">
                     <label>Nom complet</label>
-                    <input 
-                      type="text" 
-                      value={editFormData.name}
-                      onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
-                    />
+                    <input type="text" value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} />
                   </div>
                   <div className="form-group">
                     <label>Âge</label>
-                    <input 
-                      type="number" 
-                      value={editFormData.age}
-                      onChange={(e) => setEditFormData({...editFormData, age: parseInt(e.target.value)})}
-                    />
+                    <input type="number" value={editFormData.age} onChange={(e) => setEditFormData({...editFormData, age: parseInt(e.target.value) || 0})} />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Téléphone</label>
-                    <input 
-                      type="tel" 
-                      value={editFormData.phone}
-                      onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
-                    />
+                    <input type="tel" value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} />
                   </div>
                   <div className="form-group">
                     <label>Email</label>
-                    <input 
-                      type="email" 
-                      value={editFormData.email}
-                      onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
-                    />
+                    <input type="email" value={editFormData.email} onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Ville</label>
+                    <input type="text" value={editFormData.city} onChange={(e) => setEditFormData({...editFormData, city: e.target.value})} />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Genre</label>
-                    <select 
-                      value={editFormData.gender}
-                      onChange={(e) => setEditFormData({...editFormData, gender: e.target.value})}
-                    >
+                    <select value={editFormData.gender} onChange={(e) => setEditFormData({...editFormData, gender: e.target.value})}>
                       <option value="Homme">Homme</option>
                       <option value="Femme">Femme</option>
                     </select>
                   </div>
                   <div className="form-group">
+                    <label>Assurance / Mutuelle</label>
+                    <select value={editFormData.insurance} onChange={(e) => setEditFormData({...editFormData, insurance: e.target.value})}>
+                      {INSURANCE_OPTIONS.map(opt => (
+                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
                     <label>Statut</label>
-                    <select 
-                      value={editFormData.status}
-                      onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
-                    >
+                    <select value={editFormData.status} onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}>
                       <option value="Actif">Actif</option>
                       <option value="En attente">En attente</option>
                       <option value="Inactif">Inactif</option>
@@ -680,10 +698,7 @@ function PatientsPage() {
                 </div>
                 <div className="form-group full-width">
                   <label>Diagnostic</label>
-                  <select 
-                    value={editFormData.diagnosis}
-                    onChange={(e) => setEditFormData({...editFormData, diagnosis: e.target.value})}
-                  >
+                  <select value={editFormData.diagnosis} onChange={(e) => setEditFormData({...editFormData, diagnosis: e.target.value})}>
                     <option value="Polyarthrite rhumatoïde">Polyarthrite rhumatoïde</option>
                     <option value="Lupus érythémateux">Lupus érythémateux</option>
                     <option value="Arthrose">Arthrose</option>
@@ -692,6 +707,14 @@ function PatientsPage() {
                     <option value="Arthrite juvénile">Arthrite juvénile</option>
                     <option value="Autre">Autre</option>
                   </select>
+                </div>
+                <div className="form-group full-width">
+                  <label>Notes médicales</label>
+                  <textarea value={editFormData.notes} onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})} placeholder="Notes médicales" />
+                </div>
+                <div className="form-group full-width">
+                  <label>Notes administratives</label>
+                  <textarea value={editFormData.notesAdmin} onChange={(e) => setEditFormData({...editFormData, notesAdmin: e.target.value})} placeholder="Notes administratives" />
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>
