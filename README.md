@@ -27,7 +27,7 @@ Système d'intelligence artificielle **local** pour assister les rhumatologues d
 | Backend          | FastAPI (Python)                     |
 | Frontend Web     | React 18, React Router, Axios        |
 | Frontend Mobile  | React Native                         |
-| Base de données  | SQLite (par défaut, configurable)   |
+| Base de données  | Mysql                                |
 | Auth             | JWT (Bearer), bcrypt                 |
 | IA               | Préparé (modèle non chargé en dev)  |
 
