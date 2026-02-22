@@ -4,6 +4,7 @@ import {
   FiMail, FiLock, FiEye, FiEyeOff, FiActivity, 
   FiAlertCircle, FiUser, FiPhone, FiCheckCircle 
 } from 'react-icons/fi';
+import api from '../../api/api';
 import '../Login/LoginPage.css';
 import './SignupPage.css';
 
@@ -71,12 +72,22 @@ function SignupPage() {
     if (!validateStep2()) return;
 
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    setError('');
+    try {
+      const username = [formData.firstName, formData.lastName].filter(Boolean).join('.').toLowerCase().replace(/\s/g, '') || formData.email;
+      await api.post('/auth/signup', {
+        email: formData.email,
+        password: formData.password,
+        username,
+        role: 'doctor',
+      });
       setIsLoading(false);
       navigate('/signup-success');
-    }, 1500);
+    } catch (err) {
+      setIsLoading(false);
+      const detail = err.response?.data?.detail;
+      setError(Array.isArray(detail) ? detail.map((d) => d.msg).join(', ') : detail || 'Inscription impossible');
+    }
   };
 
   const getPasswordStrength = () => {

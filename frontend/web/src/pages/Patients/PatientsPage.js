@@ -4,6 +4,7 @@ import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTra
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
+import { getPatients, createPatient, updatePatient, deletePatient } from '../../api/api';
 import './PatientsPage.css';
 
 // Insurance / Mutuelle types for dropdown
@@ -18,19 +19,20 @@ const INSURANCE_OPTIONS = [
   { value: 'Autre', label: 'Autre' },
 ];
 
-// Sample patients data
-const initialPatientsData = [
-  { id: 1, ipp: 'PAT-001', name: 'Mohamed Alami', age: 45, gender: 'Homme', phone: '+212 6 12 34 56 78', email: 'mohamed.alami@email.com', city: 'Casablanca', insurance: 'CNSS', diagnosis: 'Polyarthrite rhumatoïde', lastVisit: '2026-02-03', nextAppointment: '2026-02-15', status: 'Actif', avatar: '👨' },
-  { id: 2, ipp: 'PAT-002', name: 'Fatima Benali', age: 38, gender: 'Femme', phone: '+212 6 23 45 67 89', email: 'fatima.benali@email.com', city: 'Rabat', insurance: 'CNOPS', diagnosis: 'Lupus érythémateux', lastVisit: '2026-02-01', nextAppointment: '2026-02-12', status: 'Actif', avatar: '👩' },
-  { id: 3, ipp: 'PAT-003', name: 'Ahmed Tazi', age: 62, gender: 'Homme', phone: '+212 6 34 56 78 90', email: 'ahmed.tazi@email.com', city: 'Marrakech', insurance: 'RAMED', diagnosis: 'Arthrose', lastVisit: '2026-01-28', nextAppointment: '2026-02-20', status: 'Actif', avatar: '👨' },
-  { id: 4, ipp: 'PAT-004', name: 'Khadija Mansouri', age: 55, gender: 'Femme', phone: '+212 6 45 67 89 01', email: 'khadija.mansouri@email.com', city: 'Fès', insurance: 'Assurance privée', diagnosis: 'Fibromyalgie', lastVisit: '2026-01-25', nextAppointment: null, status: 'En attente', avatar: '👩' },
-  { id: 5, ipp: 'PAT-005', name: 'Youssef El Idrissi', age: 41, gender: 'Homme', phone: '+212 6 56 78 90 12', email: 'youssef.idrissi@email.com', city: 'Tanger', insurance: 'CNSS', diagnosis: 'Spondylarthrite', lastVisit: '2026-02-04', nextAppointment: '2026-02-18', status: 'Actif', avatar: '👨' },
-  { id: 6, ipp: 'PAT-006', name: 'Salma Berrada', age: 29, gender: 'Femme', phone: '+212 6 67 89 01 23', email: 'salma.berrada@email.com', city: 'Casablanca', insurance: 'CNOPS', diagnosis: 'Arthrite juvénile', lastVisit: '2026-01-30', nextAppointment: '2026-02-10', status: 'Actif', avatar: '👩' },
-];
+function mapApiPatientToUi(p) {
+  return {
+    ...p,
+    insuranceNumber: p.insurance_number,
+    notesAdmin: p.notes_admin,
+    lastVisit: null,
+    nextAppointment: null,
+    avatar: (p.gender && p.gender.toLowerCase() === 'femme') ? '👩' : '👨',
+  };
+}
 
 function PatientsPage() {
   const navigate = useNavigate();
-  const [patients, setPatients] = useState(initialPatientsData);
+  const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Tous');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -84,10 +86,19 @@ function PatientsPage() {
     });
   };
 
-  // Simulate data loading
+  const loadPatients = async () => {
+    try {
+      const res = await getPatients();
+      setPatients((res.data || []).map(mapApiPatientToUi));
+    } catch {
+      toast.error('Impossible de charger les patients');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(timer);
+    loadPatients();
   }, []);
 
   const filteredPatients = patients.filter(patient => {
@@ -129,16 +140,30 @@ function PatientsPage() {
     setShowEditModal(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setPatients(patients.map(p => 
-      p.id === selectedPatient.id 
-        ? { ...p, ...editFormData }
-        : p
-    ));
-    setShowEditModal(false);
-    setSelectedPatient(null);
-    toast.success(`Patient ${editFormData.name} modifié avec succès`);
+    try {
+      await updatePatient(selectedPatient.id, {
+        name: editFormData.name,
+        age: editFormData.age,
+        gender: editFormData.gender,
+        phone: editFormData.phone || null,
+        email: editFormData.email || null,
+        city: editFormData.city || null,
+        insurance: editFormData.insurance || null,
+        insurance_number: editFormData.insuranceNumber || null,
+        diagnosis: editFormData.diagnosis || null,
+        status: editFormData.status || 'Actif',
+        notes: editFormData.notes || null,
+        notes_admin: editFormData.notesAdmin || null,
+      });
+      setPatients(patients.map(p => p.id === selectedPatient.id ? { ...p, ...editFormData } : p));
+      setShowEditModal(false);
+      setSelectedPatient(null);
+      toast.success(`Patient ${editFormData.name} modifié avec succès`);
+    } catch {
+      toast.error('Erreur lors de la modification');
+    }
   };
 
   // Handle Delete
@@ -147,12 +172,17 @@ function PatientsPage() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     const patientName = selectedPatient.name;
-    setPatients(patients.filter(p => p.id !== selectedPatient.id));
-    setShowDeleteModal(false);
-    setSelectedPatient(null);
-    toast.success(`Patient ${patientName} supprimé avec succès`);
+    try {
+      await deletePatient(selectedPatient.id);
+      setPatients(patients.filter(p => p.id !== selectedPatient.id));
+      setShowDeleteModal(false);
+      setSelectedPatient(null);
+      toast.success(`Patient ${patientName} supprimé avec succès`);
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
   };
 
   // Handle Add Patient
@@ -172,39 +202,41 @@ function PatientsPage() {
     return age;
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate required fields
+
     if (!addFormData.name || !addFormData.birthDate || !addFormData.gender || !addFormData.diagnosis) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
-    const newPatient = {
-      id: Date.now(),
-      ipp: addFormData.ipp || `PAT-${String(Date.now()).slice(-6)}`,
-      name: addFormData.name,
-      age: calculateAge(addFormData.birthDate),
-      gender: addFormData.gender === 'homme' ? 'Homme' : 'Femme',
-      phone: addFormData.phone || '-',
-      email: addFormData.email || '-',
-      city: addFormData.city || '',
-      insurance: addFormData.insurance || '',
-      insuranceNumber: addFormData.insuranceNumber || '',
-      diagnosis: addFormData.diagnosis,
-      notes: addFormData.notes || '',
-      notesAdmin: addFormData.notesAdmin || '',
-      lastVisit: null,
-      nextAppointment: addFormData.appointmentDate || null,
-      status: 'Actif',
-      avatar: addFormData.gender === 'homme' ? '👨' : '👩'
-    };
-
-    setPatients([newPatient, ...patients]);
-    setShowAddModal(false);
-    resetAddForm();
-    toast.success(`Patient ${addFormData.name} ajouté avec succès`);
+    const age = calculateAge(addFormData.birthDate);
+    const genderLabel = addFormData.gender === 'homme' ? 'Homme' : 'Femme';
+    try {
+      const res = await createPatient({
+        ipp: addFormData.ipp || null,
+        name: addFormData.name,
+        age,
+        gender: genderLabel,
+        date_of_birth: addFormData.birthDate || null,
+        phone: addFormData.phone || null,
+        email: addFormData.email || null,
+        city: addFormData.city || null,
+        insurance: addFormData.insurance || null,
+        insurance_number: addFormData.insuranceNumber || null,
+        diagnosis: addFormData.diagnosis,
+        notes: addFormData.notes || null,
+        notes_admin: addFormData.notesAdmin || null,
+        status: 'Actif',
+      });
+      const created = mapApiPatientToUi(res.data);
+      setPatients([created, ...patients]);
+      setShowAddModal(false);
+      resetAddForm();
+      toast.success(`Patient ${addFormData.name} ajouté avec succès`);
+    } catch {
+      toast.error('Erreur lors de l\'ajout du patient');
+    }
   };
 
   return (

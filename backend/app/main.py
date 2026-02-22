@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts
+from app.database import engine, Base
+from app.models import user, patient, appointment, medical_act, notification  # noqa: F401 - register models
 
 app = FastAPI(
     title="Medical AI Assistant",
@@ -23,6 +25,23 @@ app.include_router(medical_acts.router, prefix="/api/medical-acts", tags=["medic
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+
+
+@app.on_event("startup")
+def on_startup():
+    import logging
+    log = logging.getLogger("uvicorn.error")
+    try:
+        Base.metadata.create_all(bind=engine)
+        log.info("Database tables created or already exist.")
+    except Exception as e:
+        log.error(
+            "Database startup failed: %s. "
+            "Check that MySQL is running and DATABASE_URL in .env is correct (user, password, host, database name).",
+            e,
+        )
+        # Server still starts; API calls that need the DB will fail until the connection is fixed.
+
 
 @app.get("/")
 def root():

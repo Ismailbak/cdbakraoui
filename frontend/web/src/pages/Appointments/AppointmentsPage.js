@@ -3,87 +3,23 @@ import { FiCalendar, FiClock, FiUser, FiPlus, FiChevronLeft, FiChevronRight, FiC
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonListItem, useToast } from '../../components/common';
+import { getAppointments, getPatients, createAppointment, updateAppointment, deleteAppointment } from '../../api/api';
 import './AppointmentsPage.css';
 
-// Patient data for selection
-const patientsData = [
-  { id: 1, name: 'Mohamed Alami', phone: '+212 6 12 34 56 78' },
-  { id: 2, name: 'Fatima Benali', phone: '+212 6 23 45 67 89' },
-  { id: 3, name: 'Ahmed Tazi', phone: '+212 6 34 56 78 90' },
-  { id: 4, name: 'Khadija Mansouri', phone: '+212 6 45 67 89 01' },
-  { id: 5, name: 'Youssef El Idrissi', phone: '+212 6 56 78 90 12' },
-  { id: 6, name: 'Salma Berrada', phone: '+212 6 67 89 01 23' },
-];
-
-// Sample appointments data
-const initialAppointmentsData = [
-  {
-    id: 1,
-    patientName: 'Mohamed Alami',
-    patientPhone: '+212 6 12 34 56 78',
-    type: 'Consultation de suivi',
-    date: '2026-02-05',
-    time: '09:00',
-    duration: 60,
-    status: 'confirmed',
-    notes: 'Contrôle polyarthrite rhumatoïde'
-  },
-  {
-    id: 2,
-    patientName: 'Fatima Benali',
-    patientPhone: '+212 6 23 45 67 89',
-    type: 'Première consultation',
-    date: '2026-02-05',
-    time: '10:30',
-    duration: 45,
-    status: 'confirmed',
-    notes: 'Douleurs articulaires chroniques'
-  },
-  {
-    id: 3,
-    patientName: 'Ahmed Tazi',
-    patientPhone: '+212 6 34 56 78 90',
-    type: 'Contrôle',
-    date: '2026-02-05',
-    time: '14:00',
+function mapApiAppointmentToUi(apt) {
+  return {
+    id: apt.id,
+    patient_id: apt.patient_id,
+    patientName: apt.patient_name || '-',
+    patientPhone: '',
+    type: 'Consultation',
+    date: apt.date,
+    time: apt.time,
     duration: 30,
-    status: 'pending',
-    notes: 'Suivi traitement arthrose'
-  },
-  {
-    id: 4,
-    patientName: 'Khadija Mansouri',
-    patientPhone: '+212 6 45 67 89 01',
-    type: 'Consultation urgente',
-    date: '2026-02-05',
-    time: '15:30',
-    duration: 45,
-    status: 'confirmed',
-    notes: 'Crise fibromyalgie'
-  },
-  {
-    id: 5,
-    patientName: 'Youssef El Idrissi',
-    patientPhone: '+212 6 56 78 90 12',
-    type: 'Consultation de suivi',
-    date: '2026-02-06',
-    time: '09:30',
-    duration: 60,
-    status: 'pending',
-    notes: 'Bilan spondylarthrite'
-  },
-  {
-    id: 6,
-    patientName: 'Salma Berrada',
-    patientPhone: '+212 6 67 89 01 23',
-    type: 'Contrôle',
-    date: '2026-02-06',
-    time: '11:00',
-    duration: 30,
-    status: 'confirmed',
-    notes: 'Résultats analyses'
-  },
-];
+    status: apt.status === 'scheduled' ? 'pending' : apt.status === 'cancelled' ? 'cancelled' : 'confirmed',
+    notes: apt.reason || '',
+  };
+}
 
 // Generate calendar days
 const generateCalendarDays = (year, month) => {
@@ -118,18 +54,18 @@ const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 function AppointmentsPage() {
-  const [appointments, setAppointments] = useState(initialAppointmentsData);
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 1, 5)); // February 5, 2026
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 1, 5));
+  const [appointments, setAppointments] = useState([]);
+  const [patientsData, setPatientsData] = useState([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+  const [viewMode, setViewMode] = useState('list');
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
 
-  // Add appointment form state
   const [addFormData, setAddFormData] = useState({
     patientId: '',
-    date: '2026-02-05',
+    date: '',
     time: '',
     type: '',
     duration: '60',
@@ -147,9 +83,31 @@ function AppointmentsPage() {
     });
   };
 
+  const loadAppointments = async () => {
+    try {
+      const res = await getAppointments();
+      setAppointments((res.data || []).map(mapApiAppointmentToUi));
+    } catch {
+      toast.error('Impossible de charger les rendez-vous');
+    }
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    async function load() {
+      try {
+        const [aptRes, patRes] = await Promise.all([getAppointments(), getPatients()]);
+        if (cancelled) return;
+        setAppointments((aptRes.data || []).map(mapApiAppointmentToUi));
+        setPatientsData(patRes.data || []);
+      } catch {
+        if (!cancelled) toast.error('Impossible de charger les données');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
@@ -199,56 +157,74 @@ function AppointmentsPage() {
     setAddFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle confirm appointment
-  const handleConfirmAppointment = (id) => {
-    setAppointments(appointments.map(apt => 
-      apt.id === id ? { ...apt, status: 'confirmed' } : apt
-    ));
-    toast.success('Rendez-vous confirmé');
+  const handleConfirmAppointment = async (id) => {
+    const apt = appointments.find(a => a.id === id);
+    if (!apt) return;
+    try {
+      await updateAppointment(id, {
+        patient_id: apt.patient_id,
+        date: apt.date,
+        time: apt.time,
+        reason: apt.notes,
+        status: 'scheduled',
+      });
+      setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'confirmed' } : a));
+      toast.success('Rendez-vous confirmé');
+    } catch {
+      toast.error('Erreur lors de la confirmation');
+    }
   };
 
-  // Handle cancel appointment
-  const handleCancelAppointment = (id) => {
-    setAppointments(appointments.map(apt => 
-      apt.id === id ? { ...apt, status: 'cancelled' } : apt
-    ));
-    toast.info('Rendez-vous annulé');
+  const handleCancelAppointment = async (id) => {
+    const apt = appointments.find(a => a.id === id);
+    if (!apt) return;
+    try {
+      await updateAppointment(id, {
+        patient_id: apt.patient_id,
+        date: apt.date,
+        time: apt.time,
+        reason: apt.notes,
+        status: 'cancelled',
+      });
+      setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
+      toast.info('Rendez-vous annulé');
+    } catch {
+      toast.error('Erreur lors de l\'annulation');
+    }
   };
 
-  // Handle add appointment
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!addFormData.patientId || !addFormData.date || !addFormData.time || !addFormData.type) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
+    if (!addFormData.patientId || !addFormData.date || !addFormData.time) {
+      toast.error('Veuillez remplir patient, date et heure');
       return;
     }
-
-    const patient = patientsData.find(p => p.id === parseInt(addFormData.patientId));
-    
-    const newAppointment = {
-      id: Date.now(),
-      patientName: patient.name,
-      patientPhone: patient.phone,
-      type: addFormData.type,
-      date: addFormData.date,
-      time: addFormData.time,
-      duration: parseInt(addFormData.duration),
-      status: 'pending',
-      notes: addFormData.notes
-    };
-
-    setAppointments([...appointments, newAppointment]);
-    setShowAddModal(false);
-    resetAddForm();
-    toast.success(`Rendez-vous créé pour ${patient.name}`);
+    const patient = patientsData.find(p => p.id === parseInt(addFormData.patientId, 10));
+    try {
+      const res = await createAppointment({
+        patient_id: parseInt(addFormData.patientId, 10),
+        date: addFormData.date,
+        time: addFormData.time,
+        reason: [addFormData.type, addFormData.notes].filter(Boolean).join(' – ') || null,
+        status: 'scheduled',
+      });
+      const created = mapApiAppointmentToUi(res.data);
+      created.patientName = patient ? patient.name : '-';
+      created.patientPhone = patient ? (patient.phone || '') : '';
+      setAppointments([...appointments, created]);
+      setShowAddModal(false);
+      resetAddForm();
+      toast.success(patient ? `Rendez-vous créé pour ${patient.name}` : 'Rendez-vous créé');
+    } catch {
+      toast.error('Erreur lors de la création du rendez-vous');
+    }
   };
 
   const isToday = (day, currentMonth) => {
     if (!currentMonth) return false;
-    const today = new Date(2026, 1, 5); // February 5, 2026
-    return day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
+    const today = new Date();
+    return day === today.getDate() &&
+           currentDate.getMonth() === today.getMonth() &&
            currentDate.getFullYear() === today.getFullYear();
   };
 
@@ -283,7 +259,7 @@ function AppointmentsPage() {
                 Calendrier
               </button>
             </div>
-            <button className="add-appointment-btn" onClick={() => setShowAddModal(true)}>
+            <button className="add-appointment-btn" onClick={() => { setShowAddModal(true); setAddFormData(prev => ({ ...prev, date: selectedDate.toISOString().split('T')[0] })); }}>
               <FiPlus />
               <span>Nouveau RDV</span>
             </button>

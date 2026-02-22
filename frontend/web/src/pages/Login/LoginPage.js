@@ -13,73 +13,10 @@ function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
-  const performDemoLogin = (role, rememberEmail, emailToRemember) => {
-    setIsLoading(true);
-    setError('');
-    if (role === 'medecin') {
-      setTimeout(() => {
-        localStorage.setItem('token', 'demo-token-rhumatoai-2026');
-        localStorage.setItem('user', JSON.stringify({
-          id: 1,
-          name: 'Dr. Demo',
-          email: 'demo@churochd.ma',
-          role: 'medecin',
-          specialty: 'Rhumatologie'
-        }));
-        if (rememberEmail) localStorage.setItem('rememberEmail', emailToRemember);
-        setIsLoading(false);
-        navigate('/dashboard');
-      }, 600);
-    } else {
-      setTimeout(() => {
-        localStorage.setItem('token', 'demo-token-admin-2026');
-        localStorage.setItem('user', JSON.stringify({
-          id: 0,
-          name: 'Admin Demo',
-          email: 'admin@churochd.ma',
-          role: 'admin',
-          is_admin: true
-        }));
-        if (rememberEmail) localStorage.setItem('rememberEmail', emailToRemember);
-        setIsLoading(false);
-        navigate('/admin');
-      }, 600);
-    }
-  };
-
-  const handleDemoUser = () => {
-    setEmail('demo@churochd.ma');
-    setPassword('demo123');
-    setError('');
-    performDemoLogin('medecin', rememberMe, 'demo@churochd.ma');
-  };
-
-  const handleDemoAdmin = () => {
-    setEmail('admin@churochd.ma');
-    setPassword('adminpass2026');
-    setError('');
-    performDemoLogin('admin', rememberMe, 'admin@churochd.ma');
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
-
-    // Mode démo - connexion sans backend (médecin)
-    if (email === 'demo@churochd.ma' && password === 'demo123') {
-      performDemoLogin('medecin', rememberMe, email);
-      return;
-    }
-
-    // Mode démo - connexion sans backend (admin)
-    if (email === 'admin@churochd.ma' && password === 'adminpass2026') {
-      performDemoLogin('admin', rememberMe, email);
-      return;
-    }
-
-    // Connexion normale via API
     try {
       const res = await login(email, password);
       localStorage.setItem('token', res.data.access_token);
@@ -233,23 +170,6 @@ function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="auth-divider">
-            <span>ou</span>
-          </div>
-
-
-          <div className="demo-login">
-            <p>Compte de démonstration :</p>
-            <div className="demo-login-buttons">
-              <button type="button" className="demo-btn" onClick={handleDemoUser}>
-                Utiliser le compte démo
-              </button>
-              <button type="button" className="demo-btn" onClick={handleDemoAdmin}>
-                Utiliser le compte admin
-              </button>
-            </div>
-          </div>
 
           <div className="auth-footer">
             <p>

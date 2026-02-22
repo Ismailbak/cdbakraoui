@@ -4,33 +4,46 @@ import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart } from 'react-icon
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
+import { getPatients, getTodayAppointments, getMedicalActs, getAnalyticsSummary } from '../../api/api';
 import './DashboardPage.css';
 
-// Sample data for charts
-const appointmentData = [
-  { name: '12/20', value: 45 },
-  { name: '2/4', value: 78 },
-  { name: '14/8', value: 65 },
-  { name: '6/3', value: 90 },
-  { name: '16/8', value: 120 },
-  { name: '12/4', value: 145 },
-];
-
-const diagnosisData = [
-  { name: 'Arthrite', value: 35, color: '#6B7280' },
-  { name: 'Lupus', value: 25, color: '#F97316' },
-  { name: 'Polyarthrite', value: 20, color: '#3B82F6' },
-  { name: 'Fibromyalgie', value: 20, color: '#06B6D4' },
-];
+const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
 
 function DashboardPage() {
-  const userName = "Dr. Martin";
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userName = user.username || user.name || user.email || 'Docteur';
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
 
-  // Simulate data loading
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1500);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    async function load() {
+      try {
+        const [patientsRes, todayRes, actsRes, analyticsRes] = await Promise.all([
+          getPatients(),
+          getTodayAppointments(),
+          getMedicalActs(),
+          getAnalyticsSummary(),
+        ]);
+        if (cancelled) return;
+        const patients = patientsRes.data || [];
+        const today = todayRes.data || [];
+        const acts = actsRes.data || [];
+        const analytics = analyticsRes.data || {};
+        setStats({
+          totalPatients: patients.length,
+          todayAppointments: today.length,
+          medicalActs: acts.length,
+          commonDiagnoses: (analytics.common_diagnoses || []).slice(0, 5).map((name, i) => ({ name, value: 20 - i * 3, color: diagnosisColors[i] })),
+        });
+      } catch {
+        if (!cancelled) setStats({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -56,7 +69,7 @@ function DashboardPage() {
                 <span className="chart-date">Janvier 2026 ▼</span>
               </div>
               <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={appointmentData}>
+                <LineChart data={[{ name: 'Rendez-vous', value: stats.todayAppointments }]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                   <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
                   <YAxis stroke="#9CA3AF" fontSize={12} />
@@ -91,35 +104,35 @@ function DashboardPage() {
                 icon={<FiUsers />}
                 label="Patients"
                 percentage="Total"
-                value="245 patients"
+                value={`${stats.totalPatients} patients`}
                 color="pink"
               />
               <StatCard 
                 icon={<FiCalendar />}
                 label="Rendez-vous Aujourd'hui"
                 percentage="Planifiés"
-                value="12 rdv"
+                value={`${stats.todayAppointments} rdv`}
                 color="blue"
               />
               <StatCard 
                 icon={<FiFileText />}
                 label="Actes Médicaux"
-                percentage="Ce mois"
-                value="89 actes"
+                percentage="Total"
+                value={`${stats.medicalActs} actes`}
                 color="green"
               />
               <StatCard 
                 icon={<FiActivity />}
                 label="Consultations"
-                percentage="Cette semaine"
-                value="34 consultations"
+                percentage="Total"
+                value={`${stats.medicalActs} actes`}
                 color="yellow"
               />
               <StatCard 
                 icon={<FiHeart />}
-                label="Nouveaux Patients"
-                percentage="Ce mois"
-                value="18 nouveaux"
+                label="Diagnostics"
+                percentage="Fréquents"
+                value={stats.commonDiagnoses.length ? `${stats.commonDiagnoses.length} types` : '-'}
                 color="purple"
               />
             </>
@@ -187,7 +200,7 @@ function DashboardPage() {
               <ResponsiveContainer width="100%" height={150}>
                 <PieChart>
                   <Pie
-                    data={diagnosisData}
+                    data={stats.commonDiagnoses.length ? stats.commonDiagnoses : [{ name: '-', value: 1, color: '#E5E7EB' }]}
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
@@ -195,19 +208,19 @@ function DashboardPage() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {diagnosisData.map((entry, index) => (
+                    {(stats.commonDiagnoses.length ? stats.commonDiagnoses : [{ color: '#E5E7EB' }]).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
               <div className="diagnosis-center">
-                <span className="diagnosis-total">245</span>
+                <span className="diagnosis-total">{stats.totalPatients}</span>
                 <span className="diagnosis-label">Patients</span>
               </div>
             </div>
             <div className="diagnosis-legend">
-              {diagnosisData.map((item, index) => (
+              {(stats.commonDiagnoses.length ? stats.commonDiagnoses : []).map((item, index) => (
                 <div key={index} className="legend-item">
                   <span className="legend-dot" style={{ background: item.color }}></span>
                   <span>{item.name}</span>

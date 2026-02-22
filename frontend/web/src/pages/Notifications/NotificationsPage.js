@@ -6,143 +6,43 @@ import {
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { SkeletonListItem, useToast } from '../../components/common';
+import { getNotifications, markNotificationRead as apiMarkRead } from '../../api/api';
 import './NotificationsPage.css';
 
-// Sample notifications data - personalized for Dr. Martin
-const notificationsData = [
-  {
-    id: 1,
-    type: 'appointment_reminder',
-    title: 'Rappel: RDV dans 30 minutes',
-    message: 'Consultation avec Mohamed Alami prévue à 09:00',
-    patient: 'Mohamed Alami',
-    time: 'Il y a 5 min',
-    date: '2026-02-05',
-    isRead: false,
-    priority: 'high',
-    icon: 'calendar',
-    action: 'Voir le dossier'
-  },
-  {
-    id: 2,
-    type: 'new_patient',
-    title: 'Nouveau patient enregistré',
-    message: 'Rachid El Fassi a été ajouté à votre liste de patients',
-    patient: 'Rachid El Fassi',
-    time: 'Il y a 1h',
-    date: '2026-02-05',
-    isRead: false,
+function mapApiNotification(n) {
+  return {
+    id: n.id,
+    type: 'generic',
+    title: n.title,
+    message: n.message,
+    isRead: n.read,
+    icon: 'bell',
+    date: new Date().toISOString().split('T')[0],
     priority: 'normal',
-    icon: 'user',
-    action: 'Voir le profil'
-  },
-  {
-    id: 3,
-    type: 'lab_results',
-    title: 'Résultats d\'analyses disponibles',
-    message: 'Les résultats du bilan inflammatoire de Fatima Benali sont prêts',
-    patient: 'Fatima Benali',
-    time: 'Il y a 2h',
-    date: '2026-02-05',
-    isRead: false,
-    priority: 'high',
-    icon: 'file',
-    action: 'Consulter les résultats'
-  },
-  {
-    id: 4,
-    type: 'appointment_cancelled',
-    title: 'RDV annulé',
-    message: 'Khadija Mansouri a annulé son rendez-vous du 10 février',
-    patient: 'Khadija Mansouri',
-    time: 'Il y a 3h',
-    date: '2026-02-05',
-    isRead: true,
-    priority: 'normal',
-    icon: 'alert',
-    action: 'Reprogrammer'
-  },
-  {
-    id: 5,
-    type: 'prescription_renewal',
-    title: 'Renouvellement d\'ordonnance demandé',
-    message: 'Ahmed Tazi demande le renouvellement de son traitement Méthotrexate',
-    patient: 'Ahmed Tazi',
-    time: 'Il y a 4h',
-    date: '2026-02-05',
-    isRead: true,
-    priority: 'normal',
-    icon: 'activity',
-    action: 'Traiter la demande'
-  },
-  {
-    id: 6,
-    type: 'follow_up',
-    title: 'Suivi recommandé',
-    message: 'Youssef El Idrissi n\'a pas eu de consultation depuis 3 mois',
-    patient: 'Youssef El Idrissi',
-    time: 'Il y a 5h',
-    date: '2026-02-05',
-    isRead: true,
-    priority: 'low',
-    icon: 'heart',
-    action: 'Planifier un RDV'
-  },
-  {
-    id: 7,
-    type: 'message',
-    title: 'Nouveau message patient',
-    message: 'Salma Berrada vous a envoyé un message concernant ses effets secondaires',
-    patient: 'Salma Berrada',
-    time: 'Hier, 18:30',
-    date: '2026-02-04',
-    isRead: true,
-    priority: 'normal',
-    icon: 'message',
-    action: 'Répondre'
-  },
-  {
-    id: 8,
-    type: 'appointment_confirmed',
-    title: 'RDV confirmé',
-    message: 'Nadia Chraibi a confirmé son rendez-vous du 12 février à 14:00',
-    patient: 'Nadia Chraibi',
-    time: 'Hier, 15:00',
-    date: '2026-02-04',
-    isRead: true,
-    priority: 'low',
-    icon: 'check',
-    action: 'Voir l\'agenda'
-  },
-  {
-    id: 9,
-    type: 'system',
-    title: 'Mise à jour système',
-    message: 'RhumatoAI a été mis à jour avec de nouvelles fonctionnalités IA',
-    patient: null,
-    time: 'Hier, 08:00',
-    date: '2026-02-04',
-    isRead: true,
-    priority: 'low',
-    icon: 'settings',
-    action: 'En savoir plus'
-  },
-];
+  };
+}
 
 const notificationFilters = ['Toutes', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
 
 function NotificationsPage() {
-  const [notifications, setNotifications] = useState(notificationsData);
+  const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('Toutes');
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const toast = useToast();
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    getNotifications()
+      .then(res => {
+        if (!cancelled) setNotifications((res.data || []).map(mapApiNotification));
+      })
+      .catch(() => { if (!cancelled) setNotifications([]); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  const toast = useToast();
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -157,10 +57,13 @@ function NotificationsPage() {
     }
   });
 
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    ));
+  const markAsRead = async (id) => {
+    try {
+      await apiMarkRead(id);
+      setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch {
+      toast.error('Erreur');
+    }
   };
 
   const markAllAsRead = () => {

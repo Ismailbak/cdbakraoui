@@ -97,13 +97,13 @@ Système d'intelligence artificielle **local** pour assister les rhumatologues d
 
 1. **Données** : En l’état, patients, rendez-vous, actes, notifications et analytics utilisent des **données mock / locale** côté frontend. Les endpoints backend renvoient souvent `[]` ou des stubs. Pour des données réelles, il faut brancher l’API sur la base (modèles SQLAlchemy déjà définis : Patient, Appointment, MedicalAct, ActDocument, User, Notification).
 
-2. **Base de données** : Par défaut **SQLite** (`backend/app/config.py` → `DATABASE_URL`). Les tables ne sont pas créées automatiquement dans `main.py` ; il faut les créer (migrations ou `Base.metadata.create_all(engine)` avec tous les modèles importés).
+2. **Base de données** : **MySQL** par défaut (`backend/app/config.py` → `DATABASE_URL`). Créer la base `rhumatoai` puis configurer l'URL dans un fichier `.env` (voir `backend/.env.example`). Les tables sont créées automatiquement au démarrage.
 
 3. **URL de l’API** : Dans `frontend/web/src/api/api.js`, `API_URL = 'http://localhost:8000/api'`. Le backend tourne sur le port **8000**.
 
 4. **Auth** : Le token JWT est stocké dans **localStorage** (`token`). Les requêtes envoient `Authorization: Bearer <token>`. La connexion utilise des **utilisateurs mock** dans `auth_service.py` ; l’inscription ne crée pas d’utilisateur côté backend.
 
-5. **Admin** : Seuls les comptes avec `is_admin: True` dans les utilisateurs mock voient et utilisent les routes `/admin`.
+5. **Admin** : Les comptes avec `is_admin: True` en base voient et utilisent les routes `/admin` (à définir manuellement en base si besoin).
 
 6. **IA** : Aucun modèle chargé : `llm.generate()` dans `backend/app/models/llm.py` renvoie une chaîne fixe. Pour une vraie IA, il faut charger un modèle (ex. Transformers) et implémenter `generate()`.
 
@@ -127,16 +127,9 @@ npm install
 npm start
 ```
 
-Ouvrir `http://localhost:3000` et se connecter avec un compte démo.
-
-## Comptes démo
-
-| Identifiant           | Mot de passe   |
-|-----------------------|----------------|
-| `doctor`              | `password123`  |
-| `admin@churochd.ma`   | `adminpass2026`|
-
-*(Les comptes sont définis dans `backend/app/services/auth_service.py`.)*
+1. Créer la base MySQL : `CREATE DATABASE rhumatoai;`
+2. Copier `backend/.env.example` vers `backend/.env` et renseigner `DATABASE_URL` (utilisateur/mot de passe MySQL).
+3. Ouvrir `http://localhost:3000` et **créer un compte** via « Créer un compte » (inscription), puis se connecter.
 
 ---
 
