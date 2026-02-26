@@ -9,73 +9,135 @@ import {
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { SkeletonCard, SkeletonChart } from '../../components/common';
+import { getAnalyticsSummary } from '../../api/api';
 import './AnalyticsPage.css';
 
-// Sample data for charts
-const monthlyRevenueData = [
-  { month: 'Sep', revenue: 42000, patients: 38 },
-  { month: 'Oct', revenue: 48000, patients: 45 },
-  { month: 'Nov', revenue: 52000, patients: 52 },
-  { month: 'Déc', revenue: 45000, patients: 41 },
-  { month: 'Jan', revenue: 58000, patients: 56 },
-  { month: 'Fév', revenue: 62000, patients: 62 },
-];
-
-const weeklyAppointmentsData = [
-  { day: 'Lun', consultations: 12, suivis: 8, urgences: 2 },
-  { day: 'Mar', consultations: 15, suivis: 10, urgences: 1 },
-  { day: 'Mer', consultations: 10, suivis: 6, urgences: 3 },
-  { day: 'Jeu', consultations: 14, suivis: 9, urgences: 2 },
-  { day: 'Ven', consultations: 18, suivis: 12, urgences: 4 },
-  { day: 'Sam', consultations: 8, suivis: 4, urgences: 1 },
-];
-
-const diagnosisData = [
-  { name: 'Polyarthrite rhumatoïde', value: 35, color: '#3B82F6' },
-  { name: 'Arthrose', value: 28, color: '#10B981' },
-  { name: 'Lupus érythémateux', value: 18, color: '#F59E0B' },
-  { name: 'Fibromyalgie', value: 12, color: '#EF4444' },
-  { name: 'Spondylarthrite', value: 7, color: '#8B5CF6' },
-];
-
-const ageDistributionData = [
-  { age: '18-30', male: 15, female: 22 },
-  { age: '31-45', male: 28, female: 35 },
-  { age: '46-60', male: 42, female: 48 },
-  { age: '61-75', male: 35, female: 40 },
-  { age: '75+', male: 18, female: 22 },
-];
-
-const activityTrendData = [
-  { month: 'Sep', actes: 65, rdv: 78 },
-  { month: 'Oct', actes: 72, rdv: 85 },
-  { month: 'Nov', actes: 80, rdv: 92 },
-  { month: 'Déc', actes: 68, rdv: 75 },
-  { month: 'Jan', actes: 88, rdv: 98 },
-  { month: 'Fév', actes: 95, rdv: 108 },
-];
-
-const topTreatmentsData = [
-  { name: 'Méthotrexate', count: 45, percentage: 28 },
-  { name: 'Infiltrations', count: 38, percentage: 24 },
-  { name: 'Biothérapie', count: 32, percentage: 20 },
-  { name: 'Anti-inflammatoires', count: 28, percentage: 17 },
-  { name: 'Kinésithérapie', count: 18, percentage: 11 },
-];
+const diagnosisColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('6months');
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [medicalActs, setMedicalActs] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1300);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    setIsLoading(true);
+    Promise.all([
+      getAnalyticsSummary(),
+      import('../../api/api').then(mod => Promise.all([mod.getAppointments(), mod.getPatients(), mod.getMedicalActs()]))
+    ])
+      .then(([analyticsRes, [appointmentsRes, patientsRes, actsRes]]) => {
+        if (!cancelled) {
+          setSummary(analyticsRes.data);
+          setAppointments(appointmentsRes.data || []);
+          setPatients(patientsRes.data || []);
+          setMedicalActs(actsRes.data || []);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError('Erreur lors du chargement des statistiques.');
+          setIsLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
   }, []);
 
-  const totalRevenue = monthlyRevenueData.reduce((sum, m) => sum + m.revenue, 0);
-  const totalPatients = monthlyRevenueData.reduce((sum, m) => sum + m.patients, 0);
-  const avgRevenue = Math.round(totalRevenue / monthlyRevenueData.length);
+  const totalPatients = summary?.total_patients ?? 0;
+  const avgAge = summary?.avg_age ?? 0;
+  const commonDiagnoses = summary?.common_diagnoses ?? [];
+
+  // Compute weekly appointments data for the current week
+  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // Monday as first day
+  const weeklyAppointmentsData = weekDays.map((day, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayAppointments = appointments.filter(a => a.date === dateStr);
+    return {
+      day,
+      consultations: dayAppointments.filter(a => a.type === 'Consultation').length,
+      suivis: dayAppointments.filter(a => a.type === 'Suivi').length,
+      urgences: dayAppointments.filter(a => a.type === 'Urgence').length,
+    };
+  });
+
+  // Compute age distribution data from patients
+  const ageGroups = [
+    { label: '18-30', min: 18, max: 30 },
+    { label: '31-45', min: 31, max: 45 },
+    { label: '46-60', min: 46, max: 60 },
+    { label: '61-75', min: 61, max: 75 },
+    { label: '75+', min: 76, max: 200 },
+  ];
+  const ageDistributionData = ageGroups.map(group => {
+    const males = patients.filter(p => p.age >= group.min && p.age <= group.max && p.gender === 'male').length;
+    const females = patients.filter(p => p.age >= group.min && p.age <= group.max && p.gender === 'female').length;
+    return { age: group.label, male: males, female: females };
+  });
+
+  // Compute activity trend data (per month)
+  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+  const currentYear = new Date().getFullYear();
+  const activityTrendData = months.map((month, i) => {
+    const monthStr = String(i + 1).padStart(2, '0');
+    const acts = medicalActs.filter(a => {
+      const d = new Date(a.date);
+      return d.getFullYear() === currentYear && d.getMonth() === i;
+    }).length;
+    const rdv = appointments.filter(a => {
+      const d = new Date(a.date);
+      return d.getFullYear() === currentYear && d.getMonth() === i;
+    }).length;
+    return { month, actes: acts, rdv };
+  });
+
+
+  // Compute monthly revenue and patient count data from appointments
+  // For each month, sum up revenue and count unique patients
+  const monthlyRevenueData = months.map((month, i) => {
+    const monthAppointments = appointments.filter(a => {
+      const d = new Date(a.date);
+      return d.getFullYear() === currentYear && d.getMonth() === i;
+    });
+    // Assume each appointment has a 'price' field (if not, set to 0)
+    const revenue = monthAppointments.reduce((sum, a) => sum + (a.price || 0), 0);
+    // Count unique patients for the month
+    const patientIds = new Set(monthAppointments.map(a => a.patient_id));
+    return {
+      month,
+      revenue,
+      patients: patientIds.size
+    };
+  });
+
+
+  // Compute top treatments data from medicalActs
+  // Group by treatment name, count occurrences, sort, and calculate percentage
+  const treatmentCounts = {};
+  medicalActs.forEach(act => {
+    if (act.treatment_name) {
+      treatmentCounts[act.treatment_name] = (treatmentCounts[act.treatment_name] || 0) + 1;
+    }
+  });
+  const totalTreatments = Object.values(treatmentCounts).reduce((sum, count) => sum + count, 0);
+  const topTreatmentsData = Object.entries(treatmentCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalTreatments > 0 ? Math.round((count / totalTreatments) * 100) : 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5); // Top 5 treatments
 
   return (
     <Layout>
@@ -141,18 +203,10 @@ function AnalyticsPage() {
               <SkeletonCard />
               <SkeletonCard />
             </>
+          ) : error ? (
+            <div style={{ color: 'red', gridColumn: 'span 4' }}>{error}</div>
           ) : (
             <>
-              <div className="summary-card">
-                <div className="summary-icon blue">
-                  <FiDollarSign />
-                </div>
-                <div className="summary-info">
-                  <span className="summary-value">{totalRevenue.toLocaleString()} DH</span>
-                  <span className="summary-label">Revenus totaux</span>
-                </div>
-                <span className="summary-trend positive">+12.5%</span>
-              </div>
               <div className="summary-card">
                 <div className="summary-icon green">
                   <FiUsers />
@@ -161,27 +215,33 @@ function AnalyticsPage() {
                   <span className="summary-value">{totalPatients}</span>
                   <span className="summary-label">Patients traités</span>
                 </div>
-                <span className="summary-trend positive">+8.3%</span>
               </div>
               <div className="summary-card">
                 <div className="summary-icon purple">
                   <FiFileText />
                 </div>
                 <div className="summary-info">
-                  <span className="summary-value">468</span>
-                  <span className="summary-label">Actes médicaux</span>
+                  <span className="summary-value">{avgAge}</span>
+                  <span className="summary-label">Âge moyen</span>
                 </div>
-                <span className="summary-trend positive">+15.2%</span>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon blue">
+                  <FiPieChart />
+                </div>
+                <div className="summary-info">
+                  <span className="summary-value">{commonDiagnoses.length}</span>
+                  <span className="summary-label">Diagnostics courants</span>
+                </div>
               </div>
               <div className="summary-card">
                 <div className="summary-icon orange">
                   <FiTrendingUp />
                 </div>
                 <div className="summary-info">
-                  <span className="summary-value">{avgRevenue.toLocaleString()} DH</span>
-                  <span className="summary-label">Moyenne mensuelle</span>
+                  <span className="summary-value">-</span>
+                  <span className="summary-label">À compléter</span>
                 </div>
-                <span className="summary-trend positive">+5.7%</span>
               </div>
             </>
           )}
@@ -256,7 +316,7 @@ function AnalyticsPage() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
-                    data={diagnosisData}
+                    data={commonDiagnoses.map((name, i) => ({ name, value: 1, color: diagnosisColors[i % diagnosisColors.length] }))}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -264,19 +324,18 @@ function AnalyticsPage() {
                     paddingAngle={3}
                     dataKey="value"
                   >
-                    {diagnosisData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {commonDiagnoses.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
               <div className="pie-legend">
-                {diagnosisData.map((item, index) => (
+                {commonDiagnoses.map((name, index) => (
                   <div key={index} className="pie-legend-item">
-                    <span className="pie-dot" style={{ background: item.color }}></span>
-                    <span className="pie-name">{item.name}</span>
-                    <span className="pie-value">{item.value}%</span>
+                    <span className="pie-dot" style={{ background: diagnosisColors[index % diagnosisColors.length] }}></span>
+                    <span className="pie-name">{name}</span>
                   </div>
                 ))}
               </div>

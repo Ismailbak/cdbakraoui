@@ -1,3 +1,4 @@
+export const getMedicalActsStats = () => api.get('/medical-acts/stats');
 import axios from 'axios';
 
 const API_URL = 'http://localhost:8000/api';
@@ -17,6 +18,8 @@ api.interceptors.request.use((config) => {
 // Auth
 export const login = (username, password) =>
   api.post('/auth/login', new URLSearchParams({ username, password }));
+
+export const getCurrentUser = () => api.get('/auth/me');
 
 // Patients
 export const getPatients = () => api.get('/patients/');

@@ -11,7 +11,10 @@ const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
 
 function DashboardPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userName = user.username || user.name || user.email || 'Docteur';
+  const userName =
+    user.specialty === 'medecine-interne' && (user.last_name || user.lastName)
+      ? `Dr. ${user.last_name || user.lastName}`
+      : user.username || user.name || user.email || 'Docteur';
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
 

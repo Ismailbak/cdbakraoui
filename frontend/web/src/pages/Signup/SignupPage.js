@@ -15,6 +15,7 @@ function SignupPage() {
     email: '',
     phone: '',
     specialty: 'rhumatologie',
+    department: '',
     password: '',
     confirmPassword: ''
   });
@@ -79,10 +80,15 @@ function SignupPage() {
         email: formData.email,
         password: formData.password,
         username,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        specialty: formData.specialty,
+        department: formData.department,
         role: 'doctor',
       });
       setIsLoading(false);
-      navigate('/signup-success');
+      navigate('/'); // Redirect to login page
     } catch (err) {
       setIsLoading(false);
       const detail = err.response?.data?.detail;
@@ -258,6 +264,7 @@ function SignupPage() {
                   </div>
                 </div>
 
+
                 <div className="form-group">
                   <label htmlFor="specialty">Rôle / Spécialité</label>
                   <select
@@ -271,6 +278,18 @@ function SignupPage() {
                     <option value="infirmier">Infirmier(ère)</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label htmlFor="department">Département</label>
+                  <input
+                    id="department"
+                    name="department"
+                    type="text"
+                    placeholder="Département"
+                    value={formData.department}
+                    onChange={handleChange}
+                  />
+                </div>
+
 
                 <button 
                   type="button" 

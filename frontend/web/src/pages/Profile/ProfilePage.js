@@ -10,15 +10,7 @@ import './ProfilePage.css';
 function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    firstName: 'Dr. Ahmed',
-    lastName: 'Martin',
-    email: 'ahmed.martin@churochd.ma',
-    phone: '+212 6XX XXX XXX',
-    specialty: 'Rhumatologue',
-    department: 'Service de Rhumatologie',
-    hospital: 'CHU Ibn Rochd - Casablanca'
-  });
+  const [profile, setProfile] = useState(null);
 
   const [passwords, setPasswords] = useState({
     current: '',
@@ -27,8 +19,27 @@ function ProfilePage() {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    async function fetchProfile() {
+      setIsLoading(true);
+      try {
+        const res = await import('../../api/api').then(mod => mod.getCurrentUser());
+        const user = res.data.user || res.data;
+        setProfile({
+          firstName: user.first_name || user.username || '',
+          lastName: user.last_name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          specialty: user.specialty || '',
+          department: user.department || '',
+          hospital: user.hospital || '',
+        });
+      } catch (err) {
+        setProfile(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProfile();
   }, []);
 
   const toast = useToast();
@@ -70,6 +81,10 @@ function ProfilePage() {
               <SkeletonCard height="200px" />
             </div>
           </div>
+        ) : !profile ? (
+          <div className="profile-content">
+            <div style={{ color: 'red' }}>Impossible de charger le profil utilisateur.</div>
+          </div>
         ) : (
         <div className="profile-content">
           {/* Profile Card */}
@@ -82,8 +97,28 @@ function ProfilePage() {
                 </button>
               </div>
               <div className="profile-info">
-                <h2>{profile.firstName} {profile.lastName}</h2>
-                <span className="profile-specialty">{profile.specialty}</span>
+                    <h2>
+                      <span>
+                        {profile.specialty
+                          ? `Dr. ${profile.lastName || profile.firstName || profile.email}`
+                          : profile.firstName || profile.email}
+                      </span>
+                    </h2>
+                {profile.phone && (
+                  <div className="profile-phone" style={{ marginTop: 4, color: '#6B7280', fontSize: 15 }}>
+                    <FiPhone style={{ marginRight: 4 }} /> {profile.phone}
+                  </div>
+                )}
+                {profile.specialty && (
+                  <div className="profile-specialty" style={{ marginTop: 4, color: '#6B7280', fontSize: 15 }}>
+                    <strong>Spécialité:</strong> {profile.specialty}
+                  </div>
+                )}
+                {profile.department && (
+                  <div className="profile-department" style={{ marginTop: 4, color: '#6B7280', fontSize: 15 }}>
+                    <strong>Département:</strong> {profile.department}
+                  </div>
+                )}
                 <span className="profile-hospital">{profile.hospital}</span>
               </div>
             </div>

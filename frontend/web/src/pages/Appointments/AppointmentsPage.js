@@ -58,6 +58,25 @@ function AppointmentsPage() {
   const [patientsData, setPatientsData] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Stats calculations
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  const weekEndStr = weekEnd.toISOString().slice(0, 10);
+  const month = new Date().getMonth();
+  const year = new Date().getFullYear();
+  const isSameMonth = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.getMonth() === month && d.getFullYear() === year;
+  };
+  const rdvToday = appointments.filter(a => a.date === todayStr).length;
+  const rdvWeek = appointments.filter(a => a.date >= weekStartStr && a.date <= weekEndStr).length;
+  const confirmedThisMonth = appointments.filter(a => a.status === 'confirmed' && isSameMonth(a.date)).length;
+  const pending = appointments.filter(a => a.status === 'pending').length;
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [isLoading, setIsLoading] = useState(true);
@@ -281,28 +300,28 @@ function AppointmentsPage() {
                 icon={<FiCalendar />}
                 label="RDV Aujourd'hui"
                 percentage="Planifiés"
-                value="8"
+                value={rdvToday}
                 color="blue"
               />
               <StatCard 
                 icon={<FiClock />}
                 label="Cette semaine"
                 percentage="Total"
-                value="32"
+                value={rdvWeek}
                 color="green"
               />
               <StatCard 
                 icon={<FiCheck />}
                 label="Confirmés"
                 percentage="Ce mois"
-                value="45"
+                value={confirmedThisMonth}
                 color="pink"
               />
               <StatCard 
                 icon={<FiUser />}
                 label="En attente"
                 percentage="À confirmer"
-                value="12"
+                value={pending}
                 color="yellow"
               />
             </>

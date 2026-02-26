@@ -31,7 +31,7 @@ function mapApiPatientToUi(p) {
 }
 
 function PatientsPage() {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Tous');
@@ -42,7 +42,21 @@ function PatientsPage() {
   const [editFormData, setEditFormData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
-
+    const totalPatients = Array.isArray(patients) ? patients.length : 0;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newThisMonth = Array.isArray(patients) ? patients.filter(p => {
+      if (!p.createdAt && !p.date_of_birth) return false;
+      const created = p.createdAt ? new Date(p.createdAt) : new Date(p.date_of_birth);
+      return created >= startOfMonth && created <= now;
+    }).length : 0;
+    const todayStr = now.toISOString().slice(0, 10);
+    const rdvToday = Array.isArray(patients) ? patients.filter(p => {
+      if (!p.nextAppointment) return false;
+      const appt = new Date(p.nextAppointment);
+      return appt.toISOString().slice(0, 10) === todayStr;
+    }).length : 0;
+    const enAttente = Array.isArray(patients) ? patients.filter(p => p.status === 'En attente').length : 0;
   // Add patient form state
   const [addFormData, setAddFormData] = useState({
     ipp: '',
@@ -268,29 +282,29 @@ function PatientsPage() {
               <StatCard 
                 icon={<FiUsers />}
                 label="Total Patients"
-                percentage="Tous"
-                value="245"
+                percentage=""
+                value={totalPatients}
                 color="blue"
               />
               <StatCard 
                 icon={<FiUserPlus />}
                 label="Nouveaux ce mois"
-                percentage="+12%"
-                value="18"
+                percentage=""
+                value={newThisMonth}
                 color="green"
               />
               <StatCard 
                 icon={<FiCalendar />}
                 label="RDV Aujourd'hui"
-                percentage="Planifiés"
-                value="8"
+                percentage=""
+                value={rdvToday}
                 color="pink"
               />
               <StatCard 
                 icon={<FiUsers />}
                 label="En attente"
-                percentage="À revoir"
-                value="5"
+                percentage=""
+                value={enAttente}
                 color="yellow"
               />
             </>

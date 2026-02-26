@@ -45,6 +45,11 @@ class SignupRequest(BaseModel):
     password: str
     username: str | None = None  # default to email if not provided
     role: str = "doctor"
+    first_name: str | None = None
+    last_name: str | None = None
+    specialty: str | None = None
+    phone: str | None = None
+    department: str | None = None
 
 
 @router.post("/login", response_model=Token)
@@ -66,12 +71,28 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username already registered")
     if get_user_by_email(db, data.email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    user = create_user(db, username=username, email=data.email, password=data.password, role=data.role)
+    user = create_user(
+        db,
+        username=username,
+        email=data.email,
+        password=data.password,
+        role=data.role,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        specialty=data.specialty,
+        phone=data.phone,
+        department=data.department,
+    )
     return {
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "role": user.role,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "specialty": user.specialty,
+        "phone": user.phone,
+        "department": user.department,
         "message": "Account created",
     }
 
@@ -86,5 +107,10 @@ def get_current_user(current_user: User = Depends(get_current_user_orm)):
             "role": current_user.role,
             "is_admin": current_user.is_admin,
             "is_active": current_user.is_active,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+            "specialty": current_user.specialty,
+            "phone": current_user.phone,
+            "department": current_user.department,
         }
     }

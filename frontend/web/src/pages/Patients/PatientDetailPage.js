@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getPatient, getPatientAppointments, getPatientMedicalActs } from '../../api/api';
 import { 
   FiArrowLeft, FiEdit2, FiPhone, FiMail, FiMapPin, FiCalendar, 
   FiFileText, FiActivity, FiHeart, FiAlertCircle, FiClock,
@@ -9,129 +10,6 @@ import Layout from '../../components/layout/Layout';
 import { LoadingSpinner, Breadcrumb } from '../../components/common';
 import './PatientDetailPage.css';
 
-// Sample patient data (in real app, fetch from API)
-const patientsDatabase = {
-  1: {
-    id: 1,
-    name: 'Mohamed Alami',
-    age: 45,
-    gender: 'Homme',
-    dateOfBirth: '1981-03-15',
-    phone: '+212 6 12 34 56 78',
-    email: 'mohamed.alami@email.com',
-    address: '123 Rue Mohammed V, Casablanca',
-    city: 'Casablanca',
-    bloodType: 'A+',
-    allergies: ['Pénicilline', 'Aspirine'],
-    diagnosis: 'Polyarthrite rhumatoïde',
-    status: 'Actif',
-    avatar: '👨',
-    insurance: 'CNSS - Carte N° 12345678',
-    notesAdmin: '',
-    emergencyContact: {
-      name: 'Fatima Alami',
-      relation: 'Épouse',
-      phone: '+212 6 98 76 54 32'
-    },
-    medicalHistory: [
-      { date: '2024-03-10', event: 'Diagnostic initial - PR séropositive', doctor: 'Dr. Martin' },
-      { date: '2024-06-15', event: 'Début traitement Méthotrexate 15mg', doctor: 'Dr. Martin' },
-      { date: '2024-09-20', event: 'Ajustement posologie - 20mg', doctor: 'Dr. Martin' },
-      { date: '2025-01-10', event: 'Ajout Prednisone 5mg', doctor: 'Dr. Martin' },
-      { date: '2026-02-03', event: 'Consultation de suivi - DAS28: 3.2', doctor: 'Dr. Martin' },
-    ],
-    currentTreatments: [
-      { name: 'Méthotrexate', dosage: '20mg/semaine', startDate: '2024-06-15' },
-      { name: 'Acide folique', dosage: '5mg/semaine', startDate: '2024-06-15' },
-      { name: 'Prednisone', dosage: '5mg/jour', startDate: '2025-01-10' },
-    ],
-    appointments: [
-      { date: '2026-02-15', time: '10:30', type: 'Consultation de suivi', status: 'Confirmé' },
-      { date: '2026-03-15', time: '09:00', type: 'Bilan sanguin', status: 'Planifié' },
-    ],
-    labResults: [
-      { date: '2026-02-03', test: 'VS', value: '28 mm/h', status: 'Élevé' },
-      { date: '2026-02-03', test: 'CRP', value: '12 mg/L', status: 'Élevé' },
-      { date: '2026-02-03', test: 'NFS', value: 'Normal', status: 'Normal' },
-      { date: '2026-02-03', test: 'Créatinine', value: '0.9 mg/dL', status: 'Normal' },
-    ],
-    notes: 'Patient coopératif, bonne observance du traitement. Surveiller fonction hépatique.',
-    acts: [
-      { id: 1, date: '2026-02-05', type: 'Consultation', report: 'Suivi PR - DAS28: 3.2. Traitement maintenu.', doctor: 'Dr. Martin', status: 'completed' },
-      { id: 2, date: '2026-01-10', type: 'Consultation', report: 'Ajustement Prednisone 5mg.', doctor: 'Dr. Martin', status: 'completed' },
-    ],
-  },
-  2: {
-    id: 2,
-    name: 'Fatima Benali',
-    age: 38,
-    gender: 'Femme',
-    dateOfBirth: '1988-07-22',
-    phone: '+212 6 23 45 67 89',
-    email: 'fatima.benali@email.com',
-    address: '45 Avenue Hassan II, Rabat',
-    city: 'Rabat',
-    bloodType: 'O+',
-    allergies: ['Sulfamides'],
-    diagnosis: 'Lupus érythémateux',
-    status: 'Actif',
-    avatar: '👩',
-    insurance: 'CNOPS - Carte N° 87654321',
-    emergencyContact: {
-      name: 'Ahmed Benali',
-      relation: 'Frère',
-      phone: '+212 6 11 22 33 44'
-    },
-    medicalHistory: [
-      { date: '2023-05-20', event: 'Diagnostic Lupus', doctor: 'Dr. Martin' },
-      { date: '2023-06-01', event: 'Début Hydroxychloroquine', doctor: 'Dr. Martin' },
-      { date: '2026-02-01', event: 'Consultation de suivi', doctor: 'Dr. Martin' },
-    ],
-    currentTreatments: [
-      { name: 'Hydroxychloroquine', dosage: '400mg/jour', startDate: '2023-06-01' },
-      { name: 'Prednisone', dosage: '10mg/jour', startDate: '2023-06-01' },
-    ],
-    appointments: [
-      { date: '2026-02-12', time: '14:00', type: 'Consultation de suivi', status: 'Confirmé' },
-    ],
-    labResults: [
-      { date: '2026-02-01', test: 'Anti-DNA', value: 'Positif', status: 'Anormal' },
-      { date: '2026-02-01', test: 'C3/C4', value: 'Bas', status: 'Anormal' },
-    ],
-    notes: 'Patiente stable, éviter exposition solaire.',
-    notesAdmin: '',
-    acts: [
-      { id: 3, date: '2026-02-01', type: 'Consultation', report: 'Suivi Lupus - stable.', doctor: 'Dr. Martin', status: 'completed' },
-    ],
-  },
-};
-
-// Default patient template for IDs not in database
-const defaultPatient = (id) => ({
-  id,
-  name: `Patient ${id}`,
-  age: 40,
-  gender: 'Non spécifié',
-  dateOfBirth: '1986-01-01',
-  phone: '+212 6 00 00 00 00',
-  email: 'patient@email.com',
-  address: 'Adresse non renseignée',
-  bloodType: 'Non renseigné',
-  allergies: [],
-  diagnosis: 'En cours de diagnostic',
-  status: 'Actif',
-  avatar: '👤',
-  insurance: 'Non renseigné',
-  emergencyContact: { name: '-', relation: '-', phone: '-' },
-  medicalHistory: [],
-  currentTreatments: [],
-  appointments: [],
-  labResults: [],
-  notes: 'Aucune note',
-  notesAdmin: '',
-  acts: [],
-});
-
 function PatientDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -140,13 +18,34 @@ function PatientDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    // Simulate API fetch
-    const timer = setTimeout(() => {
-      const patientData = patientsDatabase[id] || defaultPatient(id);
-      setPatient(patientData);
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    async function fetchPatient() {
+      setIsLoading(true);
+      try {
+        const res = await getPatient(id);
+        const patientData = res.data;
+
+        // Fetch appointments and acts
+        const [appointmentsRes, actsRes] = await Promise.all([
+          getPatientAppointments(id),
+          getPatientMedicalActs(id)
+        ]);
+
+        patientData.appointments = appointmentsRes.data || [];
+        patientData.acts = actsRes.data || [];
+
+        // Optionally fetch lab results, medical history, treatments if you have endpoints
+        // patientData.labResults = ...
+        // patientData.medicalHistory = ...
+        // patientData.currentTreatments = ...
+
+        setPatient(patientData);
+      } catch (error) {
+        setPatient(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchPatient();
   }, [id]);
 
   const formatDate = (dateString) => {
@@ -282,7 +181,7 @@ function PatientDetailPage() {
                   <div className="info-row">
                     <span className="info-label">Allergies</span>
                     <span className="info-value allergies">
-                      {patient.allergies.length > 0 
+                      {(patient.allergies && Array.isArray(patient.allergies) && patient.allergies.length > 0)
                         ? patient.allergies.map((a, i) => (
                             <span key={i} className="allergy-tag">{a}</span>
                           ))
@@ -299,15 +198,15 @@ function PatientDetailPage() {
                 <div className="info-grid">
                   <div className="info-row">
                     <span className="info-label">Nom</span>
-                    <span className="info-value">{patient.emergencyContact.name}</span>
+                    <span className="info-value">{patient.emergencyContact && patient.emergencyContact.name}</span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">Relation</span>
-                    <span className="info-value">{patient.emergencyContact.relation}</span>
+                    <span className="info-value">{patient.emergencyContact && patient.emergencyContact.relation}</span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">Téléphone</span>
-                    <span className="info-value">{patient.emergencyContact.phone}</span>
+                    <span className="info-value">{patient.emergencyContact && patient.emergencyContact.phone}</span>
                   </div>
                 </div>
               </div>
@@ -332,19 +231,19 @@ function PatientDetailPage() {
                 <h3>Historique médical</h3>
               </div>
               <div className="timeline">
-                {patient.medicalHistory.map((event, index) => (
-                  <div key={index} className="timeline-item">
-                    <div className="timeline-dot"></div>
-                    <div className="timeline-content">
-                      <span className="timeline-date">{formatDate(event.date)}</span>
-                      <p className="timeline-event">{event.event}</p>
-                      <span className="timeline-doctor">{event.doctor}</span>
-                    </div>
-                  </div>
-                ))}
-                {patient.medicalHistory.length === 0 && (
-                  <p className="empty-state">Aucun historique enregistré</p>
-                )}
+                {(patient.medicalHistory && Array.isArray(patient.medicalHistory) && patient.medicalHistory.length > 0)
+                  ? patient.medicalHistory.map((event, index) => (
+                      <div key={index} className="timeline-item">
+                        <div className="timeline-dot"></div>
+                        <div className="timeline-content">
+                          <span className="timeline-date">{formatDate(event.date)}</span>
+                          <p className="timeline-event">{event.event}</p>
+                          <span className="timeline-doctor">{event.doctor}</span>
+                        </div>
+                      </div>
+                    ))
+                  : <p className="empty-state">Aucun historique enregistré</p>
+                }
               </div>
             </div>
           )}
@@ -356,19 +255,19 @@ function PatientDetailPage() {
                 <button className="add-btn"><FiPlusCircle /> Ajouter</button>
               </div>
               <div className="treatments-list">
-                {patient.currentTreatments.map((treatment, index) => (
-                  <div key={index} className="treatment-card">
-                    <div className="treatment-icon">💊</div>
-                    <div className="treatment-info">
-                      <h4>{treatment.name}</h4>
-                      <p className="treatment-dosage">{treatment.dosage}</p>
-                      <span className="treatment-date">Depuis {formatDate(treatment.startDate)}</span>
-                    </div>
-                  </div>
-                ))}
-                {patient.currentTreatments.length === 0 && (
-                  <p className="empty-state">Aucun traitement en cours</p>
-                )}
+                {(patient.currentTreatments && Array.isArray(patient.currentTreatments) && patient.currentTreatments.length > 0)
+                  ? patient.currentTreatments.map((treatment, index) => (
+                      <div key={index} className="treatment-card">
+                        <div className="treatment-icon">💊</div>
+                        <div className="treatment-info">
+                          <h4>{treatment.name}</h4>
+                          <p className="treatment-dosage">{treatment.dosage}</p>
+                          <span className="treatment-date">Depuis {formatDate(treatment.startDate)}</span>
+                        </div>
+                      </div>
+                    ))
+                  : <p className="empty-state">Aucun traitement en cours</p>
+                }
               </div>
             </div>
           )}
@@ -380,24 +279,24 @@ function PatientDetailPage() {
                 <button className="add-btn"><FiPlusCircle /> Nouveau RDV</button>
               </div>
               <div className="appointments-list">
-                {patient.appointments.map((apt, index) => (
-                  <div key={index} className="appointment-card">
-                    <div className="appointment-date">
-                      <span className="day">{new Date(apt.date).getDate()}</span>
-                      <span className="month">{new Date(apt.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
-                    </div>
-                    <div className="appointment-info">
-                      <h4>{apt.type}</h4>
-                      <p>{apt.time}</p>
-                    </div>
-                    <span className={`appointment-status ${apt.status === 'Confirmé' ? 'confirmed' : 'planned'}`}>
-                      {apt.status}
-                    </span>
-                  </div>
-                ))}
-                {patient.appointments.length === 0 && (
-                  <p className="empty-state">Aucun rendez-vous planifié</p>
-                )}
+                {(patient.appointments && Array.isArray(patient.appointments) && patient.appointments.length > 0)
+                  ? patient.appointments.map((apt, index) => (
+                      <div key={index} className="appointment-card">
+                        <div className="appointment-date">
+                          <span className="day">{new Date(apt.date).getDate()}</span>
+                          <span className="month">{new Date(apt.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                        </div>
+                        <div className="appointment-info">
+                          <h4>{apt.type}</h4>
+                          <p>{apt.time}</p>
+                        </div>
+                        <span className={`appointment-status ${apt.status === 'Confirmé' ? 'confirmed' : 'planned'}`}>
+                          {apt.status}
+                        </span>
+                      </div>
+                    ))
+                  : <p className="empty-state">Aucun rendez-vous planifié</p>
+                }
               </div>
             </div>
           )}
@@ -417,21 +316,24 @@ function PatientDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {patient.labResults.map((result, index) => (
-                    <tr key={index}>
-                      <td>{formatDate(result.date)}</td>
-                      <td>{result.test}</td>
-                      <td>{result.value}</td>
-                      <td>
-                        <span className={`lab-status ${result.status === 'Normal' ? 'normal' : 'abnormal'}`}>
-                          {result.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {(patient.labResults && Array.isArray(patient.labResults) && patient.labResults.length > 0)
+                    ? patient.labResults.map((result, index) => (
+                        <tr key={index}>
+                          <td>{formatDate(result.date)}</td>
+                          <td>{result.test}</td>
+                          <td>{result.value}</td>
+                          <td>
+                            <span className={`lab-status ${result.status === 'Normal' ? 'normal' : 'abnormal'}`}>
+                              {result.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    : null
+                  }
                 </tbody>
               </table>
-              {patient.labResults.length === 0 && (
+              {(!patient.labResults || patient.labResults.length === 0) && (
                 <p className="empty-state">Aucun résultat disponible</p>
               )}
             </div>
@@ -446,25 +348,25 @@ function PatientDetailPage() {
                 </button>
               </div>
               <div className="acts-list">
-                {(patient.acts || []).map((act) => (
-                  <div key={act.id} className="act-card">
-                    <div className="act-date">
-                      <span className="day">{new Date(act.date).getDate()}</span>
-                      <span className="month">{new Date(act.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
-                    </div>
-                    <div className="act-info">
-                      <h4>{act.type}</h4>
-                      <p className="act-report">{act.report}</p>
-                      <span className="act-doctor">{act.doctor}</span>
-                    </div>
-                    <span className={`act-status ${act.status === 'completed' ? 'completed' : 'pending'}`}>
-                      {act.status === 'completed' ? 'Terminé' : 'En attente'}
-                    </span>
-                  </div>
-                ))}
-                {(patient.acts || []).length === 0 && (
-                  <p className="empty-state">Aucun acte enregistré. <button type="button" className="link-btn" onClick={() => navigate(`/medical-acts?patientId=${patient.id}&new=1`)}>Ajouter un acte</button></p>
-                )}
+                {(patient.acts && Array.isArray(patient.acts) && patient.acts.length > 0)
+                  ? patient.acts.map((act) => (
+                      <div key={act.id} className="act-card">
+                        <div className="act-date">
+                          <span className="day">{new Date(act.date).getDate()}</span>
+                          <span className="month">{new Date(act.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                        </div>
+                        <div className="act-info">
+                          <h4>{act.type}</h4>
+                          <p className="act-report">{act.report}</p>
+                          <span className="act-doctor">{act.doctor}</span>
+                        </div>
+                        <span className={`act-status ${act.status === 'completed' ? 'completed' : 'pending'}`}>
+                          {act.status === 'completed' ? 'Terminé' : 'En attente'}
+                        </span>
+                      </div>
+                    ))
+                  : <p className="empty-state">Aucun acte enregistré. <button type="button" className="link-btn" onClick={() => navigate(`/medical-acts?patientId=${patient.id}&new=1`)}>Ajouter un acte</button></p>
+                }
               </div>
             </div>
           )}

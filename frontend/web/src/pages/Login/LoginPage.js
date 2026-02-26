@@ -25,7 +25,15 @@ function LoginPage() {
         headers: { Authorization: `Bearer ${res.data.access_token}` }
       });
       const userData = await userRes.json();
-      localStorage.setItem('user', JSON.stringify(userData.user || userData));
+      // Ensure user object includes first_name, last_name, specialty
+      const userProfile = userData.user || userData;
+      const enrichedUser = {
+        ...userProfile,
+        first_name: userProfile.first_name || userProfile.firstName || '',
+        last_name: userProfile.last_name || userProfile.lastName || '',
+        specialty: userProfile.specialty || '',
+      };
+      localStorage.setItem('user', JSON.stringify(enrichedUser));
       if (rememberMe) {
         localStorage.setItem('rememberEmail', email);
       }

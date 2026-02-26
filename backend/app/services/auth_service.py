@@ -53,6 +53,11 @@ def create_user(
     password: str,
     role: str = "doctor",
     is_admin: bool = False,
+    first_name: str = None,
+    last_name: str = None,
+    specialty: str = None,
+    phone: str = None,
+    department: str = None,
 ):
     hashed = hash_password(password)
     user = User(
@@ -61,6 +66,11 @@ def create_user(
         hashed_password=hashed,
         role=role,
         is_admin=is_admin,
+        first_name=first_name,
+        last_name=last_name,
+        specialty=specialty,
+        phone=phone,
+        department=department,
     )
     db.add(user)
     db.commit()

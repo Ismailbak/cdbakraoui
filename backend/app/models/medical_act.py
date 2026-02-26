@@ -15,6 +15,10 @@ class MedicalAct(Base):
     status = Column(String(20), default="completed")
     doctor_id = Column(Integer, nullable=True)  # Médecin principal
     assigned_staff_ids = Column(Text, nullable=True)  # JSON array of staff IDs for multi-assignment
+    amount = Column(String(20), nullable=True)
+    category = Column(String(50), nullable=True)
+    diagnosis = Column(Text, nullable=True)
+    treatment = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 
