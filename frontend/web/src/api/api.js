@@ -52,6 +52,7 @@ export const sendChatMessage = (message, patientId) =>
 
 // Analytics & Notifications
 export const getAnalyticsSummary = () => api.get('/analytics/summary');
+export const getRecentActivity = () => api.get('/analytics/recent-activity');
 export const getNotifications = () => api.get('/notifications/');
 export const markNotificationRead = (id) => api.post(`/notifications/read/${id}`);
 

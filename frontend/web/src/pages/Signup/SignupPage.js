@@ -118,8 +118,54 @@ function SignupPage() {
 
   const passwordStrength = getPasswordStrength();
 
+  // Modal state for terms/privacy
+  const [modalContent, setModalContent] = useState({ open: false, type: null });
+
+  // Dummy content for terms/privacy (replace with actual content or fetch)
+  const termsContent = (
+    <div>
+      <h3>Conditions d'utilisation</h3>
+      <p>Bienvenue sur RhumatoAI. En utilisant cette plateforme, vous acceptez de respecter les règles et conditions suivantes...</p>
+      <ul>
+        <li>Utilisation professionnelle uniquement.</li>
+        <li>Respect de la confidentialité des données patients.</li>
+        <li>Interdiction de partage non autorisé.</li>
+      </ul>
+    </div>
+  );
+  const privacyContent = (
+    <div>
+      <h3>Politique de confidentialité</h3>
+      <p>Vos données sont protégées et utilisées uniquement dans le cadre de votre activité médicale sur RhumatoAI...</p>
+      <ul>
+        <li>Stockage sécurisé et crypté.</li>
+        <li>Aucune revente de données.</li>
+        <li>Accès limité aux membres autorisés.</li>
+      </ul>
+    </div>
+  );
+
+  // Modal card for terms/privacy
+  const renderModalCard = () => {
+    if (!modalContent.open) return null;
+    return (
+      <div className="modal-overlay" onClick={() => setModalContent({ open: false, type: null })}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>{modalContent.type === 'terms' ? "Conditions d'utilisation" : "Politique de confidentialité"}</h2>
+            <button className="modal-close" onClick={() => setModalContent({ open: false, type: null })}>×</button>
+          </div>
+          <div className="modal-body">
+            {modalContent.type === 'terms' ? termsContent : privacyContent}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="auth-container signup-container">
+      {renderModalCard()}
       {/* Left Side - Branding */}
       <div className="auth-branding">
         <div className="branding-content">
@@ -383,8 +429,9 @@ function SignupPage() {
                     onChange={(e) => setAcceptTerms(e.target.checked)}
                   />
                   <span className="checkmark"></span>
-                  J'accepte les <a href="/terms">conditions d'utilisation</a> et la{' '}
-                  <a href="/privacy">politique de confidentialité</a>
+                  J'accepte les{' '}
+                  <a href="#" onClick={e => { e.preventDefault(); setModalContent({ open: true, type: 'terms' }); }}>conditions d'utilisation</a>{' '}et la{' '}
+                  <a href="#" onClick={e => { e.preventDefault(); setModalContent({ open: true, type: 'privacy' }); }}>politique de confidentialité</a>
                 </label>
 
                 <div className="form-buttons">

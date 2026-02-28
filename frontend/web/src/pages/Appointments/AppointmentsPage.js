@@ -54,6 +54,22 @@ const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 function AppointmentsPage() {
+    // State for selected day insights modal
+    const [insightsModal, setInsightsModal] = useState({ open: false, date: null, appointments: [] });
+
+    // Helper to open insights modal for a day
+    const openDayInsights = (dayObj) => {
+      if (!dayObj.currentMonth) return;
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
+      const dayAppointments = appointments.filter(apt => apt.date === dateStr);
+      setInsightsModal({ open: true, date: dateStr, appointments: dayAppointments });
+    };
+
+    // Helper to format date for modal
+    const formatDateForModal = (dateStr) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    };
   const [appointments, setAppointments] = useState([]);
   const [patientsData, setPatientsData] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -285,157 +301,245 @@ function AppointmentsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="appointments-stats">
-          {isLoading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
-          ) : (
-            <>
-              <StatCard 
-                icon={<FiCalendar />}
-                label="RDV Aujourd'hui"
-                percentage="Planifiés"
-                value={rdvToday}
-                color="blue"
-              />
-              <StatCard 
-                icon={<FiClock />}
-                label="Cette semaine"
-                percentage="Total"
-                value={rdvWeek}
-                color="green"
-              />
-              <StatCard 
-                icon={<FiCheck />}
-                label="Confirmés"
-                percentage="Ce mois"
-                value={confirmedThisMonth}
-                color="pink"
-              />
-              <StatCard 
-                icon={<FiUser />}
-                label="En attente"
-                percentage="À confirmer"
-                value={pending}
-                color="yellow"
-              />
-            </>
-          )}
-        </div>
+        {viewMode === 'list' ? (
+          <>
+            {/* Stats Cards */}
+            <div className="appointments-stats">
+              {isLoading ? (
+                <>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </>
+              ) : (
+                <>
+                  <StatCard 
+                    icon={<FiCalendar />}
+                    label="RDV Aujourd'hui"
+                    percentage="Planifiés"
+                    value={rdvToday}
+                    color="blue"
+                  />
+                  <StatCard 
+                    icon={<FiClock />}
+                    label="Cette semaine"
+                    percentage="Total"
+                    value={rdvWeek}
+                    color="green"
+                  />
+                  <StatCard 
+                    icon={<FiCheck />}
+                    label="Confirmés"
+                    percentage="Ce mois"
+                    value={confirmedThisMonth}
+                    color="pink"
+                  />
+                  <StatCard 
+                    icon={<FiUser />}
+                    label="En attente"
+                    percentage="À confirmer"
+                    value={pending}
+                    color="yellow"
+                  />
+                </>
+              )}
+            </div>
 
-        {/* Main Content Grid */}
-        <div className="appointments-content">
-          {/* Calendar Section */}
-          <div className="calendar-card">
+            {/* Main Content Grid */}
+            <div className="appointments-content">
+              {/* Calendar Section */}
+              <div className="calendar-card">
+                <div className="calendar-header">
+                  <h3>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+                  <div className="calendar-nav">
+                    <button onClick={() => navigateMonth(-1)}><FiChevronLeft /></button>
+                    <button onClick={() => navigateMonth(1)}><FiChevronRight /></button>
+                  </div>
+                </div>
+                
+                <div className="calendar-weekdays">
+                  {weekDays.map(day => (
+                    <div key={day} className="weekday">{day}</div>
+                  ))}
+                </div>
+                
+                <div className="calendar-days">
+                  {calendarDays.map((dayObj, index) => (
+                    <div 
+                      key={index}
+                      className={`calendar-day ${!dayObj.currentMonth ? 'other-month' : ''} ${isToday(dayObj.day, dayObj.currentMonth) ? 'today' : ''} ${isSelected(dayObj.day, dayObj.currentMonth) ? 'selected' : ''} ${hasAppointments(dayObj.day, dayObj.currentMonth) ? 'has-appointments' : ''}`}
+                      onClick={() => {
+                        if (dayObj.currentMonth) {
+                          setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), dayObj.day));
+                        }
+                      }}
+                    >
+                      <span>{dayObj.day}</span>
+                      {hasAppointments(dayObj.day, dayObj.currentMonth) && <div className="appointment-dot"></div>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick Stats */}
+                <div className="calendar-quick-stats">
+                  <div className="quick-stat">
+                    <span className="stat-dot confirmed"></span>
+                    <span>4 Confirmés</span>
+                  </div>
+                  <div className="quick-stat">
+                    <span className="stat-dot pending"></span>
+                    <span>2 En attente</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Appointments List */}
+              <div className="appointments-list-card">
+                <div className="list-header">
+                  <div className="list-title">
+                    <h3>Rendez-vous du jour</h3>
+                    <span className="selected-date">{formatSelectedDate(selectedDate)}</span>
+                  </div>
+                  <span className="appointment-count">{selectedDateAppointments.length} rendez-vous</span>
+                </div>
+
+                <div className="appointments-list">
+                  {selectedDateAppointments.length === 0 ? (
+                    <div className="no-appointments">
+                      <FiCalendar className="no-apt-icon" />
+                      <p>Aucun rendez-vous pour cette date</p>
+                      <button className="add-apt-btn" onClick={() => setShowAddModal(true)}>
+                        Ajouter un rendez-vous
+                      </button>
+                    </div>
+                  ) : (
+                    selectedDateAppointments.map(appointment => (
+                      <div key={appointment.id} className="appointment-item">
+                        <div className="appointment-time">
+                          <span className="time">{appointment.time}</span>
+                          <span className="duration">{appointment.duration} min</span>
+                        </div>
+                        <div className="appointment-details">
+                          <div className="appointment-main">
+                            <h4 className="patient-name">{appointment.patientName}</h4>
+                            <span className={`appointment-status ${getStatusColor(appointment.status)}`}>
+                              {getStatusLabel(appointment.status)}
+                            </span>
+                          </div>
+                          <p className="appointment-type">{appointment.type}</p>
+                          <p className="appointment-notes">{appointment.notes}</p>
+                          <div className="appointment-contact">
+                            <FiPhone /> {appointment.patientPhone}
+                          </div>
+                        </div>
+                        <div className="appointment-actions">
+                          {appointment.status === 'pending' && (
+                            <>
+                              <button className="action-btn confirm" title="Confirmer" onClick={() => handleConfirmAppointment(appointment.id)}>
+                                <FiCheck />
+                              </button>
+                              <button className="action-btn cancel" title="Annuler" onClick={() => handleCancelAppointment(appointment.id)}>
+                                <FiX />
+                              </button>
+                            </>
+                          )}
+                          <button className="action-btn edit" title="Modifier">
+                            <FiEdit2 />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          // Full-page calendar mode
+          <div className="full-calendar-view">
             <div className="calendar-header">
-              <h3>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+              <h2>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
               <div className="calendar-nav">
                 <button onClick={() => navigateMonth(-1)}><FiChevronLeft /></button>
                 <button onClick={() => navigateMonth(1)}><FiChevronRight /></button>
               </div>
             </div>
-            
-            <div className="calendar-weekdays">
+            <div className="calendar-weekdays full">
               {weekDays.map(day => (
                 <div key={day} className="weekday">{day}</div>
               ))}
             </div>
-            
-            <div className="calendar-days">
-              {calendarDays.map((dayObj, index) => (
-                <div 
-                  key={index}
-                  className={`calendar-day ${!dayObj.currentMonth ? 'other-month' : ''} ${isToday(dayObj.day, dayObj.currentMonth) ? 'today' : ''} ${isSelected(dayObj.day, dayObj.currentMonth) ? 'selected' : ''} ${hasAppointments(dayObj.day, dayObj.currentMonth) ? 'has-appointments' : ''}`}
-                  onClick={() => {
-                    if (dayObj.currentMonth) {
-                      setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), dayObj.day));
-                    }
-                  }}
-                >
-                  <span>{dayObj.day}</span>
-                  {hasAppointments(dayObj.day, dayObj.currentMonth) && <div className="appointment-dot"></div>}
-                </div>
-              ))}
-            </div>
-
-            {/* Quick Stats */}
-            <div className="calendar-quick-stats">
-              <div className="quick-stat">
-                <span className="stat-dot confirmed"></span>
-                <span>4 Confirmés</span>
-              </div>
-              <div className="quick-stat">
-                <span className="stat-dot pending"></span>
-                <span>2 En attente</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Appointments List */}
-          <div className="appointments-list-card">
-            <div className="list-header">
-              <div className="list-title">
-                <h3>Rendez-vous du jour</h3>
-                <span className="selected-date">{formatSelectedDate(selectedDate)}</span>
-              </div>
-              <span className="appointment-count">{selectedDateAppointments.length} rendez-vous</span>
-            </div>
-
-            <div className="appointments-list">
-              {selectedDateAppointments.length === 0 ? (
-                <div className="no-appointments">
-                  <FiCalendar className="no-apt-icon" />
-                  <p>Aucun rendez-vous pour cette date</p>
-                  <button className="add-apt-btn" onClick={() => setShowAddModal(true)}>
-                    Ajouter un rendez-vous
-                  </button>
-                </div>
-              ) : (
-                selectedDateAppointments.map(appointment => (
-                  <div key={appointment.id} className="appointment-item">
-                    <div className="appointment-time">
-                      <span className="time">{appointment.time}</span>
-                      <span className="duration">{appointment.duration} min</span>
+            <div className="calendar-days full">
+              {calendarDays.map((dayObj, index) => {
+                // Get appointments for this day
+                const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
+                const dayAppointments = dayObj.currentMonth ? appointments.filter(apt => apt.date === dateStr) : [];
+                return (
+                  <div
+                    key={index}
+                    className={`calendar-day full clickable ${!dayObj.currentMonth ? 'other-month' : ''} ${isToday(dayObj.day, dayObj.currentMonth) ? 'today' : ''}`}
+                    onClick={() => openDayInsights(dayObj)}
+                    tabIndex={dayObj.currentMonth ? 0 : -1}
+                    style={{ cursor: dayObj.currentMonth ? 'pointer' : 'default', outline: 'none' }}
+                  >
+                    <span className="day-number">{dayObj.day}</span>
+                    <div className="day-appointments">
+                      {dayAppointments.map(apt => (
+                        <div
+                          key={apt.id}
+                          className={`apt-chip ${getStatusColor(apt.status)}`}
+                          title={`${apt.patientName} (${getStatusLabel(apt.status)})`}
+                        >
+                          <span className="apt-time">{apt.time}</span>
+                          <span className="apt-patient">{apt.patientName}</span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="appointment-details">
-                      <div className="appointment-main">
-                        <h4 className="patient-name">{appointment.patientName}</h4>
-                        <span className={`appointment-status ${getStatusColor(appointment.status)}`}>
-                          {getStatusLabel(appointment.status)}
-                        </span>
-                      </div>
-                      <p className="appointment-type">{appointment.type}</p>
-                      <p className="appointment-notes">{appointment.notes}</p>
-                      <div className="appointment-contact">
-                        <FiPhone /> {appointment.patientPhone}
-                      </div>
-                    </div>
-                    <div className="appointment-actions">
-                      {appointment.status === 'pending' && (
-                        <>
-                          <button className="action-btn confirm" title="Confirmer" onClick={() => handleConfirmAppointment(appointment.id)}>
-                            <FiCheck />
-                          </button>
-                          <button className="action-btn cancel" title="Annuler" onClick={() => handleCancelAppointment(appointment.id)}>
-                            <FiX />
-                          </button>
-                        </>
-                      )}
-                      <button className="action-btn edit" title="Modifier">
-                        <FiEdit2 />
-                      </button>
-                    </div>
+                    {dayObj.currentMonth && dayAppointments.length > 0 && (
+                      <span className="day-insights-icon" title="Voir les rendez-vous">🔍</span>
+                    )}
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
+            {/* Insights Modal */}
+            {insightsModal.open && (
+              <div className="modal-overlay" onClick={() => setInsightsModal({ open: false, date: null, appointments: [] })}>
+                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h2>Rendez-vous du {formatDateForModal(insightsModal.date)}</h2>
+                    <button className="modal-close" onClick={() => setInsightsModal({ open: false, date: null, appointments: [] })}>×</button>
+                  </div>
+                  <div className="insights-list">
+                    {insightsModal.appointments.length === 0 ? (
+                      <div className="no-appointments">
+                        <FiCalendar className="no-apt-icon" />
+                        <p>Aucun rendez-vous pour cette date</p>
+                      </div>
+                    ) : (
+                      insightsModal.appointments.map(apt => (
+                        <div key={apt.id} className="insight-apt-item">
+                          <div className={`apt-chip ${getStatusColor(apt.status)}`}
+                            style={{ marginBottom: 6 }}>
+                            <span className="apt-time">{apt.time}</span>
+                            <span className="apt-patient">{apt.patientName}</span>
+                          </div>
+                          <div className="apt-details">
+                            <span className="apt-type">{apt.type}</span>
+                            <span className={`apt-status ${getStatusColor(apt.status)}`}>{getStatusLabel(apt.status)}</span>
+                            {apt.notes && <p className="apt-notes">{apt.notes}</p>}
+                            {apt.patientPhone && <span className="apt-phone"><FiPhone /> {apt.patientPhone}</span>}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Add Appointment Modal */}
         {showAddModal && (

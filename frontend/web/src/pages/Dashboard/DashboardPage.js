@@ -4,10 +4,22 @@ import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart } from 'react-icon
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
-import { getPatients, getTodayAppointments, getMedicalActs, getAnalyticsSummary } from '../../api/api';
+import { getPatients, getTodayAppointments, getMedicalActs, getAnalyticsSummary, getRecentActivity } from '../../api/api';
 import './DashboardPage.css';
 
 const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
+
+function timeAgo(isoString) {
+  if (!isoString) return '';
+  const now = new Date();
+  const date = new Date(isoString);
+  const diff = Math.floor((now - date) / 1000);
+  if (diff < 60) return 'À l’instant';
+  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
+  if (diff < 172800) return 'Hier';
+  return date.toLocaleDateString();
+}
 
 function DashboardPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -17,16 +29,18 @@ function DashboardPage() {
       : user.username || user.name || user.email || 'Docteur';
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
+  const [activity, setActivity] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const [patientsRes, todayRes, actsRes, analyticsRes] = await Promise.all([
+        const [patientsRes, todayRes, actsRes, analyticsRes, activityRes] = await Promise.all([
           getPatients(),
           getTodayAppointments(),
           getMedicalActs(),
           getAnalyticsSummary(),
+          getRecentActivity(),
         ]);
         if (cancelled) return;
         const patients = patientsRes.data || [];
@@ -39,8 +53,12 @@ function DashboardPage() {
           medicalActs: acts.length,
           commonDiagnoses: (analytics.common_diagnoses || []).slice(0, 5).map((name, i) => ({ name, value: 20 - i * 3, color: diagnosisColors[i] })),
         });
+        setActivity((activityRes.data && activityRes.data.activities) || []);
       } catch {
-        if (!cancelled) setStats({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
+        if (!cancelled) {
+          setStats({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
+          setActivity([]);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -158,30 +176,17 @@ function DashboardPage() {
             <div className="activity-card">
               <h3>Activité Récente</h3>
               <div className="activity-list">
-                <div className="activity-item">
-                  <div className="activity-icon patient">👤</div>
-                  <div className="activity-info">
-                    <p className="activity-title">Nouveau patient ajouté</p>
-                    <p className="activity-subtitle">Mohamed Alami</p>
+                {activity.length === 0 && <div className="activity-item">Aucune activité récente</div>}
+                {activity.slice(0, 4).map((item, idx) => (
+                  <div className={`activity-item ${item.type}`} key={idx}>
+                    <div className={`activity-icon ${item.type}`}>{item.type === 'patient' ? '👤' : item.type === 'appointment' ? '📅' : '📋'}</div>
+                    <div className="activity-info">
+                      <p className="activity-title">{item.title}</p>
+                      <p className="activity-subtitle">{item.subtitle}</p>
+                    </div>
+                    <span className="activity-time">{timeAgo(item.time)}</span>
                   </div>
-                  <span className="activity-time">Il y a 2h</span>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon appointment">📅</div>
-                  <div className="activity-info">
-                    <p className="activity-title">Rendez-vous confirmé</p>
-                    <p className="activity-subtitle">Fatima Benali - 14:30</p>
-                  </div>
-                  <span className="activity-time">Il y a 3h</span>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon medical">📋</div>
-                  <div className="activity-info">
-                    <p className="activity-title">Acte médical créé</p>
-                    <p className="activity-subtitle">Consultation rhumatologie</p>
-                  </div>
-                  <span className="activity-time">Hier</span>
-                </div>
+                ))}
               </div>
             </div>
           )}
