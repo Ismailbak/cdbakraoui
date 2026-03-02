@@ -589,7 +589,7 @@
   .medical-acts-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .medical-acts-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -601,29 +601,29 @@
     align-items: flex-start;
     gap: 15px;
   }
-  
+
   .search-filter-bar {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-box {
     min-width: 100%;
   }
-  
+
   .medical-acts-stats {
     grid-template-columns: 1fr;
   }
-  
+
   .medical-acts-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .form-row,
   .detail-row {
     grid-template-columns: 1fr;
   }
-  
+
   .detail-actions {
     flex-wrap: wrap;
   }

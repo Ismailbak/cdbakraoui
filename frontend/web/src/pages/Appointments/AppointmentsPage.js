@@ -3,7 +3,8 @@ import { FiCalendar, FiClock, FiUser, FiPlus, FiChevronLeft, FiChevronRight, FiC
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonListItem, useToast } from '../../components/common';
-import { getAppointments, getPatients, createAppointment, updateAppointment, deleteAppointment } from '../../api/api';
+import { getAppointments, getPatients, updateAppointment, deleteAppointment } from '../../api/api';
+import AppointmentForm from '../../components/AppointmentForm';
 import './AppointmentsPage.css';
 
 function mapApiAppointmentToUi(apt) {
@@ -27,26 +28,26 @@ const generateCalendarDays = (year, month) => {
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
   const startingDay = firstDay.getDay();
-  
+
   const days = [];
-  
+
   // Previous month days
   const prevMonthLastDay = new Date(year, month, 0).getDate();
   for (let i = startingDay - 1; i >= 0; i--) {
     days.push({ day: prevMonthLastDay - i, currentMonth: false });
   }
-  
+
   // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
     days.push({ day: i, currentMonth: true });
   }
-  
+
   // Next month days
   const remainingDays = 42 - days.length;
   for (let i = 1; i <= remainingDays; i++) {
     days.push({ day: i, currentMonth: false });
   }
-  
+
   return days;
 };
 
@@ -54,22 +55,22 @@ const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 function AppointmentsPage() {
-    // State for selected day insights modal
-    const [insightsModal, setInsightsModal] = useState({ open: false, date: null, appointments: [] });
+  // State for selected day insights modal
+  const [insightsModal, setInsightsModal] = useState({ open: false, date: null, appointments: [] });
 
-    // Helper to open insights modal for a day
-    const openDayInsights = (dayObj) => {
-      if (!dayObj.currentMonth) return;
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
-      const dayAppointments = appointments.filter(apt => apt.date === dateStr);
-      setInsightsModal({ open: true, date: dateStr, appointments: dayAppointments });
-    };
+  // Helper to open insights modal for a day
+  const openDayInsights = (dayObj) => {
+    if (!dayObj.currentMonth) return;
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
+    const dayAppointments = appointments.filter(apt => apt.date === dateStr);
+    setInsightsModal({ open: true, date: dateStr, appointments: dayAppointments });
+  };
 
-    // Helper to format date for modal
-    const formatDateForModal = (dateStr) => {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    };
+  // Helper to format date for modal
+  const formatDateForModal = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
   const [appointments, setAppointments] = useState([]);
   const [patientsData, setPatientsData] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -146,7 +147,7 @@ function AppointmentsPage() {
   }, []);
 
   const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
-  
+
   const navigateMonth = (direction) => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
   };
@@ -163,7 +164,7 @@ function AppointmentsPage() {
   const selectedDateAppointments = getAppointmentsForDate(selectedDate);
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'confirmed': return 'confirmed';
       case 'pending': return 'pending';
       case 'cancelled': return 'cancelled';
@@ -172,7 +173,7 @@ function AppointmentsPage() {
   };
 
   const getStatusLabel = (status) => {
-    switch(status) {
+    switch (status) {
       case 'confirmed': return 'Confirmé';
       case 'pending': return 'En attente';
       case 'cancelled': return 'Annulé';
@@ -259,15 +260,15 @@ function AppointmentsPage() {
     if (!currentMonth) return false;
     const today = new Date();
     return day === today.getDate() &&
-           currentDate.getMonth() === today.getMonth() &&
-           currentDate.getFullYear() === today.getFullYear();
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear();
   };
 
   const isSelected = (day, currentMonth) => {
     if (!currentMonth) return false;
-    return day === selectedDate.getDate() && 
-           currentDate.getMonth() === selectedDate.getMonth() && 
-           currentDate.getFullYear() === selectedDate.getFullYear();
+    return day === selectedDate.getDate() &&
+      currentDate.getMonth() === selectedDate.getMonth() &&
+      currentDate.getFullYear() === selectedDate.getFullYear();
   };
 
   return (
@@ -281,13 +282,13 @@ function AppointmentsPage() {
           </div>
           <div className="header-actions">
             <div className="view-toggle">
-              <button 
+              <button
                 className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
                 onClick={() => setViewMode('list')}
               >
                 Liste
               </button>
-              <button 
+              <button
                 className={`view-btn ${viewMode === 'calendar' ? 'active' : ''}`}
                 onClick={() => setViewMode('calendar')}
               >
@@ -314,28 +315,28 @@ function AppointmentsPage() {
                 </>
               ) : (
                 <>
-                  <StatCard 
+                  <StatCard
                     icon={<FiCalendar />}
                     label="RDV Aujourd'hui"
                     percentage="Planifiés"
                     value={rdvToday}
                     color="blue"
                   />
-                  <StatCard 
+                  <StatCard
                     icon={<FiClock />}
                     label="Cette semaine"
                     percentage="Total"
                     value={rdvWeek}
                     color="green"
                   />
-                  <StatCard 
+                  <StatCard
                     icon={<FiCheck />}
                     label="Confirmés"
                     percentage="Ce mois"
                     value={confirmedThisMonth}
                     color="pink"
                   />
-                  <StatCard 
+                  <StatCard
                     icon={<FiUser />}
                     label="En attente"
                     percentage="À confirmer"
@@ -357,16 +358,16 @@ function AppointmentsPage() {
                     <button onClick={() => navigateMonth(1)}><FiChevronRight /></button>
                   </div>
                 </div>
-                
+
                 <div className="calendar-weekdays">
                   {weekDays.map(day => (
                     <div key={day} className="weekday">{day}</div>
                   ))}
                 </div>
-                
+
                 <div className="calendar-days">
                   {calendarDays.map((dayObj, index) => (
-                    <div 
+                    <div
                       key={index}
                       className={`calendar-day ${!dayObj.currentMonth ? 'other-month' : ''} ${isToday(dayObj.day, dayObj.currentMonth) ? 'today' : ''} ${isSelected(dayObj.day, dayObj.currentMonth) ? 'selected' : ''} ${hasAppointments(dayObj.day, dayObj.currentMonth) ? 'has-appointments' : ''}`}
                       onClick={() => {
@@ -545,111 +546,11 @@ function AppointmentsPage() {
         {showAddModal && (
           <div className="modal-overlay" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Nouveau Rendez-vous</h2>
-                <button className="modal-close" onClick={() => { setShowAddModal(false); resetAddForm(); }}>×</button>
-              </div>
-              <form className="appointment-form" onSubmit={handleAddSubmit}>
-                <div className="form-group">
-                  <label>Patient <span className="required">*</span></label>
-                  <select 
-                    name="patientId"
-                    value={addFormData.patientId}
-                    onChange={handleAddFormChange}
-                    required
-                  >
-                    <option value="">Sélectionner un patient</option>
-                    {patientsData.map(patient => (
-                      <option key={patient.id} value={patient.id}>{patient.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date <span className="required">*</span></label>
-                    <input 
-                      type="date" 
-                      name="date"
-                      value={addFormData.date}
-                      onChange={handleAddFormChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Heure <span className="required">*</span></label>
-                    <select 
-                      name="time"
-                      value={addFormData.time}
-                      onChange={handleAddFormChange}
-                      required
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="08:00">08:00</option>
-                      <option value="08:30">08:30</option>
-                      <option value="09:00">09:00</option>
-                      <option value="09:30">09:30</option>
-                      <option value="10:00">10:00</option>
-                      <option value="10:30">10:30</option>
-                      <option value="11:00">11:00</option>
-                      <option value="11:30">11:30</option>
-                      <option value="14:00">14:00</option>
-                      <option value="14:30">14:30</option>
-                      <option value="15:00">15:00</option>
-                      <option value="15:30">15:30</option>
-                      <option value="16:00">16:00</option>
-                      <option value="16:30">16:30</option>
-                      <option value="17:00">17:00</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Type de consultation <span className="required">*</span></label>
-                    <select 
-                      name="type"
-                      value={addFormData.type}
-                      onChange={handleAddFormChange}
-                      required
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="Première consultation">Première consultation</option>
-                      <option value="Consultation de suivi">Consultation de suivi</option>
-                      <option value="Consultation urgente">Consultation urgente</option>
-                      <option value="Contrôle">Contrôle</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Durée</label>
-                    <select 
-                      name="duration"
-                      value={addFormData.duration}
-                      onChange={handleAddFormChange}
-                    >
-                      <option value="30">30 minutes</option>
-                      <option value="45">45 minutes</option>
-                      <option value="60">1 heure</option>
-                      <option value="90">1h30</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Motif / Notes</label>
-                  <textarea 
-                    name="notes"
-                    value={addFormData.notes}
-                    onChange={handleAddFormChange}
-                    placeholder="Décrivez le motif de la consultation..."
-                  ></textarea>
-                </div>
-                <div className="form-actions">
-                  <button type="button" className="btn-cancel" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn-submit">
-                    Créer le rendez-vous
-                  </button>
-                </div>
-              </form>
+              <AppointmentForm
+                defaultDate={selectedDate.toISOString().split('T')[0]}
+                onSuccess={() => { loadAppointments(); toast.success('Rendez-vous créé avec succès'); }}
+                onClose={() => { setShowAddModal(false); resetAddForm(); }}
+              />
             </div>
           </div>
         )}

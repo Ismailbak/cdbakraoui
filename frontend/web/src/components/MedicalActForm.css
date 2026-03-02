@@ -1,0 +1,624 @@
+/* 
+   MedicalActForm — Modern 3-Step Form
+   Based on PatientForm and AppointmentForm design language
+*/
+
+.maf-wrapper {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 650px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header with Blue-Purple Gradient */
+.maf-header {
+    padding: 30px;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.maf-header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.maf-header-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    backdrop-filter: blur(5px);
+}
+
+.maf-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.maf-subtitle {
+    font-size: 13px;
+    opacity: 0.9;
+    margin: 2px 0 0 0;
+}
+
+.maf-close-btn {
+    background: rgba(0, 0, 0, 0.1);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.maf-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+/* Steps Indicator */
+.maf-steps {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 40px;
+    background: #fcfcfd;
+    border-bottom: 1px solid #f1f5f9;
+    position: relative;
+}
+
+.maf-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 2;
+    position: relative;
+}
+
+.maf-step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.maf-step-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.maf-step-line {
+    position: absolute;
+    top: 38px;
+    left: calc(50% + 20px);
+    width: calc(100% - 72px);
+    height: 2px;
+    background: #f1f5f9;
+    z-index: 1;
+}
+
+.maf-step.active .maf-step-circle {
+    border-color: #4F46E5;
+    color: #4F46E5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
+.maf-step.active .maf-step-label {
+    color: #4F46E5;
+}
+
+.maf-step.completed .maf-step-circle {
+    background: #4F46E5;
+    border-color: #4F46E5;
+    color: white;
+}
+
+.maf-step-line.completed {
+    background: #4F46E5;
+}
+
+/* Form Sections */
+.maf-form {
+    padding: 30px;
+}
+
+.maf-section {
+    animation: sectionSlide 0.3s ease-out;
+}
+
+@keyframes sectionSlide {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.maf-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 25px;
+    color: #1e293b;
+}
+
+.maf-section-icon {
+    font-size: 18px;
+    color: #4F46E5;
+}
+
+.maf-section-title span {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Controls */
+.maf-field {
+    margin-bottom: 20px;
+}
+
+.maf-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+}
+
+.maf-required {
+    color: #ef4444;
+}
+
+.maf-input,
+.maf-textarea,
+.maf-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.maf-input:focus,
+.maf-textarea:focus,
+.maf-select:focus {
+    outline: none;
+    background: white;
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.05);
+}
+
+.maf-input-icon-wrapper {
+    position: relative;
+}
+
+.maf-input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 16px;
+}
+
+.maf-input-with-icon {
+    padding-left: 42px;
+}
+
+/* Patient List Selection */
+.maf-search-box {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.maf-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.maf-search-input {
+    width: 100%;
+    padding: 12px 14px 12px 42px;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 12px;
+    font-size: 14px;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+}
+
+.maf-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: #4F46E5;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
+}
+
+.maf-patient-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #f1f5f9;
+    border-radius: 14px;
+    padding: 8px;
+    background: #f8fafc;
+    margin-bottom: 20px;
+}
+
+.maf-patient-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    margin-bottom: 4px;
+    background: white;
+}
+
+.maf-patient-card:hover {
+    background: #f1f5f9;
+}
+
+.maf-patient-card.selected {
+    background: #eff6ff;
+    border-color: #4F46E5;
+}
+
+.maf-patient-avatar {
+    width: 38px;
+    height: 38px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.maf-patient-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.maf-patient-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.maf-patient-meta {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.maf-patient-check {
+    color: #4F46E5;
+    font-size: 18px;
+}
+
+/* Radio Type Cards (Step 2) */
+.maf-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.maf-type-card {
+    padding: 16px 10px;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 14px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.maf-type-card:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.maf-type-card.selected {
+    border-color: #4F46E5;
+    background: #eff6ff;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+}
+
+.maf-type-icon {
+    font-size: 24px;
+}
+
+.maf-type-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.maf-type-card.selected .maf-type-label {
+    color: #4F46E5;
+}
+
+/* Category Chips */
+.maf-category-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.maf-cat-chip {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.maf-cat-chip:hover {
+    background: #e2e8f0;
+}
+
+.maf-cat-chip.selected {
+    color: white;
+}
+
+.maf-cat-chip.selected.rheumatology {
+    background: #4f46e5;
+}
+
+.maf-cat-chip.selected.imaging {
+    background: #d97706;
+}
+
+.maf-cat-chip.selected.intervention {
+    background: #db2777;
+}
+
+.maf-cat-chip.selected.laboratory {
+    background: #059669;
+}
+
+/* Status Toggle */
+.maf-status-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 12px;
+    gap: 4px;
+}
+
+.maf-status-btn {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #64748b;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.maf-status-btn.active.completed {
+    background: white;
+    color: #059669;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.maf-status-btn.active.pending {
+    background: white;
+    color: #d97706;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Layout Helpers */
+.maf-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Nav Buttons */
+.maf-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 20px;
+}
+
+.maf-btn-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    padding: 8px 12px;
+}
+
+.maf-btn-back:hover {
+    color: #1e293b;
+}
+
+.maf-nav-right {
+    display: flex;
+    gap: 12px;
+}
+
+.maf-btn-cancel {
+    background: #f1f5f9;
+    color: #64748b;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.maf-btn-next {
+    background: #4F46E5;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    transition: all 0.2s ease;
+}
+
+.maf-btn-next:hover {
+    background: #4338ca;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3);
+}
+
+.maf-btn-submit {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* Success State */
+.maf-success {
+    padding: 60px 40px;
+    text-align: center;
+    background: white;
+    border-radius: 20px;
+}
+
+.maf-success-icon {
+    width: 70px;
+    height: 70px;
+    background: #d1fae5;
+    color: #059669;
+    font-size: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes successPop {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Error States */
+.maf-input-error {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.maf-error-msg {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.maf-error-banner {
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    padding: 12px;
+    border-radius: 10px;
+    color: #b91c1c;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}

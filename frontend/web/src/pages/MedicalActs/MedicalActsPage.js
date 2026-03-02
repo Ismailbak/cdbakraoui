@@ -5,20 +5,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  FiFileText, FiPlus, FiSearch, FiEye, FiEdit2,
-  FiDownload, FiPrinter, FiClipboard, FiActivity,
-  FiUser, FiPaperclip, FiTrash2,
+  FiFileText, FiPlus, FiSearch, FiEye, FiEdit2, FiDownload, FiPrinter,
+  FiClipboard, FiActivity, FiUser, FiPaperclip, FiTrash2, FiChevronRight,
+  FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign
 } from 'react-icons/fi';
 
-import {
-  getMedicalActs,
-  createMedicalAct,
-  getPatients,
-  deleteMedicalAct,
-} from '../../api/api';
+import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct } from '../../api/api';
 import Layout from '../../components/layout/Layout';
+import { Breadcrumb, LoadingSpinner } from '../../components/common';
+import { SkeletonCard } from '../../components/common/Skeleton';
 import StatCard from '../../components/cards/StatCard';
-import { SkeletonCard } from '../../components/common';
+import MedicalActForm from '../../components/MedicalActForm';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import './MedicalActsPage.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -53,6 +51,25 @@ const EMPTY_FORM = {
 // Abstracts all API calls so the component stays clean.
 
 const medicalActsService = {
+  /** Updates a medical act, mapping camelCase form fields to backend snake_case. */
+  async updateAct(data) {
+    const mapped = {
+      patient_id: data.patientId,
+      act_type: data.type,
+      description: data.notes || '',
+      report: data.report || '',
+      date: data.date,
+      notes: data.notes || '',
+      status: data.status,
+      doctor_id: data.doctorId || null,
+      assigned_staff_ids: JSON.stringify(data.assignedStaffIds || []),
+      amount: data.amount || '',
+      category: data.category || '',
+      diagnosis: data.diagnosis || '',
+      treatment: data.treatment || '',
+    };
+    await import('../../api/api').then(api => api.updateMedicalAct(data.id, mapped));
+  },
   /** Returns summary stats from the backend. */
   async getStats() {
     const { getMedicalActsStats } = await import('../../api/api');
@@ -137,7 +154,7 @@ const statusLabel = (status) => (status === 'completed' ? 'Terminé' : 'En cours
 //   onView   – callback to open the detail modal
 //   onDelete – callback to delete the act
 
-function ActCard({ act, onView, onDelete }) {
+function ActCard({ act, onView, onDelete, onEdit }) {
   return (
     <div className="act-card">
       {/* Header: category badge + status badge */}
@@ -168,11 +185,8 @@ function ActCard({ act, onView, onDelete }) {
           <button className="action-btn view" title="Voir détails" onClick={() => onView(act)}>
             <FiEye />
           </button>
-          <button className="action-btn edit" title="Modifier">
+          <button className="action-btn edit" title="Modifier" onClick={() => onEdit(act)}>
             <FiEdit2 />
-          </button>
-          <button className="action-btn print" title="Imprimer">
-            <FiPrinter />
           </button>
           {/* Delete button: triggers confirmation in parent via onDelete prop */}
           <button
@@ -189,187 +203,7 @@ function ActCard({ act, onView, onDelete }) {
   );
 }
 
-// ─── AddActModal ──────────────────────────────────────────────────────────────
-// Modal form for creating a new medical act.
-// Props:
-//   onClose      – closes the modal without saving
-//   onSubmit     – async callback that receives the form data
-//   patients     – list of patient objects { id, name, ipp }
-//   staffOptions – list of staff objects { id, name }
-
-function AddActModal({ onClose, onSubmit, patients, staffOptions }) {
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
-
-  /** Generic handler: returns an onChange function that updates a specific field. */
-  const set = (field) => (e) =>
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-
-  /** Toggles a staff member's ID in the assignedStaffIds array. */
-  const toggleStaff = (id) =>
-    setFormData((prev) => ({
-      ...prev,
-      assignedStaffIds: prev.assignedStaffIds.includes(id)
-        ? prev.assignedStaffIds.filter((s) => s !== id)
-        : [...prev.assignedStaffIds, id],
-    }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await onSubmit(formData);
-      onClose();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      {/* Stop propagation so clicking inside the modal doesn't close it */}
-      <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Nouvel Acte Médical</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-
-        <form className="act-form" onSubmit={handleSubmit}>
-          {/* ── Section 1: Patient Info ── */}
-          <div className="form-section">
-            <h3 className="section-title">Informations Patient</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Patient</label>
-                <select value={formData.patientId} onChange={set('patientId')} required>
-                  <option value="">Sélectionner un patient</option>
-                  {patients.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.ipp})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Date de l'acte</label>
-                <input type="date" value={formData.date} onChange={set('date')} required />
-              </div>
-            </div>
-          </div>
-
-          {/* ── Section 2: Act Details ── */}
-          <div className="form-section">
-            <h3 className="section-title">Détails de l'Acte</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Type d'acte</label>
-                <select value={formData.type} onChange={set('type')}>
-                  {ACT_TYPES.filter((t) => t !== 'Tous').map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Catégorie</label>
-                <select value={formData.category} onChange={set('category')}>
-                  {Object.keys(CATEGORY_COLOR_MAP).map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Rapport de consultation</label>
-              <textarea
-                value={formData.report}
-                onChange={set('report')}
-                placeholder="Rapport structuré de la consultation..."
-                rows={3}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Diagnostic</label>
-              <input
-                type="text"
-                value={formData.diagnosis}
-                onChange={set('diagnosis')}
-                placeholder="Entrez le diagnostic..."
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Traitement / Prescription</label>
-              <textarea
-                value={formData.treatment}
-                onChange={set('treatment')}
-                placeholder="Décrivez le traitement ou la prescription..."
-              />
-            </div>
-
-            {/* Staff multi-select: renders a checkbox per staff member */}
-            <div className="form-group">
-              <label>Médecin(s) / Équipe assignée</label>
-              <div className="staff-multi-select">
-                {staffOptions.map((s) => (
-                  <label key={s.id} className="staff-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={formData.assignedStaffIds.includes(s.id)}
-                      onChange={() => toggleStaff(s.id)}
-                    />
-                    <span>{s.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Section 3: Billing ── */}
-          <div className="form-section">
-            <h3 className="section-title">Facturation</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Montant (DH)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={set('amount')}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="form-group">
-                <label>Statut</label>
-                <select value={formData.status} onChange={set('status')}>
-                  <option value="completed">Terminé</option>
-                  <option value="pending">En cours</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Notes additionnelles</label>
-            <textarea
-              value={formData.notes}
-              onChange={set('notes')}
-              placeholder="Notes ou observations supplémentaires..."
-            />
-          </div>
-
-          <div className="form-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>Annuler</button>
-            <button type="submit" className="btn-submit" disabled={submitting}>
-              {submitting ? 'Enregistrement...' : "Créer l'acte médical"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+// AddActModal was replaced by MedicalActForm component
 
 // ─── DetailModal ──────────────────────────────────────────────────────────────
 // Read-only detail view for a selected medical act.
@@ -414,7 +248,7 @@ function DetailModal({ act, onClose }) {
       doc.setFontSize(18);
       doc.text('Acte Médical', 10, y);
       doc.setFontSize(10);
-      doc.text(`Date de génération: ${new Date().toLocaleDateString('fr-FR')}`, 150, y);
+      doc.text(`Date de génération: ${new Date().toLocaleDateString('fr-FR')} `, 150, y);
       y += 10;
 
       // Patient Information
@@ -422,11 +256,11 @@ function DetailModal({ act, onClose }) {
       doc.text('Informations Patient', 10, y);
       y += 7;
       doc.setFontSize(10);
-      doc.text(`Nom: ${act.patientName || '-'}`, 10, y);
-      doc.text(`ID/IPP: ${act.patientIdDisplay ?? act.patientId ?? '-'}`, 80, y);
+      doc.text(`Nom: ${act.patientName || '-'} `, 10, y);
+      doc.text(`ID / IPP: ${act.patientIdDisplay ?? act.patientId ?? '-'} `, 80, y);
       y += 6;
-      doc.text(`Date de naissance: ${act.patientDob || '-'}`, 10, y);
-      doc.text(`Contact: ${act.patientContact || '-'}`, 80, y);
+      doc.text(`Date de naissance: ${act.patientDob || '-'} `, 10, y);
+      doc.text(`Contact: ${act.patientContact || '-'} `, 80, y);
       y += 10;
 
       // Medical Act Details
@@ -434,13 +268,13 @@ function DetailModal({ act, onClose }) {
       doc.text('Détails de l’acte médical', 10, y);
       y += 7;
       doc.setFontSize(10);
-      doc.text(`Type: ${act.type || '-'}`, 10, y);
-      doc.text(`Catégorie: ${act.category || '-'}`, 80, y);
+      doc.text(`Type: ${act.type || '-'} `, 10, y);
+      doc.text(`Catégorie: ${act.category || '-'} `, 80, y);
       y += 6;
-      doc.text(`Date de l’acte: ${formatDate(act.date)}`, 10, y);
-      doc.text(`Médecin(s)/Équipe: ${act.doctor || '-'}${act.assignedStaff?.length > 1 ? ` + ${act.assignedStaff.length - 1} autre(s)` : ''}`, 80, y);
+      doc.text(`Date de l’acte: ${formatDate(act.date)} `, 10, y);
+      doc.text(`Médecin(s) / Équipe: ${act.doctor || '-'}${act.assignedStaff?.length > 1 ? ` + ${act.assignedStaff.length - 1} autre(s)` : ''} `, 80, y);
       y += 6;
-      doc.text(`Statut: ${statusLabel(act.status)}`, 10, y);
+      doc.text(`Statut: ${statusLabel(act.status)} `, 10, y);
       doc.text(`Montant: ${act.amount || '-'} DH`, 80, y);
       y += 10;
 
@@ -449,17 +283,17 @@ function DetailModal({ act, onClose }) {
       doc.text('Informations Cliniques', 10, y);
       y += 7;
       doc.setFontSize(10);
-      doc.text(`Diagnostic: ${act.diagnosis || '-'}`, 10, y);
+      doc.text(`Diagnostic: ${act.diagnosis || '-'} `, 10, y);
       y += 6;
-      doc.text(`Traitement/Prescription: ${act.treatment || '-'}`, 10, y);
+      doc.text(`Traitement / Prescription: ${act.treatment || '-'} `, 10, y);
       y += 6;
       if (act.report) {
         doc.text('Rapport de consultation:', 10, y);
         y += 6;
-        doc.text(`${act.report}`, 10, y, { maxWidth: 180 });
+        doc.text(`${act.report} `, 10, y, { maxWidth: 180 });
         y += 10;
       }
-      doc.text(`Notes: ${act.notes || '-'}`, 10, y);
+      doc.text(`Notes: ${act.notes || '-'} `, 10, y);
       y += 10;
 
       // Attached Documents
@@ -583,11 +417,11 @@ function DetailModal({ act, onClose }) {
             <ul className="documents-list">
               {(act.documents ?? []).length > 0
                 ? act.documents.map((doc) => (
-                    <li key={doc.id}>
-                      <a href="#view" className="doc-link">{doc.filename}</a>
-                      <span className="doc-date">{doc.date}</span>
-                    </li>
-                  ))
+                  <li key={doc.id}>
+                    <a href="#view" className="doc-link">{doc.filename}</a>
+                    <span className="doc-date">{doc.date}</span>
+                  </li>
+                ))
                 : (
                   <li className="no-docs">
                     Aucun document.{' '}
@@ -628,14 +462,25 @@ function DetailModal({ act, onClose }) {
         {showEditModal && (
           <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Modifier l'acte médical</h2>
-                <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
-              </div>
-              <div className="modal-body">
-                {/* TODO: Implement edit form with pre-filled data and update logic */}
-                <p>Formulaire d’édition à implémenter.</p>
-              </div>
+              <MedicalActForm
+                initialData={{
+                  id: act.id,
+                  patientId: act.patientId,
+                  patientName: act.patientName,
+                  date: act.date,
+                  type: act.type,
+                  category: act.category,
+                  diagnosis: act.diagnosis,
+                  report: act.report,
+                  amount: act.amount,
+                  status: act.status,
+                  treatment: act.treatment,
+                  notes: act.notes,
+                }}
+                isEdit={true}
+                onSuccess={loadActs}
+                onClose={() => setShowEditModal(false)}
+              />
             </div>
           </div>
         )}
@@ -666,6 +511,9 @@ function MedicalActsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   // Holds the act selected for the detail modal (null = closed)
   const [selectedAct, setSelectedAct] = useState(null);
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editAct, setEditAct] = useState(null);
 
   // ── Data Loaders ────────────────────────────────────────────────────────────
 
@@ -722,21 +570,48 @@ function MedicalActsPage() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  /** Confirms and deletes a medical act, then refreshes the list. */
-  const handleDeleteAct = async (id) => {
-    if (window.confirm('Voulez-vous vraiment supprimer cet acte médical ?')) {
-      try {
-        await deleteMedicalAct(id);
-        await loadActs();
-      } catch (err) {
-        setError(err.message ?? 'Erreur lors de la suppression');
-      }
+  // State for delete confirmation dialog
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, actId: null });
+
+  /** Opens the delete confirmation dialog */
+  const openDeleteDialog = (id) => {
+    setDeleteDialog({ open: true, actId: id });
+  };
+
+  /** Handles confirmed delete */
+  const confirmDeleteAct = async () => {
+    const id = deleteDialog.actId;
+    setDeleteDialog({ open: false, actId: null });
+    try {
+      await deleteMedicalAct(id);
+      await loadActs();
+    } catch (err) {
+      setError(err.message ?? 'Erreur lors de la suppression');
     }
+  };
+
+  /** Cancels delete dialog */
+  const cancelDeleteAct = () => {
+    setDeleteDialog({ open: false, actId: null });
   };
 
   /** Creates a new act via the service layer, then refreshes the list. */
   const handleCreateAct = async (formData) => {
     await medicalActsService.createAct(formData);
+    await loadActs();
+  };
+
+  /** Opens the edit modal with the selected act */
+  const handleEditAct = (act) => {
+    setEditAct(act);
+    setShowEditModal(true);
+  };
+
+  /** Updates an act via the service layer, then refreshes the list. */
+  const handleUpdateAct = async (formData) => {
+    await medicalActsService.updateAct(formData);
+    setShowEditModal(false);
+    setEditAct(null);
     await loadActs();
   };
 
@@ -765,10 +640,10 @@ function MedicalActsPage() {
             <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
           ) : (
             <>
-              <StatCard icon={<FiFileText />}  label="Total Actes"      percentage="Ce mois" value={stats.total}           color="blue"   />
-              <StatCard icon={<FiClipboard />} label="Consultations"    percentage="Ce mois" value={stats.consultations}   color="green"  />
-              <StatCard icon={<FiActivity />}  label="Interventions"    percentage="Ce mois" value={stats.interventions}   color="pink"   />
-              <StatCard icon={<FiUser />}      label="Patients traités" percentage="Ce mois" value={stats.treatedPatients} color="yellow" />
+              <StatCard icon={<FiFileText />} label="Total Actes" percentage="Ce mois" value={stats.total} color="blue" />
+              <StatCard icon={<FiClipboard />} label="Consultations" percentage="Ce mois" value={stats.consultations} color="green" />
+              <StatCard icon={<FiActivity />} label="Interventions" percentage="Ce mois" value={stats.interventions} color="pink" />
+              <StatCard icon={<FiUser />} label="Patients traités" percentage="Ce mois" value={stats.treatedPatients} color="yellow" />
             </>
           )}
         </div>
@@ -820,25 +695,77 @@ function MedicalActsPage() {
                 key={act.id}
                 act={act}
                 onView={setSelectedAct}
-                onDelete={handleDeleteAct}
+                onDelete={openDeleteDialog}
+                onEdit={handleEditAct}
               />
             ))
           )}
         </div>
 
-        {/* ── Add Act Modal ── */}
-        {showAddModal && (
-          <AddActModal
-            onClose={() => setShowAddModal(false)}
-            onSubmit={handleCreateAct}
-            patients={patients}
-            staffOptions={staffOptions}
-          />
-        )}
+        {/* ── Delete Confirm Dialog ── */}
+        <ConfirmDialog
+          open={deleteDialog.open}
+          title="Supprimer l'acte médical ?"
+          description="Cette action est irréversible. Toutes les données liées à cet acte seront supprimées."
+          onConfirm={confirmDeleteAct}
+          onCancel={cancelDeleteAct}
+        />
 
         {/* ── Detail Modal ── */}
         {selectedAct && (
-          <DetailModal act={selectedAct} onClose={() => setSelectedAct(null)} />
+          <DetailModal
+            act={selectedAct}
+            onClose={() => setSelectedAct(null)}
+          />
+        )}
+
+        {/* ── Add Act Modal ── */}
+        {showAddModal && (
+          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <MedicalActForm
+                onSuccess={() => {
+                  setShowAddModal(false);
+                  loadActs();
+                }}
+                onClose={() => setShowAddModal(false)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Edit Act Modal ── */}
+        {showEditModal && editAct && (
+          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <MedicalActForm
+                initialData={{
+                  id: editAct.id,
+                  patientId: editAct.patientId,
+                  patientName: editAct.patientName,
+                  date: editAct.date,
+                  type: editAct.type,
+                  category: editAct.category,
+                  diagnosis: editAct.diagnosis,
+                  report: editAct.report,
+                  amount: editAct.amount,
+                  status: editAct.status,
+                  treatment: editAct.treatment,
+                  notes: editAct.notes,
+                }}
+                isEdit={true}
+                onSuccess={() => {
+                  setShowEditModal(false);
+                  setEditAct(null);
+                  loadActs();
+                }}
+                onClose={() => {
+                  setShowEditModal(false);
+                  setEditAct(null);
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </Layout>

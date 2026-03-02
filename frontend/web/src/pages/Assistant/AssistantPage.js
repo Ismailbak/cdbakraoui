@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
+import {
   FiSend, FiMic, FiPaperclip, FiUser, FiCpu, FiMessageSquare,
   FiFileText, FiCalendar, FiActivity, FiHelpCircle, FiRefreshCw,
   FiThumbsUp, FiThumbsDown, FiCopy, FiMoreVertical, FiTrash2
@@ -7,15 +7,7 @@ import {
 import Layout from '../../components/layout/Layout';
 import './AssistantPage.css';
 
-// Sample chat history
-const initialMessages = [
-  {
-    id: 1,
-    type: 'assistant',
-    content: 'Bonjour Dr. Martin ! 👋 Je suis votre assistant IA spécialisé en rhumatologie. Comment puis-je vous aider aujourd\'hui ?',
-    timestamp: '09:00'
-  }
-];
+// Move initialMessages inside the component so it can use dynamic data
 
 // Suggested prompts
 const suggestedPrompts = [
@@ -146,11 +138,78 @@ Score ≥ 6 = PR définie
 };
 
 function AssistantPage() {
+  // Retrieve user info from localStorage to personalize greeting
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userName =
+    user.specialty === 'medecine-interne' && (user.last_name || user.lastName)
+      ? `Dr. ${user.last_name || user.lastName}`
+      : user.username || user.name || user.email || 'Docteur';
+
+  const initialMessages = [
+    {
+      id: 1,
+      type: 'assistant',
+      content: `Bonjour ${userName} ! 👋 Je suis votre assistant IA médical. Comment puis-je vous aider aujourd'hui ?`,
+      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    }
+  ];
+
   const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recognitionError, setRecognitionError] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'fr-FR';
+
+      recognition.onresult = (event) => {
+        let currentTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          currentTranscript += event.results[i][0].transcript;
+        }
+        // If we want to append to existing text, we could do prev + currentTranscript
+        // but for a clean dictation, we'll just set it to the current spoken phrase.
+        setInputValue((prev) => {
+          // Append only final results to avoid replacing user's manually typed text completely
+          if (event.results[event.results.length - 1].isFinal) {
+            return prev.trim() + (prev.trim() ? ' ' : '') + currentTranscript;
+          }
+          // For interim, we'll just show it. A more robust implementation would separate interim and final.
+          return currentTranscript;
+        });
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        if (event.error === 'not-allowed') {
+          setRecognitionError('Accès au microphone refusé.');
+        } else {
+          setRecognitionError(`Erreur audio: ${event.error}`);
+        }
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionRef.current = recognition;
+    } else {
+      setRecognitionError('La reconnaissance vocale n\'est pas supportée par votre navigateur.');
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -160,9 +219,29 @@ function AssistantPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Handle Recording Timer
+  useEffect(() => {
+    let interval;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingTime(0);
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   const getAIResponse = (userMessage) => {
     const lowerMessage = userMessage.toLowerCase();
-    
+
     if (lowerMessage.includes('résume') || lowerMessage.includes('dossier')) {
       return sampleResponses['résumer'];
     } else if (lowerMessage.includes('traitement') || lowerMessage.includes('recommand')) {
@@ -229,6 +308,60 @@ Je suis là pour vous assister dans vos décisions cliniques. 🩺`;
     navigator.clipboard.writeText(content);
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Simulate sending a file analysis request
+    const userMessage = {
+      id: messages.length + 1,
+      type: 'user',
+      content: `📁 Document joint : ${file.name}`,
+      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+
+    // AI Response for file
+    setTimeout(() => {
+      const aiResponse = {
+        id: messages.length + 2,
+        type: 'assistant',
+        content: `J'ai bien reçu le document "${file.name}". Je l'ai analysé virtuellement. Avez-vous une question spécifique concernant ces résultats ?`,
+        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1500);
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const toggleRecording = () => {
+    if (recognitionError && !recognitionRef.current) {
+      alert(recognitionError);
+      return;
+    }
+
+    if (isRecording) {
+      // Stop recognition
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      // Start recognition
+      try {
+        setInputValue(''); // Clear input for new dictation
+        setRecognitionError('');
+        recognitionRef.current?.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Error starting recognition:", err);
+      }
+    }
+  };
+
   return (
     <Layout>
       <div className="assistant-page">
@@ -246,8 +379,8 @@ Je suis là pour vous assister dans vos décisions cliniques. 🩺`;
             <h4>Suggestions</h4>
             <div className="suggestions-list">
               {suggestedPrompts.map((item, index) => (
-                <button 
-                  key={index} 
+                <button
+                  key={index}
                   className="suggestion-btn"
                   onClick={() => handlePromptClick(item.prompt)}
                 >
@@ -291,7 +424,7 @@ Je suis là pour vous assister dans vos décisions cliniques. 🩺`;
                 <p className="welcome-text">Essayez une de ces suggestions :</p>
                 <div className="prompt-cards">
                   {suggestedPrompts.map((item, index) => (
-                    <button 
+                    <button
                       key={index}
                       className="prompt-card"
                       onClick={() => handlePromptClick(item.prompt)}
@@ -306,8 +439,8 @@ Je suis là pour vous assister dans vos décisions cliniques. 🩺`;
             )}
 
             {messages.map((message) => (
-              <div 
-                key={message.id} 
+              <div
+                key={message.id}
                 className={`message ${message.type}`}
               >
                 <div className="message-avatar">
@@ -362,28 +495,59 @@ Je suis là pour vous assister dans vos décisions cliniques. 🩺`;
 
           {/* Input Area */}
           <div className="input-container">
-            <div className="input-wrapper">
-              <button className="input-action-btn" title="Joindre un fichier">
-                <FiPaperclip />
-              </button>
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Posez votre question médicale..."
-                rows={1}
-              />
-              <button className="input-action-btn" title="Message vocal">
+            <div className={`input-wrapper ${isRecording ? 'recording' : ''}`}>
+              {!isRecording && (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileUpload}
+                  />
+                  <button
+                    className="input-action-btn"
+                    title="Joindre un fichier"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <FiPaperclip />
+                  </button>
+                </>
+              )}
+
+              {isRecording ? (
+                <div className="recording-status">
+                  <span className="recording-dot"></span>
+                  <span className="recording-time">{formatTime(recordingTime)}</span>
+                  <span className="recording-text">Écoute en cours...</span>
+                </div>
+              ) : (
+                <textarea
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={recognitionError ? recognitionError : "Posez votre question médicale..."}
+                  rows={1}
+                />
+              )}
+
+              <button
+                className={`input-action-btn ${isRecording ? 'is-recording-btn' : ''}`}
+                title={isRecording ? "Arrêter l'enregistrement" : "Message vocal"}
+                onClick={toggleRecording}
+              >
                 <FiMic />
               </button>
-              <button 
-                className={`send-btn ${inputValue.trim() ? 'active' : ''}`}
-                onClick={() => handleSend()}
-                disabled={!inputValue.trim()}
-              >
-                <FiSend />
-              </button>
+
+              {!isRecording && (
+                <button
+                  className={`send-btn ${inputValue.trim() ? 'active' : ''}`}
+                  onClick={() => handleSend()}
+                  disabled={!inputValue.trim()}
+                >
+                  <FiSend />
+                </button>
+              )}
             </div>
             <p className="input-hint">
               💡 RhumatoAI peut faire des erreurs. Vérifiez les informations importantes.

@@ -4,7 +4,7 @@ import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart } from 'react-icon
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
-import { getPatients, getTodayAppointments, getMedicalActs, getAnalyticsSummary, getRecentActivity } from '../../api/api';
+import { getPatients, getAppointments, getTodayAppointments, getMedicalActs, getAnalyticsSummary, getRecentActivity } from '../../api/api';
 import './DashboardPage.css';
 
 const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
@@ -13,7 +13,9 @@ function timeAgo(isoString) {
   if (!isoString) return '';
   const now = new Date();
   const date = new Date(isoString);
-  const diff = Math.floor((now - date) / 1000);
+  let diff = Math.floor((now - date) / 1000);
+  // If activity is in the future or negative diff, show date
+  if (diff < 0) return date.toLocaleDateString();
   if (diff < 60) return 'À l’instant';
   if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
   if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
@@ -31,33 +33,99 @@ function DashboardPage() {
   const [stats, setStats] = useState({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
   const [activity, setActivity] = useState([]);
 
+  const [trendData, setTrendData] = useState([]);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      setIsLoading(true);
       try {
-        const [patientsRes, todayRes, actsRes, analyticsRes, activityRes] = await Promise.all([
-          getPatients(),
-          getTodayAppointments(),
-          getMedicalActs(),
-          getAnalyticsSummary(),
-          getRecentActivity(),
+        // Individual fetchers with catches to prevent total failure
+        const fetchPatients = getPatients().then(r => r.data).catch(e => { console.error("Patients Load Error:", e); return []; });
+        const fetchAppointments = getAppointments().then(r => r.data).catch(e => { console.error("Apps Load Error:", e); return []; });
+        const fetchActs = getMedicalActs().then(r => r.data).catch(e => { console.error("Acts Load Error:", e); return []; });
+        const fetchAnalytics = getAnalyticsSummary().then(r => r.data).catch(e => { console.error("Analytics Load Error:", e); return {}; });
+        const fetchRecentActivity = getRecentActivity().then(r => r.data?.activities).catch(e => { console.error("Activity Load Error:", e); return []; });
+
+        const [patients, appointmentsData, acts, analytics, remoteActivity] = await Promise.all([
+          fetchPatients, fetchAppointments, fetchActs, fetchAnalytics, fetchRecentActivity
         ]);
+
         if (cancelled) return;
-        const patients = patientsRes.data || [];
-        const today = todayRes.data || [];
-        const acts = actsRes.data || [];
-        const analytics = analyticsRes.data || {};
+
+        // Ensure we are working with arrays
+        const patientsSafe = Array.isArray(patients) ? patients : [];
+        const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
+        const actsSafe = Array.isArray(acts) ? acts : [];
+
+        // 1. Calculate Stats
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayApps = appointments.filter(a => a.date === todayStr);
+
         setStats({
-          totalPatients: patients.length,
-          todayAppointments: today.length,
-          medicalActs: acts.length,
-          commonDiagnoses: (analytics.common_diagnoses || []).slice(0, 5).map((name, i) => ({ name, value: 20 - i * 3, color: diagnosisColors[i] })),
+          totalPatients: patientsSafe.length,
+          todayAppointments: todayApps.length,
+          medicalActs: actsSafe.length,
+          commonDiagnoses: (analytics?.common_diagnoses || []).slice(0, 5).map((name, i) => ({
+            name,
+            value: 20 - i * 3,
+            color: diagnosisColors[i]
+          })),
         });
-        setActivity((activityRes.data && activityRes.data.activities) || []);
-      } catch {
+
+        // 2. Generate 7-Day Trend
+        const last7Days = [...Array(7)].map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          return d.toISOString().split('T')[0];
+        });
+
+        const newTrend = last7Days.map(date => {
+          const dayDate = new Date(date);
+          const dayName = dayDate.toLocaleDateString('fr-FR', { weekday: 'short' });
+          return {
+            name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+            rdv: appointments.filter(a => a.date === date).length,
+            actes: actsSafe.filter(a => a.date === date).length
+          };
+        });
+        setTrendData(newTrend);
+
+        // 3. Robust Recent Activity: Merge, format and sort
+        const recentPatients = patientsSafe.slice(-5).map(p => ({
+          type: 'patient',
+          title: `Nouveau Patient: ${p.name}`,
+          subtitle: `IPP: ${p.ipp || 'N/A'}`,
+          time: p.created_at || new Date().toISOString(),
+          icon: '👤'
+        }));
+
+        const recentActsData = actsSafe.slice(-5).map(a => ({
+          type: 'medical',
+          title: `${a.act_type}: ${a.patient_name || a.patientName || 'Patient'}`,
+          subtitle: a.diagnosis || 'Détails non spécifiés',
+          time: a.date,
+          icon: '📋'
+        }));
+
+        const recentAppsData = appointments.slice(-5).map(app => ({
+          type: 'appointment',
+          title: `RDV: ${app.patient_name || app.patientName || 'Patient'}`,
+          subtitle: `${app.time || ''} - ${app.type || 'Cons'}`,
+          time: `${app.date}T${app.time || '00:00'}`,
+          icon: '📅'
+        }));
+
+        const mergedActivity = [...recentPatients, ...recentActsData, ...recentAppsData]
+          .sort((a, b) => new Date(b.time) - new Date(a.time))
+          .slice(0, 4);
+
+        // Fallback to merged if remote is empty
+        setActivity(mergedActivity.length > 0 ? mergedActivity : (remoteActivity || []));
+
+      } catch (err) {
         if (!cancelled) {
-          setStats({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
-          setActivity([]);
+          console.error("Dashboard Global Load Error:", err);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -86,22 +154,37 @@ function DashboardPage() {
           ) : (
             <div className="chart-card">
               <div className="chart-header">
-                <h3>Rendez-vous</h3>
-                <span className="chart-date">Janvier 2026 ▼</span>
+                <h3>Activité Hebdomadaire</h3>
+                <div className="chart-legend-top">
+                  <span className="legend-item"><i className="dot rdv"></i> RDV</span>
+                  <span className="legend-item"><i className="dot actes"></i> Actes</span>
+                </div>
               </div>
               <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={[{ name: 'Rendez-vous', value: stats.todayAppointments }]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
-                  <YAxis stroke="#9CA3AF" fontSize={12} />
-                  <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#EF4444" 
-                    strokeWidth={2}
-                    dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6 }}
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#9CA3AF" fontSize={11} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rdv"
+                    name="Rendez-vous"
+                    stroke="#3B82F6"
+                    strokeWidth={3}
+                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="actes"
+                    name="Actes"
+                    stroke="#8B5CF6"
+                    strokeWidth={3}
+                    dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -121,35 +204,35 @@ function DashboardPage() {
             </>
           ) : (
             <>
-              <StatCard 
+              <StatCard
                 icon={<FiUsers />}
                 label="Patients"
                 percentage="Total"
                 value={`${stats.totalPatients} patients`}
                 color="pink"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiCalendar />}
                 label="Rendez-vous Aujourd'hui"
                 percentage="Planifiés"
                 value={`${stats.todayAppointments} rdv`}
                 color="blue"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiFileText />}
                 label="Actes Médicaux"
                 percentage="Total"
                 value={`${stats.medicalActs} actes`}
                 color="green"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiActivity />}
                 label="Consultations"
                 percentage="Total"
                 value={`${stats.medicalActs} actes`}
                 color="yellow"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiHeart />}
                 label="Diagnostics"
                 percentage="Fréquents"
@@ -176,10 +259,10 @@ function DashboardPage() {
             <div className="activity-card">
               <h3>Activité Récente</h3>
               <div className="activity-list">
-                {activity.length === 0 && <div className="activity-item">Aucune activité récente</div>}
-                {activity.slice(0, 4).map((item, idx) => (
+                {activity.length === 0 && <div className="activity-empty-state">Aucune activité récente à afficher</div>}
+                {activity.map((item, idx) => (
                   <div className={`activity-item ${item.type}`} key={idx}>
-                    <div className={`activity-icon ${item.type}`}>{item.type === 'patient' ? '👤' : item.type === 'appointment' ? '📅' : '📋'}</div>
+                    <div className={`activity-icon ${item.type}`}>{item.icon}</div>
                     <div className="activity-info">
                       <p className="activity-title">{item.title}</p>
                       <p className="activity-subtitle">{item.subtitle}</p>

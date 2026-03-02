@@ -1,0 +1,786 @@
+/* ============================================
+   AppointmentForm — Modern 3-Step Form
+   Matches PatientForm / app design system
+   ============================================ */
+
+.af-wrapper {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────── */
+.af-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 30px;
+    border-bottom: 1px solid #E5E7EB;
+    background: linear-gradient(135deg, #f0fdf4 0%, #e8f5e9 100%);
+}
+
+.af-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.af-header-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    flex-shrink: 0;
+}
+
+.af-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1E2A4A;
+    margin: 0 0 2px;
+}
+
+.af-subtitle {
+    font-size: 13px;
+    color: #6B7280;
+    margin: 0;
+}
+
+.af-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #F3F4F6;
+    color: #6B7280;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.af-close-btn:hover {
+    background: #E5E7EB;
+    color: #1E2A4A;
+}
+
+/* ── Steps ───────────────────────────────── */
+.af-steps {
+    display: flex;
+    align-items: center;
+    padding: 20px 30px;
+    background: #FAFBFF;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.af-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.af-step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid #E5E7EB;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #9CA3AF;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+.af-step.active .af-step-circle {
+    border-color: #059669;
+    background: #059669;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.15);
+}
+
+.af-step.completed .af-step-circle {
+    border-color: #047857;
+    background: #047857;
+    color: #fff;
+}
+
+.af-step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+}
+
+.af-step.active .af-step-label {
+    color: #059669;
+    font-weight: 600;
+}
+
+.af-step.completed .af-step-label {
+    color: #047857;
+}
+
+.af-step-line {
+    flex: 1;
+    height: 2px;
+    background: #E5E7EB;
+    margin-bottom: 18px;
+    transition: background 0.3s ease;
+}
+
+.af-step-line.completed {
+    background: #047857;
+}
+
+/* ── Form body ───────────────────────────── */
+.af-form {
+    padding: 28px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.af-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    animation: af-fadein 0.25s ease;
+}
+
+@keyframes af-fadein {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.af-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E2A4A;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.af-section-icon {
+    color: #059669;
+    font-size: 17px;
+}
+
+/* ── Patient search ──────────────────────── */
+.af-search-box {
+    position: relative;
+}
+
+.af-search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9CA3AF;
+    font-size: 15px;
+    pointer-events: none;
+}
+
+.af-search-input {
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #374151;
+    background: #FAFAFA;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.af-search-input:focus {
+    border-color: #059669;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+/* ── Patient List ────────────────────────── */
+.af-patient-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.af-patient-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.af-patient-list::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 4px;
+}
+
+.af-patient-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FAFAFA;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.af-patient-card:hover {
+    border-color: #6EE7B7;
+    background: #F0FDF4;
+}
+
+.af-patient-card.selected {
+    border-color: #059669;
+    background: #ECFDF5;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.af-patient-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.af-patient-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.af-patient-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E2A4A;
+}
+
+.af-patient-meta {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.af-patient-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #059669;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.af-loading,
+.af-empty {
+    text-align: center;
+    padding: 24px;
+    font-size: 13px;
+    color: #9CA3AF;
+}
+
+/* ── Selected Patient banner (step 2) ──────*/
+.af-selected-patient-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.af-banner-avatar {
+    font-size: 20px;
+}
+
+.af-banner-name {
+    font-weight: 600;
+    color: #065F46;
+}
+
+/* ── Generic field ───────────────────────── */
+.af-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.af-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.af-required {
+    color: #EF4444;
+    margin-left: 2px;
+}
+
+.af-optional {
+    font-size: 11px;
+    color: #9CA3AF;
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+/* ── Generic input ───────────────────────── */
+.af-input,
+.af-textarea {
+    padding: 11px 14px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #374151;
+    background: #FAFAFA;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.af-input:focus,
+.af-textarea:focus {
+    border-color: #059669;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.af-input-error {
+    border-color: #EF4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+}
+
+.af-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.af-input-icon-wrapper {
+    position: relative;
+}
+
+.af-input-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9CA3AF;
+    font-size: 15px;
+    pointer-events: none;
+}
+
+.af-input-with-icon {
+    padding-left: 38px;
+}
+
+/* ── Time chips grid ─────────────────────── */
+.af-time-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.af-time-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 6px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 9px;
+    background: #FAFAFA;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.af-time-chip:hover {
+    border-color: #6EE7B7;
+    background: #F0FDF4;
+    color: #059669;
+}
+
+.af-time-chip.selected {
+    border-color: #059669;
+    background: #059669;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+}
+
+.af-time-chip svg {
+    font-size: 12px;
+}
+
+/* ── Consultation type cards ─────────────── */
+.af-type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.af-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 10px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FAFAFA;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.af-type-card:hover {
+    border-color: #6EE7B7;
+    background: #F0FDF4;
+}
+
+.af-type-card.selected {
+    border-color: #059669;
+    background: #ECFDF5;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.af-type-icon {
+    font-size: 24px;
+}
+
+.af-type-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.af-type-card.selected .af-type-label {
+    color: #065F46;
+    font-weight: 600;
+}
+
+/* ── Duration chips ──────────────────────── */
+.af-duration-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.af-dur-chip {
+    padding: 9px 18px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #FAFAFA;
+}
+
+.af-dur-chip:hover {
+    border-color: #6EE7B7;
+    color: #059669;
+    background: #F0FDF4;
+}
+
+.af-dur-chip.selected {
+    border-color: #059669;
+    background: #059669;
+    color: #fff;
+}
+
+/* ── Summary pill (step 3) ───────────────── */
+.af-summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #065F46;
+    font-weight: 500;
+    align-self: flex-start;
+}
+
+.af-summary-pill svg {
+    font-size: 14px;
+}
+
+/* ── Error / banner ──────────────────────── */
+.af-error-msg {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #EF4444;
+}
+
+.af-error-msg svg {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.af-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #DC2626;
+}
+
+.af-error-banner svg {
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+/* ── Navigation ──────────────────────────── */
+.af-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.af-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.af-btn-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 20px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.af-btn-back:hover {
+    border-color: #D1D5DB;
+    background: #F9FAFB;
+    color: #374151;
+}
+
+.af-btn-cancel {
+    padding: 11px 20px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.af-btn-cancel:hover {
+    border-color: #D1D5DB;
+    background: #F9FAFB;
+}
+
+.af-btn-next {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    font-family: inherit;
+}
+
+.af-btn-next:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+}
+
+.af-btn-submit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 24px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    font-family: inherit;
+    min-width: 180px;
+    justify-content: center;
+}
+
+.af-btn-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+}
+
+.af-btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.af-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: af-spin 0.6s linear infinite;
+}
+
+@keyframes af-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Success ─────────────────────────────── */
+.af-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    animation: af-fadein 0.3s ease;
+}
+
+.af-success-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    color: #059669;
+    margin-bottom: 20px;
+    box-shadow: 0 0 0 10px rgba(5, 150, 105, 0.08);
+    animation: af-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes af-pop {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.af-success h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1E2A4A;
+    margin: 0 0 8px;
+}
+
+.af-success p {
+    font-size: 14px;
+    color: #6B7280;
+    margin: 0;
+}
+
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 600px) {
+
+    .af-header,
+    .af-steps,
+    .af-form {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .af-step-label {
+        display: none;
+    }
+
+    .af-time-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .af-type-grid {
+        grid-template-columns: 1fr;
+    }
+}

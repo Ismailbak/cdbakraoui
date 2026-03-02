@@ -1,4 +1,3 @@
-export const getMedicalActsStats = () => api.get('/medical-acts/stats');
 import axios from 'axios';
 
 const API_URL = 'http://localhost:8000/api';
@@ -55,5 +54,7 @@ export const getAnalyticsSummary = () => api.get('/analytics/summary');
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
 export const getNotifications = () => api.get('/notifications/');
 export const markNotificationRead = (id) => api.post(`/notifications/read/${id}`);
+
+export const getMedicalActsStats = () => api.get('/medical-acts/stats');
 
 export default api;

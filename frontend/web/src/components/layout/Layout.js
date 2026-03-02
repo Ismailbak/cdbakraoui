@@ -13,11 +13,11 @@ function Layout({ children }) {
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
 
   return (
-    <div className="layout">
+    <div className={`layout ${isAssistantPage ? 'no-scroll-layout' : ''}`}>
       <Sidebar />
       <Header />
       <main className={`main-content ${isAssistantPage ? 'no-scroll' : ''}`}>
-        {!isDashboard && <Breadcrumb />}
+        {!isDashboard && !isAssistantPage && <Breadcrumb />}
         {children}
       </main>
     </div>

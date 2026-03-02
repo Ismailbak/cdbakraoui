@@ -4,7 +4,8 @@ import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTra
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
-import { getPatients, createPatient, updatePatient, deletePatient } from '../../api/api';
+import { getPatients, updatePatient, deletePatient } from '../../api/api';
+import PatientForm from '../../components/PatientForm';
 import './PatientsPage.css';
 
 // Insurance / Mutuelle types for dropdown
@@ -31,7 +32,7 @@ function mapApiPatientToUi(p) {
 }
 
 function PatientsPage() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Tous');
@@ -42,21 +43,21 @@ function PatientsPage() {
   const [editFormData, setEditFormData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
-    const totalPatients = Array.isArray(patients) ? patients.length : 0;
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const newThisMonth = Array.isArray(patients) ? patients.filter(p => {
-      if (!p.createdAt && !p.date_of_birth) return false;
-      const created = p.createdAt ? new Date(p.createdAt) : new Date(p.date_of_birth);
-      return created >= startOfMonth && created <= now;
-    }).length : 0;
-    const todayStr = now.toISOString().slice(0, 10);
-    const rdvToday = Array.isArray(patients) ? patients.filter(p => {
-      if (!p.nextAppointment) return false;
-      const appt = new Date(p.nextAppointment);
-      return appt.toISOString().slice(0, 10) === todayStr;
-    }).length : 0;
-    const enAttente = Array.isArray(patients) ? patients.filter(p => p.status === 'En attente').length : 0;
+  const totalPatients = Array.isArray(patients) ? patients.length : 0;
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const newThisMonth = Array.isArray(patients) ? patients.filter(p => {
+    if (!p.createdAt && !p.date_of_birth) return false;
+    const created = p.createdAt ? new Date(p.createdAt) : new Date(p.date_of_birth);
+    return created >= startOfMonth && created <= now;
+  }).length : 0;
+  const todayStr = now.toISOString().slice(0, 10);
+  const rdvToday = Array.isArray(patients) ? patients.filter(p => {
+    if (!p.nextAppointment) return false;
+    const appt = new Date(p.nextAppointment);
+    return appt.toISOString().slice(0, 10) === todayStr;
+  }).length : 0;
+  const enAttente = Array.isArray(patients) ? patients.filter(p => p.status === 'En attente').length : 0;
   // Add patient form state
   const [addFormData, setAddFormData] = useState({
     ipp: '',
@@ -279,28 +280,28 @@ function PatientsPage() {
             </>
           ) : (
             <>
-              <StatCard 
+              <StatCard
                 icon={<FiUsers />}
                 label="Total Patients"
                 percentage=""
                 value={totalPatients}
                 color="blue"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiUserPlus />}
                 label="Nouveaux ce mois"
                 percentage=""
                 value={newThisMonth}
                 color="green"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiCalendar />}
                 label="RDV Aujourd'hui"
                 percentage=""
                 value={rdvToday}
                 color="pink"
               />
-              <StatCard 
+              <StatCard
                 icon={<FiUsers />}
                 label="En attente"
                 percentage=""
@@ -315,8 +316,8 @@ function PatientsPage() {
         <div className="search-filter-bar">
           <div className="search-box">
             <FiSearch className="search-icon" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Rechercher par IPP, nom, téléphone, diagnostic, ville..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -324,7 +325,7 @@ function PatientsPage() {
           </div>
           <div className="filter-buttons">
             {['Tous', 'Actif', 'En attente'].map(filter => (
-              <button 
+              <button
                 key={filter}
                 className={`filter-btn ${selectedFilter === filter ? 'active' : ''}`}
                 onClick={() => setSelectedFilter(filter)}
@@ -341,7 +342,7 @@ function PatientsPage() {
             <h3>Liste des Patients</h3>
             <span className="patient-count">{filteredPatients.length} patients</span>
           </div>
-          
+
           <div className="table-wrapper">
             <table className="patients-table">
               <thead>
@@ -437,243 +438,12 @@ function PatientsPage() {
 
         {/* Add Patient Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
+          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Nouveau Patient</h2>
-                <button className="modal-close" onClick={() => { setShowAddModal(false); resetAddForm(); }}>×</button>
-              </div>
-              <form className="patient-form" onSubmit={handleAddSubmit}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>IPP</label>
-                    <input 
-                      type="text" 
-                      name="ipp"
-                      value={addFormData.ipp}
-                      onChange={handleAddFormChange}
-                      placeholder="Ex: PAT-001 (optionnel)" 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Nom complet <span className="required">*</span></label>
-                    <input 
-                      type="text" 
-                      name="name"
-                      value={addFormData.name}
-                      onChange={handleAddFormChange}
-                      placeholder="Entrez le nom complet" 
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Date de naissance <span className="required">*</span></label>
-                    <input 
-                      type="date" 
-                      name="birthDate"
-                      value={addFormData.birthDate}
-                      onChange={handleAddFormChange}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Téléphone</label>
-                    <input 
-                      type="tel" 
-                      name="phone"
-                      value={addFormData.phone}
-                      onChange={handleAddFormChange}
-                      placeholder="+212 6 XX XX XX XX" 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input 
-                      type="email" 
-                      name="email"
-                      value={addFormData.email}
-                      onChange={handleAddFormChange}
-                      placeholder="email@example.com" 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Ville</label>
-                    <input 
-                      type="text" 
-                      name="city"
-                      value={addFormData.city}
-                      onChange={handleAddFormChange}
-                      placeholder="Ville" 
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Genre <span className="required">*</span></label>
-                    <select 
-                      name="gender"
-                      value={addFormData.gender}
-                      onChange={handleAddFormChange}
-                      required
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="homme">Homme</option>
-                      <option value="femme">Femme</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Assurance / Mutuelle</label>
-                    <select 
-                      name="insurance"
-                      value={addFormData.insurance}
-                      onChange={handleAddFormChange}
-                    >
-                      {INSURANCE_OPTIONS.map(opt => (
-                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>N° carte assurance</label>
-                    <input 
-                      type="text" 
-                      name="insuranceNumber"
-                      value={addFormData.insuranceNumber}
-                      onChange={handleAddFormChange}
-                      placeholder="N° carte" 
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Diagnostic initial <span className="required">*</span></label>
-                    <select 
-                      name="diagnosis"
-                      value={addFormData.diagnosis}
-                      onChange={handleAddFormChange}
-                      required
-                    >
-                      <option value="">Sélectionner un diagnostic</option>
-                      <option value="Polyarthrite rhumatoïde">Polyarthrite rhumatoïde</option>
-                      <option value="Lupus érythémateux">Lupus érythémateux</option>
-                      <option value="Arthrose">Arthrose</option>
-                      <option value="Fibromyalgie">Fibromyalgie</option>
-                      <option value="Spondylarthrite">Spondylarthrite</option>
-                      <option value="Sclérodermie">Sclérodermie</option>
-                      <option value="Goutte">Goutte</option>
-                      <option value="Autre">Autre</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-group full-width">
-                  <label>Notes médicales</label>
-                  <textarea 
-                    name="notes"
-                    value={addFormData.notes}
-                    onChange={handleAddFormChange}
-                    placeholder="Antécédents, allergies, observations..."
-                  ></textarea>
-                </div>
-                <div className="form-group full-width">
-                  <label>Notes administratives</label>
-                  <textarea 
-                    name="notesAdmin"
-                    value={addFormData.notesAdmin}
-                    onChange={handleAddFormChange}
-                    placeholder="Notes internes, rappels admin..."
-                  ></textarea>
-                </div>
-
-                {/* Appointment Section */}
-                <div className="form-section-divider">
-                  <span>Rendez-vous (optionnel)</span>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date du rendez-vous</label>
-                    <input 
-                      type="date" 
-                      name="appointmentDate"
-                      value={addFormData.appointmentDate}
-                      onChange={handleAddFormChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Heure</label>
-                    <select 
-                      name="appointmentTime"
-                      value={addFormData.appointmentTime}
-                      onChange={handleAddFormChange}
-                    >
-                      <option value="">Sélectionner l'heure</option>
-                      <option value="08:00">08:00</option>
-                      <option value="08:30">08:30</option>
-                      <option value="09:00">09:00</option>
-                      <option value="09:30">09:30</option>
-                      <option value="10:00">10:00</option>
-                      <option value="10:30">10:30</option>
-                      <option value="11:00">11:00</option>
-                      <option value="11:30">11:30</option>
-                      <option value="14:00">14:00</option>
-                      <option value="14:30">14:30</option>
-                      <option value="15:00">15:00</option>
-                      <option value="15:30">15:30</option>
-                      <option value="16:00">16:00</option>
-                      <option value="16:30">16:30</option>
-                      <option value="17:00">17:00</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Type de consultation</label>
-                    <select 
-                      name="consultationType"
-                      value={addFormData.consultationType}
-                      onChange={handleAddFormChange}
-                    >
-                      <option value="">Sélectionner le type</option>
-                      <option value="premiere">Première consultation</option>
-                      <option value="suivi">Consultation de suivi</option>
-                      <option value="urgence">Consultation urgente</option>
-                      <option value="controle">Contrôle</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Durée estimée</label>
-                    <select 
-                      name="duration"
-                      value={addFormData.duration}
-                      onChange={handleAddFormChange}
-                    >
-                      <option value="30">30 minutes</option>
-                      <option value="45">45 minutes</option>
-                      <option value="60">1 heure</option>
-                      <option value="90">1h30</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-group full-width">
-                  <label>Motif du rendez-vous</label>
-                  <textarea 
-                    name="appointmentReason"
-                    value={addFormData.appointmentReason}
-                    onChange={handleAddFormChange}
-                    placeholder="Décrivez le motif de la consultation..."
-                  ></textarea>
-                </div>
-
-                <div className="form-actions">
-                  <button type="button" className="btn-cancel" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn-submit">
-                    Ajouter le patient
-                  </button>
-                </div>
-              </form>
+              <PatientForm
+                onSuccess={() => { loadPatients(); toast.success('Patient ajouté avec succès'); }}
+                onClose={() => setShowAddModal(false)}
+              />
             </div>
           </div>
         )}
@@ -692,42 +462,42 @@ function PatientsPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>IPP</label>
-                    <input type="text" value={editFormData.ipp} onChange={(e) => setEditFormData({...editFormData, ipp: e.target.value})} />
+                    <input type="text" value={editFormData.ipp} onChange={(e) => setEditFormData({ ...editFormData, ipp: e.target.value })} />
                   </div>
                   <div className="form-group">
                     <label>Nom complet</label>
-                    <input type="text" value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} />
+                    <input type="text" value={editFormData.name} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
                   </div>
                   <div className="form-group">
                     <label>Âge</label>
-                    <input type="number" value={editFormData.age} onChange={(e) => setEditFormData({...editFormData, age: parseInt(e.target.value) || 0})} />
+                    <input type="number" value={editFormData.age} onChange={(e) => setEditFormData({ ...editFormData, age: parseInt(e.target.value) || 0 })} />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Téléphone</label>
-                    <input type="tel" value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} />
+                    <input type="tel" value={editFormData.phone} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} />
                   </div>
                   <div className="form-group">
                     <label>Email</label>
-                    <input type="email" value={editFormData.email} onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} />
+                    <input type="email" value={editFormData.email} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} />
                   </div>
                   <div className="form-group">
                     <label>Ville</label>
-                    <input type="text" value={editFormData.city} onChange={(e) => setEditFormData({...editFormData, city: e.target.value})} />
+                    <input type="text" value={editFormData.city} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Genre</label>
-                    <select value={editFormData.gender} onChange={(e) => setEditFormData({...editFormData, gender: e.target.value})}>
+                    <select value={editFormData.gender} onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}>
                       <option value="Homme">Homme</option>
                       <option value="Femme">Femme</option>
                     </select>
                   </div>
                   <div className="form-group">
                     <label>Assurance / Mutuelle</label>
-                    <select value={editFormData.insurance} onChange={(e) => setEditFormData({...editFormData, insurance: e.target.value})}>
+                    <select value={editFormData.insurance} onChange={(e) => setEditFormData({ ...editFormData, insurance: e.target.value })}>
                       {INSURANCE_OPTIONS.map(opt => (
                         <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
                       ))}
@@ -735,7 +505,7 @@ function PatientsPage() {
                   </div>
                   <div className="form-group">
                     <label>Statut</label>
-                    <select value={editFormData.status} onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}>
+                    <select value={editFormData.status} onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}>
                       <option value="Actif">Actif</option>
                       <option value="En attente">En attente</option>
                       <option value="Inactif">Inactif</option>
@@ -744,7 +514,7 @@ function PatientsPage() {
                 </div>
                 <div className="form-group full-width">
                   <label>Diagnostic</label>
-                  <select value={editFormData.diagnosis} onChange={(e) => setEditFormData({...editFormData, diagnosis: e.target.value})}>
+                  <select value={editFormData.diagnosis} onChange={(e) => setEditFormData({ ...editFormData, diagnosis: e.target.value })}>
                     <option value="Polyarthrite rhumatoïde">Polyarthrite rhumatoïde</option>
                     <option value="Lupus érythémateux">Lupus érythémateux</option>
                     <option value="Arthrose">Arthrose</option>
@@ -756,11 +526,11 @@ function PatientsPage() {
                 </div>
                 <div className="form-group full-width">
                   <label>Notes médicales</label>
-                  <textarea value={editFormData.notes} onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})} placeholder="Notes médicales" />
+                  <textarea value={editFormData.notes} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} placeholder="Notes médicales" />
                 </div>
                 <div className="form-group full-width">
                   <label>Notes administratives</label>
-                  <textarea value={editFormData.notesAdmin} onChange={(e) => setEditFormData({...editFormData, notesAdmin: e.target.value})} placeholder="Notes administratives" />
+                  <textarea value={editFormData.notesAdmin} onChange={(e) => setEditFormData({ ...editFormData, notesAdmin: e.target.value })} placeholder="Notes administratives" />
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>

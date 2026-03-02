@@ -62,13 +62,35 @@
 .chart-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #374151;
+  color: #1E2A4A;
 }
 
-.chart-date {
+.chart-legend-top {
+  display: flex;
+  gap: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
-  color: #EF4444;
-  cursor: pointer;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot.rdv {
+  background: #3B82F6;
+}
+
+.dot.actes {
+  background: #8B5CF6;
 }
 
 /* Stats Grid */
@@ -124,15 +146,26 @@
 }
 
 .activity-icon.patient {
-  background: #DBEAFE;
+  background: #E0E7FF;
+  color: #4F46E5;
 }
 
 .activity-icon.appointment {
   background: #D1FAE5;
+  color: #059669;
 }
 
 .activity-icon.medical {
-  background: #FEF3C7;
+  background: #F3E8FF;
+  color: #8B5CF6;
+}
+
+.activity-empty-state {
+  text-align: center;
+  padding: 30px 10px;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-style: italic;
 }
 
 .activity-info {
@@ -265,7 +298,7 @@
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .bottom-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -275,11 +308,11 @@
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .bottom-grid {
     grid-template-columns: 1fr;
   }

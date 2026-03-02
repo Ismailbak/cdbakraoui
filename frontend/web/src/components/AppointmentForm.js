@@ -1,40 +1,381 @@
-import React, { useState } from 'react';
-import { createAppointment } from '../api/api';
+import React, { useState, useEffect } from 'react';
+import {
+  FiUser, FiCalendar, FiClock, FiFileText,
+  FiChevronRight, FiChevronLeft, FiCheck, FiX,
+  FiAlertCircle, FiPlus, FiSearch
+} from 'react-icons/fi';
+import { createAppointment, getPatients } from '../api/api';
+import './AppointmentForm.css';
 
-function AppointmentForm({ onSuccess }) {
-  const [form, setForm] = useState({
-    patient_id: '',
-    date: '',
-    time: '',
-    reason: '',
-    status: 'scheduled'
-  });
+const TIME_SLOTS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+  '11:00', '11:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00'
+];
+
+const CONSULT_TYPES = [
+  { value: 'Première consultation', icon: '🩺' },
+  { value: 'Consultation de suivi', icon: '🔄' },
+  { value: 'Consultation urgente', icon: '🚨' },
+  { value: 'Contrôle', icon: '✅' },
+];
+
+const DURATIONS = [
+  { value: '30', label: '30 min' },
+  { value: '45', label: '45 min' },
+  { value: '60', label: '1 heure' },
+  { value: '90', label: '1h 30' },
+];
+
+const STEPS = [
+  { id: 1, label: 'Patient', icon: FiUser },
+  { id: 2, label: 'Horaire', icon: FiCalendar },
+  { id: 3, label: 'Consultation', icon: FiFileText },
+];
+
+const initialForm = {
+  patientId: '',
+  date: '',
+  time: '',
+  type: '',
+  duration: '60',
+  notes: '',
+};
+
+function AppointmentForm({ onSuccess, onClose, defaultDate }) {
+  const [form, setForm] = useState({ ...initialForm, date: defaultDate || '' });
+  const [step, setStep] = useState(1);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [patSearch, setPatSearch] = useState('');
+  const [loadingPats, setLoadingPats] = useState(true);
+
+  useEffect(() => {
+    getPatients()
+      .then(r => setPatients(r.data || []))
+      .catch(() => { })
+      .finally(() => setLoadingPats(false));
+  }, []);
+
+  const filteredPatients = patients.filter(p =>
+    !patSearch || p.name.toLowerCase().includes(patSearch.toLowerCase())
+  );
+
+  const selectedPatient = patients.find(p => p.id === parseInt(form.patientId, 10));
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
+
+  const validateStep = (s) => {
+    const errs = {};
+    if (s === 1 && !form.patientId) errs.patientId = 'Veuillez sélectionner un patient';
+    if (s === 2) {
+      if (!form.date) errs.date = 'La date est requise';
+      if (!form.time) errs.time = 'L\'heure est requise';
+    }
+    if (s === 3 && !form.type) errs.type = 'Veuillez choisir un type de consultation';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleNext = () => { if (validateStep(step)) setStep(s => s + 1); };
+  const handleBack = () => setStep(s => s - 1);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await createAppointment({ ...form, id: 0 });
-    setForm({ patient_id: '', date: '', time: '', reason: '', status: 'scheduled' });
-    if (onSuccess) onSuccess();
+    if (!validateStep(3)) return;
+    setIsSubmitting(true);
+    try {
+      await createAppointment({
+        patient_id: parseInt(form.patientId, 10),
+        date: form.date,
+        time: form.time,
+        reason: [form.type, form.notes].filter(Boolean).join(' – ') || null,
+        status: 'scheduled',
+      });
+      setSubmitted(true);
+      setTimeout(() => {
+        setForm({ ...initialForm, date: defaultDate || '' });
+        setStep(1);
+        setSubmitted(false);
+        if (onSuccess) onSuccess();
+        if (onClose) onClose();
+      }, 1400);
+    } catch {
+      setErrors({ submit: 'Erreur lors de la création du rendez-vous. Veuillez réessayer.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // ── Success screen ────────────────────────
+  if (submitted) {
+    return (
+      <div className="af-success">
+        <div className="af-success-icon"><FiCheck /></div>
+        <h3>Rendez-vous créé !</h3>
+        <p>
+          {selectedPatient?.name && <><strong>{selectedPatient.name}</strong> — </>}
+          {form.date} à {form.time}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h3>New Appointment</h3>
-      <form onSubmit={handleSubmit}>
-        <input name="patient_id" placeholder="Patient ID" value={form.patient_id} onChange={handleChange} required />
-        <input name="date" type="date" value={form.date} onChange={handleChange} required />
-        <input name="time" type="time" value={form.time} onChange={handleChange} required />
-        <input name="reason" placeholder="Reason" value={form.reason} onChange={handleChange} />
-        <select name="status" value={form.status} onChange={handleChange}>
-          <option value="scheduled">Scheduled</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <button type="submit">Create</button>
+    <div className="af-wrapper">
+      {/* Header */}
+      <div className="af-header">
+        <div className="af-header-left">
+          <div className="af-header-icon"><FiPlus /></div>
+          <div>
+            <h2 className="af-title">Nouveau Rendez-vous</h2>
+            <p className="af-subtitle">Planifiez une consultation</p>
+          </div>
+        </div>
+        {onClose && (
+          <button className="af-close-btn" onClick={onClose} type="button" aria-label="Fermer">
+            <FiX />
+          </button>
+        )}
+      </div>
+
+      {/* Step indicator */}
+      <div className="af-steps">
+        {STEPS.map((s, i) => {
+          const Icon = s.icon;
+          const done = step > s.id;
+          const active = step === s.id;
+          return (
+            <React.Fragment key={s.id}>
+              <div className={`af-step ${active ? 'active' : ''} ${done ? 'completed' : ''}`}>
+                <div className="af-step-circle">
+                  {done ? <FiCheck /> : <Icon />}
+                </div>
+                <span className="af-step-label">{s.label}</span>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className={`af-step-line ${done ? 'completed' : ''}`} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Form */}
+      <form className="af-form" onSubmit={handleSubmit} noValidate>
+
+        {/* ── Step 1: Patient ── */}
+        {step === 1 && (
+          <div className="af-section">
+            <div className="af-section-title">
+              <FiUser className="af-section-icon" />
+              <span>Sélectionner le patient</span>
+            </div>
+
+            <div className="af-search-box">
+              <FiSearch className="af-search-icon" />
+              <input
+                className="af-search-input"
+                type="text"
+                placeholder="Rechercher un patient..."
+                value={patSearch}
+                onChange={e => setPatSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="af-patient-list">
+              {loadingPats ? (
+                <div className="af-loading">Chargement des patients...</div>
+              ) : filteredPatients.length === 0 ? (
+                <div className="af-empty">Aucun patient trouvé</div>
+              ) : (
+                filteredPatients.map(p => (
+                  <label
+                    key={p.id}
+                    className={`af-patient-card ${form.patientId == p.id ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="patientId"
+                      value={p.id}
+                      checked={form.patientId == p.id}
+                      onChange={handleChange}
+                      hidden
+                    />
+                    <div className="af-patient-avatar">
+                      {p.gender?.toLowerCase() === 'femme' ? '👩' : '👨'}
+                    </div>
+                    <div className="af-patient-info">
+                      <span className="af-patient-name">{p.name}</span>
+                      <span className="af-patient-meta">{p.age} ans • {p.diagnosis || '-'}</span>
+                    </div>
+                    {form.patientId == p.id && (
+                      <div className="af-patient-check"><FiCheck /></div>
+                    )}
+                  </label>
+                ))
+              )}
+            </div>
+            {errors.patientId && (
+              <span className="af-error-msg"><FiAlertCircle />{errors.patientId}</span>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 2: Date & Time ── */}
+        {step === 2 && (
+          <div className="af-section">
+            <div className="af-section-title">
+              <FiCalendar className="af-section-icon" />
+              <span>Date & Heure</span>
+            </div>
+
+            {selectedPatient && (
+              <div className="af-selected-patient-banner">
+                <span className="af-banner-avatar">
+                  {selectedPatient.gender?.toLowerCase() === 'femme' ? '👩' : '👨'}
+                </span>
+                <span className="af-banner-name">{selectedPatient.name}</span>
+              </div>
+            )}
+
+            <div className="af-field">
+              <label className="af-label">Date <span className="af-required">*</span></label>
+              <div className="af-input-icon-wrapper">
+                <FiCalendar className="af-input-icon" />
+                <input
+                  className={`af-input af-input-with-icon ${errors.date ? 'af-input-error' : ''}`}
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              {errors.date && <span className="af-error-msg"><FiAlertCircle />{errors.date}</span>}
+            </div>
+
+            <div className="af-field">
+              <label className="af-label">Heure <span className="af-required">*</span></label>
+              <div className="af-time-grid">
+                {TIME_SLOTS.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`af-time-chip ${form.time === t ? 'selected' : ''}`}
+                    onClick={() => { setForm(f => ({ ...f, time: t })); setErrors(e => ({ ...e, time: '' })); }}
+                  >
+                    <FiClock />
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {errors.time && <span className="af-error-msg"><FiAlertCircle />{errors.time}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Consultation details ── */}
+        {step === 3 && (
+          <div className="af-section">
+            <div className="af-section-title">
+              <FiFileText className="af-section-icon" />
+              <span>Type de consultation</span>
+            </div>
+
+            {/* Summary pill */}
+            {form.date && form.time && (
+              <div className="af-summary-pill">
+                <FiCalendar /> {form.date} &nbsp;·&nbsp; <FiClock /> {form.time}
+              </div>
+            )}
+
+            <div className="af-field">
+              <label className="af-label">Type <span className="af-required">*</span></label>
+              <div className="af-type-grid">
+                {CONSULT_TYPES.map(ct => (
+                  <button
+                    key={ct.value}
+                    type="button"
+                    className={`af-type-card ${form.type === ct.value ? 'selected' : ''}`}
+                    onClick={() => { setForm(f => ({ ...f, type: ct.value })); setErrors(e => ({ ...e, type: '' })); }}
+                  >
+                    <span className="af-type-icon">{ct.icon}</span>
+                    <span className="af-type-label">{ct.value}</span>
+                  </button>
+                ))}
+              </div>
+              {errors.type && <span className="af-error-msg"><FiAlertCircle />{errors.type}</span>}
+            </div>
+
+            <div className="af-field">
+              <label className="af-label">Durée estimée</label>
+              <div className="af-duration-group">
+                {DURATIONS.map(d => (
+                  <label key={d.value} className={`af-dur-chip ${form.duration === d.value ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="duration"
+                      value={d.value}
+                      checked={form.duration === d.value}
+                      onChange={handleChange}
+                      hidden
+                    />
+                    {d.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="af-field">
+              <label className="af-label">Motif / Notes <span className="af-optional">(optionnel)</span></label>
+              <textarea
+                className="af-textarea"
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                placeholder="Décrivez le motif de la consultation..."
+                rows={3}
+              />
+            </div>
+
+            {errors.submit && (
+              <div className="af-error-banner">
+                <FiAlertCircle /><span>{errors.submit}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="af-nav">
+          {step > 1
+            ? <button type="button" className="af-btn-back" onClick={handleBack}><FiChevronLeft /> Précédent</button>
+            : <div />
+          }
+          <div className="af-nav-right">
+            {onClose && (
+              <button type="button" className="af-btn-cancel" onClick={onClose}>Annuler</button>
+            )}
+            {step < 3
+              ? <button type="button" className="af-btn-next" onClick={handleNext}>Suivant <FiChevronRight /></button>
+              : (
+                <button type="submit" className="af-btn-submit" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? <span className="af-spinner" />
+                    : <><FiCheck /> Créer le rendez-vous</>
+                  }
+                </button>
+              )
+            }
+          </div>
+        </div>
       </form>
     </div>
   );
