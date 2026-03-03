@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiUser, FiPhone, FiMail, FiMapPin, FiShield,
   FiFileText, FiChevronRight, FiChevronLeft, FiCheck, FiX,
-  FiAlertCircle, FiUserPlus
+  FiAlertCircle, FiUserPlus, FiEdit2
 } from 'react-icons/fi';
-import { createPatient } from '../api/api';
+import { createPatient, updatePatient } from '../api/api';
 import './PatientForm.css';
 
 
@@ -61,12 +61,39 @@ function calculateAge(birthDate) {
   return age;
 }
 
-function PatientForm({ onSuccess, onClose }) {
-  const [form, setForm] = useState(initialForm);
+function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false }) {
+  const getInitialForm = () => {
+    if (initialData) {
+      return {
+        ipp: initialData.ipp || '',
+        name: initialData.name || '',
+        birthDate: initialData.date_of_birth || initialData.birthDate || '',
+        gender: initialData.gender?.toLowerCase() === 'homme' ? 'homme' : 
+                initialData.gender?.toLowerCase() === 'femme' ? 'femme' : '',
+        phone: initialData.phone || '',
+        email: initialData.email || '',
+        city: initialData.city || '',
+        insurance: initialData.insurance || '',
+        insuranceNumber: initialData.insurance_number || initialData.insuranceNumber || '',
+        diagnosis: initialData.diagnosis || '',
+        notes: initialData.notes || '',
+      };
+    }
+    return initialForm;
+  };
+
+  const [form, setForm] = useState(getInitialForm);
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Update form if initialData changes (for reuse in editing different patients)
+  useEffect(() => {
+    if (initialData) {
+      setForm(getInitialForm());
+    }
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +128,7 @@ function PatientForm({ onSuccess, onClose }) {
     try {
       const age = form.birthDate ? calculateAge(form.birthDate) : 0;
       const genderLabel = form.gender === 'homme' ? 'Homme' : 'Femme';
-      await createPatient({
+      const patientData = {
         ipp: form.ipp || null,
         name: form.name,
         age,
@@ -114,8 +141,14 @@ function PatientForm({ onSuccess, onClose }) {
         insurance_number: form.insuranceNumber || null,
         diagnosis: form.diagnosis,
         notes: form.notes || null,
-        status: 'Actif',
-      });
+        status: initialData?.status || 'Actif',
+      };
+
+      if (isEdit && initialData?.id) {
+        await updatePatient(initialData.id, patientData);
+      } else {
+        await createPatient(patientData);
+      }
       setSubmitted(true);
       setTimeout(() => {
         setForm(initialForm);
@@ -125,7 +158,7 @@ function PatientForm({ onSuccess, onClose }) {
         if (onClose) onClose();
       }, 1400);
     } catch {
-      setErrors({ submit: 'Erreur lors de l\'ajout du patient. Veuillez réessayer.' });
+      setErrors({ submit: isEdit ? 'Erreur lors de la modification du patient. Veuillez réessayer.' : 'Erreur lors de l\'ajout du patient. Veuillez réessayer.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -137,8 +170,8 @@ function PatientForm({ onSuccess, onClose }) {
         <div className="pf-success-icon">
           <FiCheck />
         </div>
-        <h3>Patient ajouté avec succès !</h3>
-        <p>{form.name} a été enregistré dans le système.</p>
+        <h3>{isEdit ? 'Patient modifié avec succès !' : 'Patient ajouté avec succès !'}</h3>
+        <p>{form.name} a été {isEdit ? 'mis à jour' : 'enregistré'} dans le système.</p>
       </div>
     );
   }
@@ -149,11 +182,11 @@ function PatientForm({ onSuccess, onClose }) {
       <div className="pf-header">
         <div className="pf-header-left">
           <div className="pf-header-icon">
-            <FiUserPlus />
+            {isEdit ? <FiEdit2 /> : <FiUserPlus />}
           </div>
           <div>
-            <h2 className="pf-title">Nouveau Patient</h2>
-            <p className="pf-subtitle">Remplissez les informations du patient</p>
+            <h2 className="pf-title">{isEdit ? 'Modifier Patient' : 'Nouveau Patient'}</h2>
+            <p className="pf-subtitle">{isEdit ? 'Modifiez les informations du patient' : 'Remplissez les informations du patient'}</p>
           </div>
         </div>
         {onClose && (
@@ -434,7 +467,7 @@ function PatientForm({ onSuccess, onClose }) {
                 {isSubmitting ? (
                   <span className="pf-spinner" />
                 ) : (
-                  <><FiCheck /> Ajouter le patient</>
+                  <><FiCheck /> {isEdit ? 'Modifier le patient' : 'Ajouter le patient'}</>
                 )}
               </button>
             )}

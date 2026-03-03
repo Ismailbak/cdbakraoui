@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  FiUser, FiCalendar, FiActivity, FiClipboard, FiCheck, FiX,
+  FiUser, FiCalendar, FiActivity, FiCheck, FiX,
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
-  FiFileText, FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
+  FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
 } from 'react-icons/fi';
 import { getPatients, createMedicalAct, updateMedicalAct } from '../api/api';
 import './MedicalActForm.css';
 
 const CATEGORY_OPTIONS = [
-  { value: 'rheumatology', label: 'Rhumatologie', color: 'rheumatology' },
-  { value: 'imaging', label: 'Imagerie', color: 'imaging' },
-  { value: 'intervention', label: 'Intervention', color: 'intervention' },
-  { value: 'laboratory', label: 'Laboratoire', color: 'laboratory' },
+  { value: 'rheumatology', label: 'Rhumatologie' },
+  { value: 'imaging', label: 'Imagerie' },
+  { value: 'intervention', label: 'Intervention' },
+  { value: 'laboratory', label: 'Laboratoire' },
 ];
 
 const ACT_TYPES = [
@@ -23,8 +23,8 @@ const ACT_TYPES = [
 ];
 
 const STEPS = [
-  { id: 1, label: 'Patient & Date', icon: FiUser },
-  { id: 2, label: 'Détails', icon: FiActivity },
+  { id: 1, label: 'Patient', icon: FiUser },
+  { id: 2, label: 'Clinique', icon: FiActivity },
   { id: 3, label: 'Facturation', icon: FiDollarSign },
 ];
 
@@ -119,18 +119,17 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
 
     setIsSubmitting(true);
     try {
-      // Map form to backend expectations
       const payload = {
         patient_id: form.patientId,
         date: form.date,
         act_type: form.actType,
         category: form.category,
         diagnosis: form.diagnosis,
-        report: form.report,
-        amount: parseFloat(form.amount),
+        report: form.report || null,
+        amount: form.amount ? String(form.amount) : null,
         status: form.status,
-        treatment: form.treatment,
-        notes: form.notes,
+        treatment: form.treatment || null,
+        notes: form.notes || null,
       };
 
       if (isEdit && form.id) {
@@ -143,7 +142,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       setTimeout(() => {
         if (onSuccess) onSuccess();
         if (onClose) onClose();
-      }, 1500);
+      }, 1400);
     } catch (err) {
       setErrors({ submit: "Erreur lors de l'enregistrement de l'acte." });
     } finally {
@@ -157,8 +156,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         <div className="maf-success-icon">
           <FiCheck />
         </div>
-        <h3>Acte enregistré !</h3>
-        <p>L'acte médical pour {form.patientName} a été validé.</p>
+        <h3>{isEdit ? 'Acte modifié avec succès !' : 'Acte enregistré avec succès !'}</h3>
+        <p>L'acte médical pour {form.patientName} a été {isEdit ? 'mis à jour' : 'validé'}.</p>
       </div>
     );
   }
@@ -172,21 +171,23 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
             {isEdit ? <FiEdit3 /> : <FiPlus />}
           </div>
           <div>
-            <h2 className="maf-title">{isEdit ? 'Modifier l’Acte' : 'Nouvel Acte Médical'}</h2>
-            <p className="maf-subtitle">Remplissez les détails cliniques et facturation</p>
+            <h2 className="maf-title">{isEdit ? 'Modifier l\'acte' : 'Nouvel Acte Médical'}</h2>
+            <p className="maf-subtitle">{isEdit ? 'Modifiez les détails de l\'acte' : 'Remplissez les informations de l\'acte'}</p>
           </div>
         </div>
-        <button className="maf-close-btn" onClick={onClose} type="button">
-          <FiX />
-        </button>
+        {onClose && (
+          <button className="maf-close-btn" onClick={onClose} type="button" aria-label="Fermer">
+            <FiX />
+          </button>
+        )}
       </div>
 
       {/* Step Indicator */}
       <div className="maf-steps">
         {STEPS.map((s, i) => {
           const Icon = s.icon;
-          const isActive = step === s.id;
           const isCompleted = step > s.id;
+          const isActive = step === s.id;
           return (
             <React.Fragment key={s.id}>
               <div className={`maf-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
@@ -203,56 +204,71 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         })}
       </div>
 
-      <form className="maf-form" onSubmit={handleSubmit}>
-        {/* Step 1: Patient & Date */}
+      {/* Form */}
+      <form className="maf-form" onSubmit={handleSubmit} noValidate>
+        {/* Step 1 — Patient & Date */}
         {step === 1 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiUser className="maf-section-icon" />
-              <span>Patient & Date de l'acte</span>
+              <span>Sélectionner le patient</span>
             </div>
 
+            {/* Patient Search */}
             <div className="maf-field">
-              <label className="maf-label">Sélectionner un patient <span className="maf-required">*</span></label>
-              <div className="maf-search-box">
+              <label className="maf-label">
+                Patient <span className="maf-required">*</span>
+              </label>
+              <div className="maf-search-wrapper">
                 <FiSearch className="maf-search-icon" />
                 <input
                   type="text"
-                  className="maf-search-input"
+                  className="maf-input maf-input-with-icon"
                   placeholder="Rechercher par nom ou IPP..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-
-              <div className="maf-patient-list">
-                {isLoadingPatients ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Chargement...</div>
-                ) : (
-                  filteredPatients.map(p => (
-                    <div
-                      key={p.id}
-                      className={`maf-patient-card ${form.patientId === p.id ? 'selected' : ''}`}
-                      onClick={() => selectPatient(p)}
-                    >
-                      <div className="maf-patient-avatar">👤</div>
-                      <div className="maf-patient-info">
-                        <span className="maf-patient-name">{p.name}</span>
-                        <span className="maf-patient-meta">IPP: {p.ipp || 'N/A'} • {p.age} ans</span>
-                      </div>
-                      {form.patientId === p.id && <FiCheck className="maf-patient-check" />}
-                    </div>
-                  ))
-                )}
-                {filteredPatients.length === 0 && !isLoadingPatients && (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Aucun patient trouvé</div>
-                )}
-              </div>
-              {errors.patientId && <span className="maf-error-msg"><FiAlertCircle />{errors.patientId}</span>}
             </div>
 
-            <div className="maf-field">
-              <label className="maf-label">Date de l'acte <span className="maf-required">*</span></label>
+            {/* Patient List */}
+            <div className="maf-patient-list">
+              {isLoadingPatients ? (
+                <div className="maf-loading">Chargement des patients...</div>
+              ) : filteredPatients.length === 0 ? (
+                <div className="maf-empty">Aucun patient trouvé</div>
+              ) : (
+                filteredPatients.slice(0, 6).map(p => (
+                  <div
+                    key={p.id}
+                    className={`maf-patient-card ${form.patientId === p.id ? 'selected' : ''}`}
+                    onClick={() => selectPatient(p)}
+                  >
+                    <div className="maf-patient-avatar">
+                      {p.gender === 'Femme' ? '👩' : '👨'}
+                    </div>
+                    <div className="maf-patient-info">
+                      <span className="maf-patient-name">{p.name}</span>
+                      <span className="maf-patient-meta">
+                        {p.ipp ? `IPP: ${p.ipp}` : 'Sans IPP'} • {p.age || '?'} ans
+                      </span>
+                    </div>
+                    {form.patientId === p.id && (
+                      <div className="maf-patient-check">
+                        <FiCheck />
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            {errors.patientId && <span className="maf-error-msg"><FiAlertCircle />{errors.patientId}</span>}
+
+            {/* Date */}
+            <div className="maf-field" style={{ marginTop: '20px' }}>
+              <label className="maf-label">
+                Date de l'acte <span className="maf-required">*</span>
+              </label>
               <div className="maf-input-icon-wrapper">
                 <FiCalendar className="maf-input-icon" />
                 <input
@@ -268,16 +284,19 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           </div>
         )}
 
-        {/* Step 2: Act Details */}
+        {/* Step 2 — Clinical Details */}
         {step === 2 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiActivity className="maf-section-icon" />
-              <span>Détails de l'acte médical</span>
+              <span>Détails cliniques</span>
             </div>
 
+            {/* Act Type */}
             <div className="maf-field">
-              <label className="maf-label">Type d'acte <span className="maf-required">*</span></label>
+              <label className="maf-label">
+                Type d'acte <span className="maf-required">*</span>
+              </label>
               <div className="maf-type-grid">
                 {ACT_TYPES.map(type => (
                   <div
@@ -292,40 +311,52 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               </div>
             </div>
 
+            {/* Category */}
             <div className="maf-field">
               <label className="maf-label">Catégorie</label>
               <div className="maf-category-group">
                 {CATEGORY_OPTIONS.map(opt => (
-                  <div
+                  <label
                     key={opt.value}
-                    className={`maf-cat-chip ${opt.color} ${form.category === opt.value ? 'selected' : ''}`}
-                    onClick={() => setForm(prev => ({ ...prev, category: opt.value }))}
+                    className={`maf-category-chip ${form.category === opt.value ? 'selected' : ''}`}
                   >
+                    <input
+                      type="radio"
+                      name="category"
+                      value={opt.value}
+                      checked={form.category === opt.value}
+                      onChange={handleChange}
+                      hidden
+                    />
                     {opt.label}
-                  </div>
+                  </label>
                 ))}
               </div>
             </div>
 
+            {/* Diagnosis */}
             <div className="maf-field">
-              <label className="maf-label">Diagnostic <span className="maf-required">*</span></label>
+              <label className="maf-label">
+                Diagnostic <span className="maf-required">*</span>
+              </label>
               <input
                 type="text"
                 name="diagnosis"
-                placeholder="Ex: Polyarthrite Rhumatoïde"
                 className={`maf-input ${errors.diagnosis ? 'maf-input-error' : ''}`}
+                placeholder="Ex: Polyarthrite Rhumatoïde"
                 value={form.diagnosis}
                 onChange={handleChange}
               />
               {errors.diagnosis && <span className="maf-error-msg"><FiAlertCircle />{errors.diagnosis}</span>}
             </div>
 
+            {/* Report */}
             <div className="maf-field">
               <label className="maf-label">Rapport clinique</label>
               <textarea
                 name="report"
-                placeholder="Détails de l'examen, observations..."
                 className="maf-textarea"
+                placeholder="Détails de l'examen, observations..."
                 rows={4}
                 value={form.report}
                 onChange={handleChange}
@@ -334,24 +365,27 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           </div>
         )}
 
-        {/* Step 3: Billing & Status */}
+        {/* Step 3 — Billing */}
         {step === 3 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiDollarSign className="maf-section-icon" />
-              <span>Facturation & Statut final</span>
+              <span>Facturation & Finalisation</span>
             </div>
 
-            <div className="maf-row">
+            <div className="maf-grid-2">
+              {/* Amount */}
               <div className="maf-field">
-                <label className="maf-label">Montant (DH) <span className="maf-required">*</span></label>
+                <label className="maf-label">
+                  Montant (DH) <span className="maf-required">*</span>
+                </label>
                 <div className="maf-input-icon-wrapper">
                   <FiDollarSign className="maf-input-icon" />
                   <input
                     type="number"
                     name="amount"
-                    placeholder="0.00"
                     className={`maf-input maf-input-with-icon ${errors.amount ? 'maf-input-error' : ''}`}
+                    placeholder="0.00"
                     value={form.amount}
                     onChange={handleChange}
                   />
@@ -359,52 +393,67 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                 {errors.amount && <span className="maf-error-msg"><FiAlertCircle />{errors.amount}</span>}
               </div>
 
+              {/* Status */}
               <div className="maf-field">
                 <label className="maf-label">Statut</label>
-                <div className="maf-status-toggle">
-                  <button
-                    type="button"
-                    className={`maf-status-btn ${form.status === 'completed' ? 'active completed' : ''}`}
-                    onClick={() => setForm(prev => ({ ...prev, status: 'completed' }))}
-                  >
+                <div className="maf-status-group">
+                  <label className={`maf-status-chip completed ${form.status === 'completed' ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="status"
+                      value="completed"
+                      checked={form.status === 'completed'}
+                      onChange={handleChange}
+                      hidden
+                    />
                     <FiCheck /> Terminé
-                  </button>
-                  <button
-                    type="button"
-                    className={`maf-status-btn ${form.status === 'pending' ? 'active pending' : ''}`}
-                    onClick={() => setForm(prev => ({ ...prev, status: 'pending' }))}
-                  >
+                  </label>
+                  <label className={`maf-status-chip pending ${form.status === 'pending' ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="status"
+                      value="pending"
+                      checked={form.status === 'pending'}
+                      onChange={handleChange}
+                      hidden
+                    />
                     <FiClock /> En cours
-                  </button>
+                  </label>
                 </div>
               </div>
             </div>
 
+            {/* Treatment */}
             <div className="maf-field">
               <label className="maf-label">Traitement / Ordonnance</label>
               <textarea
                 name="treatment"
-                placeholder="Médicaments prescrits, doses..."
                 className="maf-textarea"
+                placeholder="Médicaments prescrits, doses..."
                 rows={3}
                 value={form.treatment}
                 onChange={handleChange}
               />
             </div>
 
+            {/* Notes */}
             <div className="maf-field">
               <label className="maf-label">Notes additionnelles</label>
               <textarea
                 name="notes"
-                placeholder="Observations administratives ou autres..."
                 className="maf-textarea"
+                placeholder="Observations, commentaires..."
                 rows={2}
                 value={form.notes}
                 onChange={handleChange}
               />
             </div>
 
-            {errors.submit && <div className="maf-error-banner"><FiAlertCircle /> {errors.submit}</div>}
+            {errors.submit && (
+              <div className="maf-error-banner">
+                <FiAlertCircle /> {errors.submit}
+              </div>
+            )}
           </div>
         )}
 
@@ -419,14 +468,16 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           )}
 
           <div className="maf-nav-right">
-            <button type="button" className="maf-btn-cancel" onClick={onClose}>Annuler</button>
+            <button type="button" className="maf-btn-cancel" onClick={onClose}>
+              Annuler
+            </button>
             {step < 3 ? (
               <button type="button" className="maf-btn-next" onClick={handleNext}>
                 Suivant <FiChevronRight />
               </button>
             ) : (
               <button type="submit" className="maf-btn-submit" disabled={isSubmitting}>
-                {isSubmitting ? "Enregistrement..." : (isEdit ? "Modifier l'acte" : "Valider l'acte")}
+                {isSubmitting ? 'Enregistrement...' : (isEdit ? "Modifier l'acte" : "Valider l'acte")}
               </button>
             )}
           </div>

@@ -80,8 +80,8 @@ function AnalyticsPage() {
     { label: '75+', min: 76, max: 200 },
   ];
   const ageDistributionData = ageGroups.map(group => {
-    const males = patients.filter(p => p.age >= group.min && p.age <= group.max && p.gender === 'male').length;
-    const females = patients.filter(p => p.age >= group.min && p.age <= group.max && p.gender === 'female').length;
+    const males = patients.filter(p => p.age >= group.min && p.age <= group.max && (p.gender === 'Homme' || p.gender === 'homme')).length;
+    const females = patients.filter(p => p.age >= group.min && p.age <= group.max && (p.gender === 'Femme' || p.gender === 'femme')).length;
     return { age: group.label, male: males, female: females };
   });
 
@@ -102,17 +102,20 @@ function AnalyticsPage() {
   });
 
 
-  // Compute monthly revenue and patient count data from appointments
-  // For each month, sum up revenue and count unique patients
+  // Compute monthly revenue and patient count data from medical acts
+  // For each month, sum up revenue (amount) and count unique patients
   const monthlyRevenueData = months.map((month, i) => {
-    const monthAppointments = appointments.filter(a => {
+    const monthActs = medicalActs.filter(a => {
       const d = new Date(a.date);
       return d.getFullYear() === currentYear && d.getMonth() === i;
     });
-    // Assume each appointment has a 'price' field (if not, set to 0)
-    const revenue = monthAppointments.reduce((sum, a) => sum + (a.price || 0), 0);
+    // Use amount field from medical acts (may be string, parse to float)
+    const revenue = monthActs.reduce((sum, a) => {
+      const amt = parseFloat(a.amount) || 0;
+      return sum + amt;
+    }, 0);
     // Count unique patients for the month
-    const patientIds = new Set(monthAppointments.map(a => a.patient_id));
+    const patientIds = new Set(monthActs.map(a => a.patient_id));
     return {
       month,
       revenue,
@@ -122,11 +125,11 @@ function AnalyticsPage() {
 
 
   // Compute top treatments data from medicalActs
-  // Group by treatment name, count occurrences, sort, and calculate percentage
+  // Group by treatment field, count occurrences, sort, and calculate percentage
   const treatmentCounts = {};
   medicalActs.forEach(act => {
-    if (act.treatment_name) {
-      treatmentCounts[act.treatment_name] = (treatmentCounts[act.treatment_name] || 0) + 1;
+    if (act.treatment && act.treatment.trim()) {
+      treatmentCounts[act.treatment] = (treatmentCounts[act.treatment] || 0) + 1;
     }
   });
   const totalTreatments = Object.values(treatmentCounts).reduce((sum, count) => sum + count, 0);
@@ -247,217 +250,342 @@ function AnalyticsPage() {
           )}
         </div>
 
-        {/* Charts Grid */}
+        {/* Charts Grid - Conditional rendering based on activeTab */}
         <div className="charts-grid">
-          {/* Revenue Chart */}
           {isLoading ? (
-            <SkeletonChart height="350px" />
+            <>
+              <SkeletonChart height="350px" />
+              <SkeletonChart height="220px" />
+            </>
           ) : (
-            <div className="chart-card large">
-              <div className="chart-header">
-                <div>
-                  <h3>Évolution des Revenus</h3>
-                  <p className="chart-subtitle">Revenus et nombre de patients par mois</p>
-                </div>
-                <div className="chart-legend">
-                  <span className="legend-item"><span className="dot blue"></span> Revenus (DH)</span>
-                  <span className="legend-item"><span className="dot green"></span> Patients</span>
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={monthlyRevenueData}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-                <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
-                <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#fff', 
-                    border: 'none', 
-                    borderRadius: '10px', 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-                  }} 
-                />
-                <Area 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#3B82F6" 
-                  strokeWidth={2}
-                  fill="url(#colorRevenue)"
-                  name="Revenus"
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="patients" 
-                  stroke="#10B981" 
-                  strokeWidth={2}
-                  dot={{ fill: '#10B981', r: 4 }}
-                  name="Patients"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          )}
-
-          {/* Diagnosis Distribution */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <h3>Répartition des Diagnostics</h3>
-            </div>
-            <div className="pie-chart-container">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={commonDiagnoses.map((name, i) => ({ name, value: 1, color: diagnosisColors[i % diagnosisColors.length] }))}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {commonDiagnoses.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pie-legend">
-                {commonDiagnoses.map((name, index) => (
-                  <div key={index} className="pie-legend-item">
-                    <span className="pie-dot" style={{ background: diagnosisColors[index % diagnosisColors.length] }}></span>
-                    <span className="pie-name">{name}</span>
+            <>
+              {/* Overview Tab: Show activity trend + diagnosis distribution + top treatments */}
+              {activeTab === 'overview' && (
+                <>
+                  {/* Activity Trend */}
+                  <div className="chart-card large">
+                    <div className="chart-header">
+                      <h3>Tendance d'Activité</h3>
+                      <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={activityTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis stroke="#9CA3AF" fontSize={12} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            background: '#fff', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+                          }} 
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="actes" 
+                          stroke="#8B5CF6" 
+                          strokeWidth={2}
+                          dot={{ fill: '#8B5CF6', r: 4 }}
+                          name="Actes"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="rdv" 
+                          stroke="#F59E0B" 
+                          strokeWidth={2}
+                          dot={{ fill: '#F59E0B', r: 4 }}
+                          name="RDV"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* Weekly Appointments */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <h3>Rendez-vous par Jour</h3>
-              <p className="chart-subtitle">Cette semaine</p>
-            </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={weeklyAppointmentsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="day" stroke="#9CA3AF" fontSize={12} />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#fff', 
-                    border: 'none', 
-                    borderRadius: '10px', 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-                  }} 
-                />
-                <Bar dataKey="consultations" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Consultations" />
-                <Bar dataKey="suivis" fill="#10B981" radius={[4, 4, 0, 0]} name="Suivis" />
-                <Bar dataKey="urgences" fill="#EF4444" radius={[4, 4, 0, 0]} name="Urgences" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Age Distribution */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <h3>Démographie des Patients</h3>
-              <p className="chart-subtitle">Distribution par âge et genre</p>
-            </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={ageDistributionData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis type="number" stroke="#9CA3AF" fontSize={12} />
-                <YAxis dataKey="age" type="category" stroke="#9CA3AF" fontSize={12} width={50} />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#fff', 
-                    border: 'none', 
-                    borderRadius: '10px', 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-                  }} 
-                />
-                <Bar dataKey="male" fill="#3B82F6" radius={[0, 4, 4, 0]} name="Hommes" />
-                <Bar dataKey="female" fill="#EC4899" radius={[0, 4, 4, 0]} name="Femmes" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Activity Trend */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <h3>Tendance d'Activité</h3>
-              <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
-            </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={activityTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#fff', 
-                    border: 'none', 
-                    borderRadius: '10px', 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-                  }} 
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="actes" 
-                  stroke="#8B5CF6" 
-                  strokeWidth={2}
-                  dot={{ fill: '#8B5CF6', r: 4 }}
-                  name="Actes"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="rdv" 
-                  stroke="#F59E0B" 
-                  strokeWidth={2}
-                  dot={{ fill: '#F59E0B', r: 4 }}
-                  name="RDV"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Top Treatments */}
-          <div className="chart-card">
-            <div className="chart-header">
-              <h3>Traitements les Plus Prescrits</h3>
-            </div>
-            <div className="treatments-list">
-              {topTreatmentsData.map((treatment, index) => (
-                <div key={index} className="treatment-item">
-                  <div className="treatment-rank">{index + 1}</div>
-                  <div className="treatment-info">
-                    <span className="treatment-name">{treatment.name}</span>
-                    <div className="treatment-bar">
-                      <div 
-                        className="treatment-progress" 
-                        style={{ width: `${treatment.percentage}%` }}
-                      ></div>
+                  {/* Diagnosis Distribution */}
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Répartition des Diagnostics</h3>
+                    </div>
+                    <div className="pie-chart-container">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie
+                            data={commonDiagnoses.map((name, i) => ({ name, value: 1, color: diagnosisColors[i % diagnosisColors.length] }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {commonDiagnoses.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="pie-legend">
+                        {commonDiagnoses.map((name, index) => (
+                          <div key={index} className="pie-legend-item">
+                            <span className="pie-dot" style={{ background: diagnosisColors[index % diagnosisColors.length] }}></span>
+                            <span className="pie-name">{name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="treatment-stats">
-                    <span className="treatment-count">{treatment.count}</span>
-                    <span className="treatment-percentage">{treatment.percentage}%</span>
+
+                  {/* Top Treatments */}
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Traitements les Plus Prescrits</h3>
+                    </div>
+                    <div className="treatments-list">
+                      {topTreatmentsData.map((treatment, index) => (
+                        <div key={index} className="treatment-item">
+                          <div className="treatment-rank">{index + 1}</div>
+                          <div className="treatment-info">
+                            <span className="treatment-name">{treatment.name}</span>
+                            <div className="treatment-bar">
+                              <div 
+                                className="treatment-progress" 
+                                style={{ width: `${treatment.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          <div className="treatment-stats">
+                            <span className="treatment-count">{treatment.count}</span>
+                            <span className="treatment-percentage">{treatment.percentage}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                </>
+              )}
+
+              {/* Revenue Tab: Show revenue evolution chart */}
+              {activeTab === 'revenue' && (
+                <>
+                  <div className="chart-card large">
+                    <div className="chart-header">
+                      <div>
+                        <h3>Évolution des Revenus</h3>
+                        <p className="chart-subtitle">Revenus et nombre de patients par mois</p>
+                      </div>
+                      <div className="chart-legend">
+                        <span className="legend-item"><span className="dot blue"></span> Revenus (DH)</span>
+                        <span className="legend-item"><span className="dot green"></span> Patients</span>
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <AreaChart data={monthlyRevenueData}>
+                        <defs>
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            background: '#fff', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+                          }} 
+                        />
+                        <Area 
+                          yAxisId="left"
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke="#3B82F6" 
+                          strokeWidth={2}
+                          fill="url(#colorRevenue)"
+                          name="Revenus"
+                        />
+                        <Line 
+                          yAxisId="right"
+                          type="monotone" 
+                          dataKey="patients" 
+                          stroke="#10B981" 
+                          strokeWidth={2}
+                          dot={{ fill: '#10B981', r: 4 }}
+                          name="Patients"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Top Treatments (also useful in revenue context) */}
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Traitements les Plus Prescrits</h3>
+                    </div>
+                    <div className="treatments-list">
+                      {topTreatmentsData.map((treatment, index) => (
+                        <div key={index} className="treatment-item">
+                          <div className="treatment-rank">{index + 1}</div>
+                          <div className="treatment-info">
+                            <span className="treatment-name">{treatment.name}</span>
+                            <div className="treatment-bar">
+                              <div 
+                                className="treatment-progress" 
+                                style={{ width: `${treatment.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          <div className="treatment-stats">
+                            <span className="treatment-count">{treatment.count}</span>
+                            <span className="treatment-percentage">{treatment.percentage}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Patients Tab: Show diagnosis distribution + demographics */}
+              {activeTab === 'patients' && (
+                <>
+                  {/* Diagnosis Distribution */}
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Répartition des Diagnostics</h3>
+                    </div>
+                    <div className="pie-chart-container">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie
+                            data={commonDiagnoses.map((name, i) => ({ name, value: 1, color: diagnosisColors[i % diagnosisColors.length] }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {commonDiagnoses.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="pie-legend">
+                        {commonDiagnoses.map((name, index) => (
+                          <div key={index} className="pie-legend-item">
+                            <span className="pie-dot" style={{ background: diagnosisColors[index % diagnosisColors.length] }}></span>
+                            <span className="pie-name">{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Age Distribution */}
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Démographie des Patients</h3>
+                      <p className="chart-subtitle">Distribution par âge et genre</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={ageDistributionData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis type="number" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis dataKey="age" type="category" stroke="#9CA3AF" fontSize={12} width={50} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            background: '#fff', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+                          }} 
+                        />
+                        <Bar dataKey="male" fill="#3B82F6" radius={[0, 4, 4, 0]} name="Hommes" />
+                        <Bar dataKey="female" fill="#EC4899" radius={[0, 4, 4, 0]} name="Femmes" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              )}
+
+              {/* Activity Tab: Show activity trend + weekly appointments */}
+              {activeTab === 'activity' && (
+                <>
+                  {/* Activity Trend */}
+                  <div className="chart-card large">
+                    <div className="chart-header">
+                      <h3>Tendance d'Activité</h3>
+                      <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={activityTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis stroke="#9CA3AF" fontSize={12} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            background: '#fff', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+                          }} 
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="actes" 
+                          stroke="#8B5CF6" 
+                          strokeWidth={2}
+                          dot={{ fill: '#8B5CF6', r: 4 }}
+                          name="Actes"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="rdv" 
+                          stroke="#F59E0B" 
+                          strokeWidth={2}
+                          dot={{ fill: '#F59E0B', r: 4 }}
+                          name="RDV"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Weekly Appointments */}
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Rendez-vous par Jour</h3>
+                      <p className="chart-subtitle">Cette semaine</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={weeklyAppointmentsData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="day" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis stroke="#9CA3AF" fontSize={12} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            background: '#fff', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+                          }} 
+                        />
+                        <Bar dataKey="consultations" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Consultations" />
+                        <Bar dataKey="suivis" fill="#10B981" radius={[4, 4, 0, 0]} name="Suivis" />
+                        <Bar dataKey="urgences" fill="#EF4444" radius={[4, 4, 0, 0]} name="Urgences" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Export Section */}

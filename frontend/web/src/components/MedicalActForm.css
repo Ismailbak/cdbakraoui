@@ -1,22 +1,179 @@
-/* 
-   MedicalActForm — Modern 3-Step Form
-   Based on PatientForm and AppointmentForm design language
-*/
+/* ============================================
+   MedicalActForm — Clean Multi-Step Form
+   Matches PatientForm design system
+   ============================================ */
 
+/* Wrapper */
 .maf-wrapper {
-    background: white;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
     border-radius: 20px;
-    width: 100%;
-    max-width: 650px;
     overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    animation: modalFadeIn 0.3s ease-out;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
-@keyframes modalFadeIn {
+/* ── Header ─────────────────────────────── */
+.maf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 30px;
+    border-bottom: 1px solid #E5E7EB;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.maf-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.maf-header-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    flex-shrink: 0;
+}
+
+.maf-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1E2A4A;
+    margin: 0 0 2px;
+}
+
+.maf-subtitle {
+    font-size: 13px;
+    color: #6B7280;
+    margin: 0;
+}
+
+.maf-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #F3F4F6;
+    color: #6B7280;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.maf-close-btn:hover {
+    background: #E5E7EB;
+    color: #1E2A4A;
+}
+
+/* ── Step Indicator ──────────────────────── */
+.maf-steps {
+    display: flex;
+    align-items: center;
+    padding: 20px 30px;
+    background: #FAFBFF;
+    border-bottom: 1px solid #E5E7EB;
+    gap: 0;
+}
+
+.maf-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    position: relative;
+}
+
+.maf-step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid #E5E7EB;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #9CA3AF;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+.maf-step.active .maf-step-circle {
+    border-color: #10B981;
+    background: #10B981;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.maf-step.completed .maf-step-circle {
+    border-color: #059669;
+    background: #059669;
+    color: #fff;
+}
+
+.maf-step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+}
+
+.maf-step.active .maf-step-label {
+    color: #10B981;
+    font-weight: 600;
+}
+
+.maf-step.completed .maf-step-label {
+    color: #059669;
+}
+
+.maf-step-line {
+    flex: 1;
+    height: 2px;
+    background: #E5E7EB;
+    margin-bottom: 18px;
+    transition: background 0.3s ease;
+}
+
+.maf-step-line.completed {
+    background: #059669;
+}
+
+/* ── Form Body ───────────────────────────── */
+.maf-form {
+    padding: 28px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.maf-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: maf-fadein 0.25s ease;
+}
+
+@keyframes maf-fadein {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(8px);
     }
 
     to {
@@ -25,600 +182,541 @@
     }
 }
 
-/* Header with Blue-Purple Gradient */
-.maf-header {
-    padding: 30px;
-    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-}
-
-.maf-header-left {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.maf-header-icon {
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    backdrop-filter: blur(5px);
-}
-
-.maf-title {
-    font-size: 20px;
-    font-weight: 700;
-    margin: 0;
-    letter-spacing: -0.5px;
-}
-
-.maf-subtitle {
-    font-size: 13px;
-    opacity: 0.9;
-    margin: 2px 0 0 0;
-}
-
-.maf-close-btn {
-    background: rgba(0, 0, 0, 0.1);
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.maf-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: rotate(90deg);
-}
-
-/* Steps Indicator */
-.maf-steps {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px 40px;
-    background: #fcfcfd;
-    border-bottom: 1px solid #f1f5f9;
-    position: relative;
-}
-
-.maf-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    z-index: 2;
-    position: relative;
-}
-
-.maf-step-circle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: white;
-    border: 2px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.maf-step-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.maf-step-line {
-    position: absolute;
-    top: 38px;
-    left: calc(50% + 20px);
-    width: calc(100% - 72px);
-    height: 2px;
-    background: #f1f5f9;
-    z-index: 1;
-}
-
-.maf-step.active .maf-step-circle {
-    border-color: #4F46E5;
-    color: #4F46E5;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-}
-
-.maf-step.active .maf-step-label {
-    color: #4F46E5;
-}
-
-.maf-step.completed .maf-step-circle {
-    background: #4F46E5;
-    border-color: #4F46E5;
-    color: white;
-}
-
-.maf-step-line.completed {
-    background: #4F46E5;
-}
-
-/* Form Sections */
-.maf-form {
-    padding: 30px;
-}
-
-.maf-section {
-    animation: sectionSlide 0.3s ease-out;
-}
-
-@keyframes sectionSlide {
-    from {
-        opacity: 0;
-        transform: translateX(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
 .maf-section-title {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 25px;
-    color: #1e293b;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E2A4A;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #F3F4F6;
 }
 
 .maf-section-icon {
-    font-size: 18px;
-    color: #4F46E5;
+    color: #10B981;
+    font-size: 17px;
 }
 
-.maf-section-title span {
-    font-size: 16px;
-    font-weight: 600;
+/* ── Grids ───────────────────────────────── */
+.maf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
 }
 
-/* Controls */
+/* ── Field ───────────────────────────────── */
 .maf-field {
-    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
 }
 
 .maf-label {
-    display: block;
     font-size: 13px;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
 }
 
 .maf-required {
-    color: #ef4444;
+    color: #EF4444;
+    margin-left: 2px;
 }
 
+/* ── Inputs ──────────────────────────────── */
 .maf-input,
-.maf-textarea,
-.maf-select {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+.maf-select,
+.maf-textarea {
+    padding: 11px 14px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
     font-size: 14px;
-    color: #1e293b;
-    background: #f8fafc;
+    color: #374151;
+    background: #FAFAFA;
+    font-family: inherit;
     transition: all 0.2s ease;
+    outline: none;
+    width: 100%;
     box-sizing: border-box;
 }
 
 .maf-input:focus,
-.maf-textarea:focus,
-.maf-select:focus {
-    outline: none;
-    background: white;
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.05);
+.maf-select:focus,
+.maf-textarea:focus {
+    border-color: #10B981;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
-.maf-input-icon-wrapper {
+.maf-input::placeholder,
+.maf-textarea::placeholder {
+    color: #C0C5D0;
+}
+
+.maf-input-error {
+    border-color: #EF4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+}
+
+.maf-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Input with icon */
+.maf-input-icon-wrapper,
+.maf-search-wrapper {
     position: relative;
 }
 
-.maf-input-icon {
+.maf-input-icon,
+.maf-search-icon {
     position: absolute;
-    left: 14px;
+    left: 13px;
     top: 50%;
     transform: translateY(-50%);
-    color: #94a3b8;
-    font-size: 16px;
+    color: #9CA3AF;
+    font-size: 15px;
+    pointer-events: none;
 }
 
 .maf-input-with-icon {
-    padding-left: 42px;
+    padding-left: 38px;
 }
 
-/* Patient List Selection */
-.maf-search-box {
-    position: relative;
-    margin-bottom: 12px;
-}
-
-.maf-search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-}
-
-.maf-search-input {
-    width: 100%;
-    padding: 12px 14px 12px 42px;
-    border: 1.5px solid #f1f5f9;
-    border-radius: 12px;
-    font-size: 14px;
-    background: #f8fafc;
-    transition: all 0.2s ease;
-}
-
-.maf-search-input:focus {
-    outline: none;
-    background: white;
-    border-color: #4F46E5;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
-}
-
+/* ── Patient List ────────────────────────── */
 .maf-patient-list {
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
-    border: 1px solid #f1f5f9;
-    border-radius: 14px;
-    padding: 8px;
-    background: #f8fafc;
-    margin-bottom: 20px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FAFAFA;
+}
+
+.maf-patient-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.maf-patient-list::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 10px;
+}
+
+.maf-loading,
+.maf-empty {
+    padding: 24px;
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 14px;
 }
 
 .maf-patient-card {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 14px;
-    border-radius: 12px;
+    padding: 12px 16px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 2px solid transparent;
-    margin-bottom: 4px;
-    background: white;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.maf-patient-card:last-child {
+    border-bottom: none;
 }
 
 .maf-patient-card:hover {
-    background: #f1f5f9;
+    background: #F0FDF4;
 }
 
 .maf-patient-card.selected {
-    background: #eff6ff;
-    border-color: #4F46E5;
+    background: #ECFDF5;
+    border-left: 3px solid #10B981;
 }
 
 .maf-patient-avatar {
-    width: 38px;
-    height: 38px;
-    background: #f1f5f9;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
+    background: #F3F4F6;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    flex-shrink: 0;
 }
 
 .maf-patient-info {
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
 .maf-patient-name {
     font-size: 14px;
     font-weight: 600;
-    color: #1e293b;
+    color: #1E2A4A;
 }
 
 .maf-patient-meta {
-    font-size: 11px;
-    color: #64748b;
+    font-size: 12px;
+    color: #9CA3AF;
 }
 
 .maf-patient-check {
-    color: #4F46E5;
-    font-size: 18px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #10B981;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
 }
 
-/* Radio Type Cards (Step 2) */
+/* ── Act Type Cards ──────────────────────── */
 .maf-type-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 10px;
-    margin-bottom: 20px;
 }
 
 .maf-type-card {
-    padding: 16px 10px;
-    border: 1.5px solid #f1f5f9;
-    border-radius: 14px;
-    background: white;
+    padding: 14px 8px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FAFAFA;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     transition: all 0.2s ease;
+    text-align: center;
 }
 
 .maf-type-card:hover {
-    background: #f8fafc;
-    border-color: #e2e8f0;
+    border-color: #A7F3D0;
+    background: #F0FDF4;
 }
 
 .maf-type-card.selected {
-    border-color: #4F46E5;
-    background: #eff6ff;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+    border-color: #10B981;
+    background: #ECFDF5;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .maf-type-icon {
-    font-size: 24px;
+    font-size: 20px;
+    color: #6B7280;
+}
+
+.maf-type-card.selected .maf-type-icon {
+    color: #059669;
 }
 
 .maf-type-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #475569;
+    font-size: 11px;
+    font-weight: 500;
+    color: #6B7280;
 }
 
 .maf-type-card.selected .maf-type-label {
-    color: #4F46E5;
+    color: #059669;
+    font-weight: 600;
 }
 
-/* Category Chips */
+/* ── Category Chips ──────────────────────── */
 .maf-category-group {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
-.maf-cat-chip {
+.maf-category-chip {
     padding: 8px 16px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 20px;
+    background: #FAFAFA;
+    font-size: 13px;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.maf-category-chip:hover {
+    border-color: #A7F3D0;
+    background: #F0FDF4;
+}
+
+.maf-category-chip.selected {
+    border-color: #10B981;
+    background: #ECFDF5;
+    color: #059669;
+    font-weight: 600;
+}
+
+/* ── Status Chips ────────────────────────── */
+.maf-status-group {
+    display: flex;
+    gap: 10px;
+}
+
+.maf-status-chip {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: #FAFAFA;
+    font-size: 13px;
+    color: #6B7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.maf-status-chip:hover {
+    background: #F3F4F6;
+}
+
+.maf-status-chip.completed.selected {
+    border-color: #10B981;
+    background: #ECFDF5;
+    color: #059669;
+    font-weight: 600;
+}
+
+.maf-status-chip.pending.selected {
+    border-color: #F59E0B;
+    background: #FFFBEB;
+    color: #D97706;
+    font-weight: 600;
+}
+
+/* ── Error Message ───────────────────────── */
+.maf-error-msg {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #EF4444;
+    margin-top: 4px;
+}
+
+.maf-error-msg svg {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.maf-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
     border-radius: 10px;
     font-size: 13px;
-    font-weight: 500;
-    background: #f1f5f9;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
+    color: #DC2626;
 }
 
-.maf-cat-chip:hover {
-    background: #e2e8f0;
+.maf-error-banner svg {
+    flex-shrink: 0;
+    font-size: 15px;
 }
 
-.maf-cat-chip.selected {
-    color: white;
-}
-
-.maf-cat-chip.selected.rheumatology {
-    background: #4f46e5;
-}
-
-.maf-cat-chip.selected.imaging {
-    background: #d97706;
-}
-
-.maf-cat-chip.selected.intervention {
-    background: #db2777;
-}
-
-.maf-cat-chip.selected.laboratory {
-    background: #059669;
-}
-
-/* Status Toggle */
-.maf-status-toggle {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    background: #f1f5f9;
-    padding: 4px;
-    border-radius: 12px;
-    gap: 4px;
-}
-
-.maf-status-btn {
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    color: #64748b;
-    background: transparent;
-    transition: all 0.2s ease;
-}
-
-.maf-status-btn.active.completed {
-    background: white;
-    color: #059669;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.maf-status-btn.active.pending {
-    background: white;
-    color: #d97706;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* Layout Helpers */
-.maf-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-/* Nav Buttons */
+/* ── Navigation Buttons ──────────────────── */
 .maf-nav {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    margin-top: 28px;
     padding-top: 20px;
-    border-top: 1px solid #f1f5f9;
-    margin-top: 20px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.maf-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .maf-btn-back {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: none;
-    border: none;
+    padding: 11px 20px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: transparent;
     font-size: 14px;
-    font-weight: 600;
-    color: #64748b;
+    font-weight: 500;
+    color: #6B7280;
     cursor: pointer;
-    padding: 8px 12px;
+    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
 .maf-btn-back:hover {
-    color: #1e293b;
-}
-
-.maf-nav-right {
-    display: flex;
-    gap: 12px;
+    border-color: #D1D5DB;
+    background: #F9FAFB;
+    color: #374151;
 }
 
 .maf-btn-cancel {
-    background: #f1f5f9;
-    color: #64748b;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 12px;
+    padding: 11px 20px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: transparent;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
+    color: #6B7280;
     cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.maf-btn-cancel:hover {
+    border-color: #D1D5DB;
+    background: #F9FAFB;
 }
 
 .maf-btn-next {
-    background: #4F46E5;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    gap: 6px;
+    padding: 11px 22px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    font-family: inherit;
 }
 
 .maf-btn-next:hover {
-    background: #4338ca;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
 .maf-btn-submit {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    gap: 6px;
+    padding: 11px 24px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    font-family: inherit;
+    min-width: 140px;
+    justify-content: center;
 }
 
-/* Success State */
+.maf-btn-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.maf-btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── Success State ────────────────────────── */
 .maf-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     padding: 60px 40px;
     text-align: center;
-    background: white;
-    border-radius: 20px;
+    animation: maf-fadein 0.3s ease;
 }
 
 .maf-success-icon {
-    width: 70px;
-    height: 70px;
-    background: #d1fae5;
-    color: #059669;
-    font-size: 32px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
+    background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 20px;
-    animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 34px;
+    color: #059669;
+    margin-bottom: 20px;
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.08);
+    animation: maf-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes successPop {
-    0% {
+@keyframes maf-pop {
+    from {
         transform: scale(0.5);
         opacity: 0;
     }
 
-    100% {
+    to {
         transform: scale(1);
         opacity: 1;
     }
 }
 
-/* Error States */
-.maf-input-error {
-    border-color: #ef4444;
-    background: #fef2f2;
+.maf-success h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1E2A4A;
+    margin: 0 0 8px;
 }
 
-.maf-error-msg {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: #ef4444;
-    margin-top: 5px;
-    font-weight: 600;
+.maf-success p {
+    font-size: 14px;
+    color: #6B7280;
+    margin: 0;
 }
 
-.maf-error-banner {
-    background: #fef2f2;
-    border: 1px solid #fee2e2;
-    padding: 12px;
-    border-radius: 10px;
-    color: #b91c1c;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 600px) {
+
+    .maf-header,
+    .maf-steps,
+    .maf-form {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .maf-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .maf-type-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .maf-steps {
+        gap: 0;
+    }
+
+    .maf-step-label {
+        display: none;
+    }
+
+    .maf-status-group {
+        flex-direction: column;
+    }
 }

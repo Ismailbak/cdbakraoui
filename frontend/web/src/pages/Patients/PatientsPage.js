@@ -4,7 +4,7 @@ import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTra
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
-import { getPatients, updatePatient, deletePatient } from '../../api/api';
+import { getPatients, getAppointments, updatePatient, deletePatient } from '../../api/api';
 import PatientForm from '../../components/PatientForm';
 import './PatientsPage.css';
 
@@ -20,13 +20,28 @@ const INSURANCE_OPTIONS = [
   { value: 'Autre', label: 'Autre' },
 ];
 
-function mapApiPatientToUi(p) {
+function mapApiPatientToUi(p, appointments = []) {
+  const now = new Date();
+  const patientAppointments = appointments.filter(a => a.patient_id === p.id);
+  
+  // Find last visit (past appointment)
+  const pastAppointments = patientAppointments
+    .filter(a => new Date(a.date) < now)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  const lastVisit = pastAppointments.length > 0 ? pastAppointments[0].date : null;
+  
+  // Find next appointment (future appointment)
+  const futureAppointments = patientAppointments
+    .filter(a => new Date(a.date) >= now)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const nextAppointment = futureAppointments.length > 0 ? futureAppointments[0].date : null;
+  
   return {
     ...p,
     insuranceNumber: p.insurance_number,
     notesAdmin: p.notes_admin,
-    lastVisit: null,
-    nextAppointment: null,
+    lastVisit,
+    nextAppointment,
     avatar: (p.gender && p.gender.toLowerCase() === 'femme') ? '👩' : '👨',
   };
 }
@@ -103,8 +118,12 @@ function PatientsPage() {
 
   const loadPatients = async () => {
     try {
-      const res = await getPatients();
-      setPatients((res.data || []).map(mapApiPatientToUi));
+      const [patientsRes, appointmentsRes] = await Promise.all([
+        getPatients(),
+        getAppointments()
+      ]);
+      const appointments = appointmentsRes.data || [];
+      setPatients((patientsRes.data || []).map(p => mapApiPatientToUi(p, appointments)));
     } catch {
       toast.error('Impossible de charger les patients');
     } finally {
@@ -448,99 +467,16 @@ function PatientsPage() {
           </div>
         )}
 
-        {/* Edit Patient Modal */}
+        {/* Edit Patient Modal - Now using PatientForm with isEdit */}
         {showEditModal && selectedPatient && (
           <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Modifier le patient</h2>
-                <button className="modal-close" onClick={() => setShowEditModal(false)}>
-                  <FiX />
-                </button>
-              </div>
-              <form className="patient-form" onSubmit={handleEditSubmit}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>IPP</label>
-                    <input type="text" value={editFormData.ipp} onChange={(e) => setEditFormData({ ...editFormData, ipp: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Nom complet</label>
-                    <input type="text" value={editFormData.name} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Âge</label>
-                    <input type="number" value={editFormData.age} onChange={(e) => setEditFormData({ ...editFormData, age: parseInt(e.target.value) || 0 })} />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Téléphone</label>
-                    <input type="tel" value={editFormData.phone} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input type="email" value={editFormData.email} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Ville</label>
-                    <input type="text" value={editFormData.city} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Genre</label>
-                    <select value={editFormData.gender} onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}>
-                      <option value="Homme">Homme</option>
-                      <option value="Femme">Femme</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Assurance / Mutuelle</label>
-                    <select value={editFormData.insurance} onChange={(e) => setEditFormData({ ...editFormData, insurance: e.target.value })}>
-                      {INSURANCE_OPTIONS.map(opt => (
-                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Statut</label>
-                    <select value={editFormData.status} onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}>
-                      <option value="Actif">Actif</option>
-                      <option value="En attente">En attente</option>
-                      <option value="Inactif">Inactif</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-group full-width">
-                  <label>Diagnostic</label>
-                  <select value={editFormData.diagnosis} onChange={(e) => setEditFormData({ ...editFormData, diagnosis: e.target.value })}>
-                    <option value="Polyarthrite rhumatoïde">Polyarthrite rhumatoïde</option>
-                    <option value="Lupus érythémateux">Lupus érythémateux</option>
-                    <option value="Arthrose">Arthrose</option>
-                    <option value="Fibromyalgie">Fibromyalgie</option>
-                    <option value="Spondylarthrite">Spondylarthrite</option>
-                    <option value="Arthrite juvénile">Arthrite juvénile</option>
-                    <option value="Autre">Autre</option>
-                  </select>
-                </div>
-                <div className="form-group full-width">
-                  <label>Notes médicales</label>
-                  <textarea value={editFormData.notes} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} placeholder="Notes médicales" />
-                </div>
-                <div className="form-group full-width">
-                  <label>Notes administratives</label>
-                  <textarea value={editFormData.notesAdmin} onChange={(e) => setEditFormData({ ...editFormData, notesAdmin: e.target.value })} placeholder="Notes administratives" />
-                </div>
-                <div className="form-actions">
-                  <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn-submit">
-                    Enregistrer les modifications
-                  </button>
-                </div>
-              </form>
+              <PatientForm
+                initialData={selectedPatient}
+                isEdit={true}
+                onSuccess={() => { loadPatients(); toast.success('Patient modifié avec succès'); }}
+                onClose={() => setShowEditModal(false)}
+              />
             </div>
           </div>
         )}
