@@ -18,6 +18,10 @@ class Patient(Base):
     insurance = Column(String(100), nullable=True)  # Mutuelle / type assurance (CNSS, CNOPS, etc.)
     insurance_number = Column(String(50), nullable=True)
     blood_type = Column(String(10), nullable=True)
+    allergies = Column(Text, nullable=True)  # JSON array of allergies
+    emergency_contact_name = Column(String(255), nullable=True)
+    emergency_contact_relation = Column(String(100), nullable=True)
+    emergency_contact_phone = Column(String(30), nullable=True)
     diagnosis = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)  # Notes médicales
     notes_admin = Column(Text, nullable=True)  # Notes administratives

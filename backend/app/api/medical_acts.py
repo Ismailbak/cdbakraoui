@@ -5,6 +5,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 queries
 
 from app.database import get_db
@@ -52,6 +53,7 @@ class MedicalActOut(MedicalActBase):
     """Schema used for all responses — extends base with read-only fields."""
     id: int
     patient_name: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -80,6 +82,7 @@ def _act_to_dict(act: MedicalActModel, patient_name: Optional[str]) -> dict:
         "category": act.category,
         "diagnosis": act.diagnosis,
         "treatment": act.treatment,
+        "created_at": act.created_at.isoformat() if act.created_at else None,
     }
 
 

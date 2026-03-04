@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   FiUser, FiPhone, FiMail, FiMapPin, FiShield,
   FiFileText, FiChevronRight, FiChevronLeft, FiCheck, FiX,
-  FiAlertCircle, FiUserPlus, FiEdit2
+  FiAlertCircle, FiUserPlus, FiEdit2, FiHeart, FiAlertTriangle, FiHome
 } from 'react-icons/fi';
 import { createPatient, updatePatient } from '../api/api';
 import './PatientForm.css';
@@ -31,11 +31,24 @@ const DIAGNOSIS_OPTIONS = [
   { value: 'Autre', label: 'Autre' },
 ];
 
+const BLOOD_TYPE_OPTIONS = [
+  { value: '', label: 'Sélectionner' },
+  { value: 'A+', label: 'A+' },
+  { value: 'A-', label: 'A-' },
+  { value: 'B+', label: 'B+' },
+  { value: 'B-', label: 'B-' },
+  { value: 'AB+', label: 'AB+' },
+  { value: 'AB-', label: 'AB-' },
+  { value: 'O+', label: 'O+' },
+  { value: 'O-', label: 'O-' },
+];
+
 const STEPS = [
   { id: 1, label: 'Identité', icon: FiUser },
   { id: 2, label: 'Contact', icon: FiPhone },
   { id: 3, label: 'Assurance', icon: FiShield },
-  { id: 4, label: 'Médical', icon: FiFileText },
+  { id: 4, label: 'Médical', icon: FiHeart },
+  { id: 5, label: 'Urgence', icon: FiAlertTriangle },
 ];
 
 const initialForm = {
@@ -45,11 +58,18 @@ const initialForm = {
   gender: '',
   phone: '',
   email: '',
+  address: '',
   city: '',
   insurance: '',
   insuranceNumber: '',
+  bloodType: '',
+  allergies: '',
   diagnosis: '',
   notes: '',
+  notesAdmin: '',
+  emergencyName: '',
+  emergencyRelation: '',
+  emergencyPhone: '',
 };
 
 function calculateAge(birthDate) {
@@ -72,11 +92,18 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                 initialData.gender?.toLowerCase() === 'femme' ? 'femme' : '',
         phone: initialData.phone || '',
         email: initialData.email || '',
+        address: initialData.address || '',
         city: initialData.city || '',
         insurance: initialData.insurance || '',
         insuranceNumber: initialData.insurance_number || initialData.insuranceNumber || '',
+        bloodType: initialData.blood_type || initialData.bloodType || '',
+        allergies: initialData.allergies || '',
         diagnosis: initialData.diagnosis || '',
         notes: initialData.notes || '',
+        notesAdmin: initialData.notes_admin || initialData.notesAdmin || '',
+        emergencyName: initialData.emergency_contact_name || initialData.emergencyName || '',
+        emergencyRelation: initialData.emergency_contact_relation || initialData.emergencyRelation || '',
+        emergencyPhone: initialData.emergency_contact_phone || initialData.emergencyPhone || '',
       };
     }
     return initialForm;
@@ -87,6 +114,7 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false); // Only allow submit after step 5 is visible
 
   // Update form if initialData changes (for reuse in editing different patients)
   useEffect(() => {
@@ -94,6 +122,17 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
       setForm(getInitialForm());
     }
   }, [initialData]);
+
+  // Enable submit only after step 5 is rendered
+  useEffect(() => {
+    if (step === 5) {
+      // Small delay to ensure step 5 is visible before allowing submit
+      const timer = setTimeout(() => setCanSubmit(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setCanSubmit(false);
+    }
+  }, [step]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -116,14 +155,33 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
   };
 
   const handleNext = () => {
-    if (validateStep(step)) setStep(s => s + 1);
+    if (validateStep(step)) {
+      setStep(s => s + 1);
+    }
   };
 
   const handleBack = () => setStep(s => s - 1);
 
+  // Prevent Enter key from submitting the form before step 5 or when not ready
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      if (step < 5) {
+        handleNext();
+      }
+      // If step === 5, don't do anything on Enter - user must click the button
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep(4)) return;
+    if (step !== 5 || !canSubmit) {
+      if (step < 5) {
+        handleNext();
+      }
+      return;
+    }
+    if (!validateStep(5)) return;
     setIsSubmitting(true);
     try {
       const age = form.birthDate ? calculateAge(form.birthDate) : 0;
@@ -136,11 +194,18 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
         date_of_birth: form.birthDate || null,
         phone: form.phone || null,
         email: form.email || null,
+        address: form.address || null,
         city: form.city || null,
         insurance: form.insurance || null,
         insurance_number: form.insuranceNumber || null,
+        blood_type: form.bloodType || null,
+        allergies: form.allergies || null,
         diagnosis: form.diagnosis,
         notes: form.notes || null,
+        notes_admin: form.notesAdmin || null,
+        emergency_contact_name: form.emergencyName || null,
+        emergency_contact_relation: form.emergencyRelation || null,
+        emergency_contact_phone: form.emergencyPhone || null,
         status: initialData?.status || 'Actif',
       };
 
@@ -219,7 +284,7 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
       </div>
 
       {/* Form */}
-      <form className="pf-form" onSubmit={handleSubmit} noValidate>
+      <form className="pf-form" onSubmit={handleSubmit} onKeyDown={handleKeyDown} noValidate>
         {/* Step 1 — Identity */}
         {step === 1 && (
           <div className="pf-section">
@@ -333,6 +398,20 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                 </div>
               </div>
               <div className="pf-field pf-field-full">
+                <label className="pf-label">Adresse</label>
+                <div className="pf-input-icon-wrapper">
+                  <FiHome className="pf-input-icon" />
+                  <input
+                    className="pf-input pf-input-with-icon"
+                    type="text"
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    placeholder="123 Rue Example, Apt 4..."
+                  />
+                </div>
+              </div>
+              <div className="pf-field pf-field-full">
                 <label className="pf-label">Ville</label>
                 <div className="pf-input-icon-wrapper">
                   <FiMapPin className="pf-input-icon" />
@@ -400,10 +479,10 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
         {step === 4 && (
           <div className="pf-section">
             <div className="pf-section-title">
-              <FiFileText className="pf-section-icon" />
+              <FiHeart className="pf-section-icon" />
               <span>Informations médicales</span>
             </div>
-            <div className="pf-grid-1">
+            <div className="pf-grid-2">
               <div className="pf-field">
                 <label className="pf-label">
                   Diagnostic initial <span className="pf-required">*</span>
@@ -421,6 +500,32 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                 {errors.diagnosis && <span className="pf-error-msg"><FiAlertCircle />{errors.diagnosis}</span>}
               </div>
               <div className="pf-field">
+                <label className="pf-label">Groupe sanguin</label>
+                <select
+                  className="pf-select"
+                  name="bloodType"
+                  value={form.bloodType}
+                  onChange={handleChange}
+                >
+                  {BLOOD_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="pf-field pf-field-full">
+                <label className="pf-label">
+                  Allergies <span className="pf-optional">(séparées par des virgules)</span>
+                </label>
+                <input
+                  className="pf-input"
+                  type="text"
+                  name="allergies"
+                  value={form.allergies}
+                  onChange={handleChange}
+                  placeholder="Ex: Pénicilline, Aspirine, Latex..."
+                />
+              </div>
+              <div className="pf-field pf-field-full">
                 <label className="pf-label">
                   Notes médicales <span className="pf-optional">(optionnel)</span>
                 </label>
@@ -429,8 +534,69 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                   name="notes"
                   value={form.notes}
                   onChange={handleChange}
-                  placeholder="Antécédents médicaux, allergies, observations cliniques..."
-                  rows={4}
+                  placeholder="Antécédents médicaux, observations cliniques..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5 — Emergency Contact */}
+        {step === 5 && (
+          <div className="pf-section">
+            <div className="pf-section-title">
+              <FiAlertTriangle className="pf-section-icon" />
+              <span>Contact d'urgence & Notes</span>
+            </div>
+            <div className="pf-grid-2">
+              <div className="pf-field">
+                <label className="pf-label">Nom du contact</label>
+                <input
+                  className="pf-input"
+                  type="text"
+                  name="emergencyName"
+                  value={form.emergencyName}
+                  onChange={handleChange}
+                  placeholder="Nom complet"
+                />
+              </div>
+              <div className="pf-field">
+                <label className="pf-label">Relation</label>
+                <input
+                  className="pf-input"
+                  type="text"
+                  name="emergencyRelation"
+                  value={form.emergencyRelation}
+                  onChange={handleChange}
+                  placeholder="Ex: Conjoint, Parent, Enfant..."
+                />
+              </div>
+              <div className="pf-field pf-field-full">
+                <label className="pf-label">Téléphone d'urgence</label>
+                <div className="pf-input-icon-wrapper">
+                  <FiPhone className="pf-input-icon" />
+                  <input
+                    className="pf-input pf-input-with-icon"
+                    type="tel"
+                    name="emergencyPhone"
+                    value={form.emergencyPhone}
+                    onChange={handleChange}
+                    placeholder="+212 6 XX XX XX XX"
+                  />
+                </div>
+              </div>
+              <div className="pf-field pf-field-full">
+                <label className="pf-label">
+                  Notes administratives <span className="pf-optional">(optionnel)</span>
+                </label>
+                <textarea
+                  className="pf-textarea"
+                  name="notesAdmin"
+                  value={form.notesAdmin}
+                  onChange={handleChange}
+                  placeholder="Notes administratives, informations de facturation..."
+                  rows={3}
                 />
               </div>
             </div>
@@ -458,12 +624,12 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                 Annuler
               </button>
             )}
-            {step < 4 ? (
+            {step < 5 ? (
               <button type="button" className="pf-btn-next" onClick={handleNext}>
                 Suivant <FiChevronRight />
               </button>
             ) : (
-              <button type="submit" className="pf-btn-submit" disabled={isSubmitting}>
+              <button type="submit" className="pf-btn-submit" disabled={isSubmitting || !canSubmit}>
                 {isSubmitting ? (
                   <span className="pf-spinner" />
                 ) : (

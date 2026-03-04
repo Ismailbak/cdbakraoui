@@ -22,6 +22,7 @@ class AppointmentBase(BaseModel):
 class Appointment(AppointmentBase):
     id: int
     patient_name: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -37,6 +38,7 @@ def _appointment_with_patient_name(db: Session, row: AppointmentModel) -> dict:
         "time": row.time,
         "reason": row.reason,
         "status": row.status,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
     }
 
 

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
+from datetime import datetime
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -22,6 +23,10 @@ class PatientBase(BaseModel):
     insurance: Optional[str] = None
     insurance_number: Optional[str] = None
     blood_type: Optional[str] = None
+    allergies: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_relation: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
     diagnosis: Optional[str] = None
     notes: Optional[str] = None
     notes_admin: Optional[str] = None
@@ -35,6 +40,7 @@ class PatientCreate(PatientBase):
 class Patient(PatientBase):
     id: int
     ipp: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

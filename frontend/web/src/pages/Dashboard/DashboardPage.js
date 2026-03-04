@@ -10,9 +10,10 @@ import './DashboardPage.css';
 const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
 
 function timeAgo(isoString) {
-  if (!isoString) return '';
+  if (!isoString) return 'Date inconnue';
   const now = new Date();
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return 'Date inconnue';
   let diff = Math.floor((now - date) / 1000);
   // If activity is in the future or negative diff, show date
   if (diff < 0) return date.toLocaleDateString();
@@ -92,31 +93,33 @@ function DashboardPage() {
         setTrendData(newTrend);
 
         // 3. Robust Recent Activity: Merge, format and sort
-        const recentPatients = patientsSafe.slice(-5).map(p => ({
+        // API returns data in descending order (newest first), so slice(0, 5) gets the 5 most recent
+        const recentPatients = patientsSafe.slice(0, 5).map(p => ({
           type: 'patient',
           title: `Nouveau Patient: ${p.name}`,
           subtitle: `IPP: ${p.ipp || 'N/A'}`,
-          time: p.created_at || new Date().toISOString(),
+          time: p.created_at || null,
           icon: '👤'
         }));
 
-        const recentActsData = actsSafe.slice(-5).map(a => ({
+        const recentActsData = actsSafe.slice(0, 5).map(a => ({
           type: 'medical',
           title: `${a.act_type}: ${a.patient_name || a.patientName || 'Patient'}`,
           subtitle: a.diagnosis || 'Détails non spécifiés',
-          time: a.date,
+          time: a.created_at || (a.date ? `${a.date}T12:00:00` : null),
           icon: '📋'
         }));
 
-        const recentAppsData = appointments.slice(-5).map(app => ({
+        const recentAppsData = appointments.slice(0, 5).map(app => ({
           type: 'appointment',
           title: `RDV: ${app.patient_name || app.patientName || 'Patient'}`,
           subtitle: `${app.time || ''} - ${app.type || 'Cons'}`,
-          time: `${app.date}T${app.time || '00:00'}`,
+          time: app.created_at || (app.date && app.time ? `${app.date}T${app.time}` : app.date ? `${app.date}T12:00:00` : null),
           icon: '📅'
         }));
 
         const mergedActivity = [...recentPatients, ...recentActsData, ...recentAppsData]
+          .filter(item => item.time && !isNaN(new Date(item.time).getTime()))
           .sort((a, b) => new Date(b.time) - new Date(a.time))
           .slice(0, 4);
 

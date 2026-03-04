@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { LoadingSpinner, Breadcrumb } from '../../components/common';
+import PatientForm from '../../components/PatientForm';
 import './PatientDetailPage.css';
 
 function PatientDetailPage() {
@@ -16,40 +17,74 @@ function PatientDetailPage() {
   const [patient, setPatient] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const fetchPatient = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getPatient(id);
+      const patientData = res.data;
+
+      // Fetch appointments and acts
+      const [appointmentsRes, actsRes] = await Promise.all([
+        getPatientAppointments(id),
+        getPatientMedicalActs(id)
+      ]);
+
+      patientData.appointments = appointmentsRes.data || [];
+      patientData.acts = actsRes.data || [];
+
+      // Build medical history from acts
+      patientData.medicalHistory = patientData.acts.map(act => ({
+        date: act.date,
+        event: `${act.act_type}: ${act.diagnosis || act.description || 'Consultation'}`,
+        doctor: act.doctor_name || 'Dr.',
+      }));
+
+      // Build current treatments from acts that have treatment
+      patientData.currentTreatments = patientData.acts
+        .filter(act => act.treatment)
+        .map(act => ({
+          name: act.treatment,
+          dosage: act.notes || '',
+          startDate: act.date,
+        }));
+
+      // Parse allergies from comma-separated string to array
+      if (patientData.allergies && typeof patientData.allergies === 'string') {
+        patientData.allergiesArray = patientData.allergies.split(',').map(a => a.trim()).filter(Boolean);
+      } else {
+        patientData.allergiesArray = [];
+      }
+
+      // Map emergency contact fields
+      patientData.emergencyContact = {
+        name: patientData.emergency_contact_name || '',
+        relation: patientData.emergency_contact_relation || '',
+        phone: patientData.emergency_contact_phone || '',
+      };
+
+      setPatient(patientData);
+    } catch (error) {
+      setPatient(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchPatient() {
-      setIsLoading(true);
-      try {
-        const res = await getPatient(id);
-        const patientData = res.data;
-
-        // Fetch appointments and acts
-        const [appointmentsRes, actsRes] = await Promise.all([
-          getPatientAppointments(id),
-          getPatientMedicalActs(id)
-        ]);
-
-        patientData.appointments = appointmentsRes.data || [];
-        patientData.acts = actsRes.data || [];
-
-        // Optionally fetch lab results, medical history, treatments if you have endpoints
-        // patientData.labResults = ...
-        // patientData.medicalHistory = ...
-        // patientData.currentTreatments = ...
-
-        setPatient(patientData);
-      } catch (error) {
-        setPatient(null);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchPatient();
   }, [id]);
 
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    fetchPatient();
+  };
+
   const formatDate = (dateString) => {
+    if (!dateString) return 'Date inconnue';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Date invalide';
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
@@ -80,7 +115,7 @@ function PatientDetailPage() {
             <FiArrowLeft /> Retour aux patients
           </button>
           <div className="header-actions">
-            <button className="edit-btn">
+            <button className="edit-btn" onClick={() => setShowEditModal(true)}>
               <FiEdit2 /> Modifier
             </button>
           </div>
@@ -89,11 +124,11 @@ function PatientDetailPage() {
         {/* Patient Info Card */}
         <div className="patient-info-card">
           <div className="patient-main-info">
-            <div className="patient-avatar-large">{patient.avatar}</div>
+            <div className="patient-avatar-large">{patient.name?.charAt(0)?.toUpperCase() || '?'}</div>
             <div className="patient-identity">
               <h1>{patient.name}</h1>
               <p className="patient-meta-info">
-                {patient.age} ans • {patient.gender} • Né(e) le {formatDate(patient.dateOfBirth)}
+                {patient.age} ans • {patient.gender} • Né(e) le {formatDate(patient.date_of_birth)}
               </p>
               <span className={`status-badge ${patient.status === 'Actif' ? 'active' : 'pending'}`}>
                 {patient.status}
@@ -172,17 +207,17 @@ function PatientDetailPage() {
                 <div className="info-grid">
                   <div className="info-row">
                     <span className="info-label">Groupe sanguin</span>
-                    <span className="info-value">{patient.bloodType}</span>
+                    <span className="info-value">{patient.blood_type || '-'}</span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">Assurance</span>
-                    <span className="info-value">{patient.insurance}</span>
+                    <span className="info-value">{patient.insurance || 'Sans assurance'}</span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">Allergies</span>
                     <span className="info-value allergies">
-                      {(patient.allergies && Array.isArray(patient.allergies) && patient.allergies.length > 0)
-                        ? patient.allergies.map((a, i) => (
+                      {(patient.allergiesArray && patient.allergiesArray.length > 0)
+                        ? patient.allergiesArray.map((a, i) => (
                             <span key={i} className="allergy-tag">{a}</span>
                           ))
                         : 'Aucune allergie connue'
@@ -214,12 +249,12 @@ function PatientDetailPage() {
               {/* Notes */}
               <div className="info-card full-width">
                 <h3><FiFileText /> Notes médicales</h3>
-                <p className="notes-content">{patient.notes}</p>
+                <p className="notes-content">{patient.notes || 'Aucune note'}</p>
               </div>
-              {patient.notesAdmin && (
+              {patient.notes_admin && (
                 <div className="info-card full-width notes-admin">
                   <h3><FiFileText /> Notes administratives</h3>
-                  <p className="notes-content">{patient.notesAdmin}</p>
+                  <p className="notes-content">{patient.notes_admin}</p>
                 </div>
               )}
             </div>
@@ -372,6 +407,20 @@ function PatientDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <PatientForm 
+              initialData={patient} 
+              isEdit={true} 
+              onSuccess={handleEditSuccess}
+              onClose={() => setShowEditModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
