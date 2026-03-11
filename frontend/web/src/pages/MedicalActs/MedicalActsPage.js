@@ -15,7 +15,7 @@ import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
 import { SkeletonCard } from '../../components/common/Skeleton';
 import StatCard from '../../components/cards/StatCard';
-import MedicalActForm from '../../components/MedicalActForm';
+import MedicalActForm from './MedicalActForm';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import './MedicalActsPage.css';
 

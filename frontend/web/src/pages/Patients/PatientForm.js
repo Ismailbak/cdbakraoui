@@ -4,7 +4,7 @@ import {
   FiFileText, FiChevronRight, FiChevronLeft, FiCheck, FiX,
   FiAlertCircle, FiUserPlus, FiEdit2, FiHeart, FiAlertTriangle, FiHome
 } from 'react-icons/fi';
-import { createPatient, updatePatient } from '../api/api';
+import { createPatient, updatePatient } from '../../api/api';
 import './PatientForm.css';
 
 

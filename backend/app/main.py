@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts
 from app.database import engine, Base
-from app.models import user, patient, appointment, medical_act, notification  # noqa: F401 - register models
+from app.models import user, patient, appointment, medical_act, notification, audit  # noqa: F401 - register models
 
 app = FastAPI(
     title="Medical AI Assistant",

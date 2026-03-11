@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { LoadingSpinner, Breadcrumb } from '../../components/common';
-import PatientForm from '../../components/PatientForm';
+import PatientForm from './PatientForm';
 import './PatientDetailPage.css';
 
 function PatientDetailPage() {

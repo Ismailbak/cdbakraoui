@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import PatientList from '../../components/PatientList';
-import PatientForm from '../../components/PatientForm';
-import Chat from '../../components/Chat';
+import PatientList from './PatientList';
+import PatientForm from './PatientForm';
+import Chat from '../Assistant/Chat';
 
 function PatientPage() {
   const [selectedPatient, setSelectedPatient] = useState(null);

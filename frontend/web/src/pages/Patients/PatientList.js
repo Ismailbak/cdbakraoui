@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getPatients } from '../api/api';
+import { getPatients } from '../../api/api';
 
 function PatientList({ onSelect }) {
   const [patients, setPatients] = useState([]);

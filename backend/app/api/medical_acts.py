@@ -11,6 +11,9 @@ from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 q
 from app.database import get_db
 from app.models.medical_act import MedicalAct as MedicalActModel, ActDocument as ActDocumentModel
 from app.models.patient import Patient as PatientModel
+from app.api.auth import get_current_user_orm
+from app.models.user import User
+from app.services.audit_service import log_action
 
 router = APIRouter()
 
@@ -112,7 +115,10 @@ def _enrich_acts(db: Session, rows: List[MedicalActModel]) -> List[dict]:
 # ─── Stats ────────────────────────────────────────────────────────────────────
 
 @router.get("/stats")
-def get_medical_acts_stats(db: Session = Depends(get_db)):
+def get_medical_acts_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Returns aggregate counts used by the dashboard stat cards."""
     total = db.query(MedicalActModel).count()
     consultations = db.query(MedicalActModel).filter(MedicalActModel.act_type == "Consultation").count()
@@ -131,7 +137,7 @@ def get_medical_acts_stats(db: Session = Depends(get_db)):
 # FIX: This route MUST be defined before /{act_id} — otherwise FastAPI will try
 # to match "types" as an integer act_id and return a 422 Unprocessable Entity.
 @router.get("/types", response_model=List[str])
-def get_act_types():
+def get_act_types(current_user: User = Depends(get_current_user_orm)):
     """Returns the list of valid act type values."""
     # FIX: These values now match the French labels used in the frontend.
     # Previously the backend returned English strings that didn't match the frontend constants.
@@ -143,6 +149,7 @@ def get_act_types():
 @router.get("/", response_model=List[MedicalActOut])
 def get_medical_acts(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
     patient_id: Optional[int] = Query(None),
     act_type: Optional[str] = Query(None),
 ):
@@ -162,13 +169,26 @@ def get_medical_acts(
 
 
 @router.post("/", response_model=MedicalActOut, status_code=201)  # FIX: return 201 Created
-def create_medical_act(act: MedicalActCreate, db: Session = Depends(get_db)):
+def create_medical_act(
+    act: MedicalActCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Creates a new medical act and returns the saved record with patient_name."""
     # Removed debug print — use proper logging in production
     db_act = MedicalActModel(**act.model_dump())
     db.add(db_act)
     db.commit()
     db.refresh(db_act)
+    log_action(
+        db,
+        action="CREATE_MEDICAL_ACT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="medical_act",
+        resource_id=str(db_act.id),
+        details=f"Created medical act: {db_act.act_type}",
+    )
 
     # Look up patient name for the response
     patient = db.query(PatientModel).filter(PatientModel.id == db_act.patient_id).first()
@@ -178,7 +198,11 @@ def create_medical_act(act: MedicalActCreate, db: Session = Depends(get_db)):
 # ─── Per-Patient ──────────────────────────────────────────────────────────────
 
 @router.get("/patient/{patient_id}", response_model=List[MedicalActOut])
-def get_patient_medical_acts(patient_id: int, db: Session = Depends(get_db)):
+def get_patient_medical_acts(
+    patient_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Returns all acts for a specific patient, ordered by date descending."""
     rows = (
         db.query(MedicalActModel)
@@ -192,7 +216,11 @@ def get_patient_medical_acts(patient_id: int, db: Session = Depends(get_db)):
 # ─── Single Act ───────────────────────────────────────────────────────────────
 
 @router.get("/{act_id}", response_model=MedicalActOut)
-def get_medical_act(act_id: int, db: Session = Depends(get_db)):
+def get_medical_act(
+    act_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Returns a single act by ID. Raises 404 if not found."""
     row = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
     if not row:
@@ -202,7 +230,12 @@ def get_medical_act(act_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{act_id}", response_model=MedicalActOut)
-def update_medical_act(act_id: int, act: MedicalActBase, db: Session = Depends(get_db)):
+def update_medical_act(
+    act_id: int, 
+    act: MedicalActBase, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Updates all fields of an existing act. Raises 404 if not found."""
     row = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
     if not row:
@@ -211,18 +244,41 @@ def update_medical_act(act_id: int, act: MedicalActBase, db: Session = Depends(g
         setattr(row, k, v)
     db.commit()
     db.refresh(row)
+    log_action(
+        db,
+        action="UPDATE_MEDICAL_ACT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="medical_act",
+        resource_id=str(act_id),
+        details=f"Updated medical act: {row.act_type}",
+    )
     patient = db.query(PatientModel).filter(PatientModel.id == row.patient_id).first()
     return _act_to_dict(row, patient.name if patient else None)
 
 
 @router.delete("/{act_id}", status_code=204)  # FIX: 204 No Content is the correct status for DELETE
-def delete_medical_act(act_id: int, db: Session = Depends(get_db)):
+def delete_medical_act(
+    act_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Deletes an act by ID. Raises 404 if not found."""
     row = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Medical act not found")
+    act_type = row.act_type
     db.delete(row)
     db.commit()
+    log_action(
+        db,
+        action="DELETE_MEDICAL_ACT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="medical_act",
+        resource_id=str(act_id),
+        details=f"Deleted medical act: {act_type}",
+    )
     # FIX: No response body for 204; returning {"message": "Deleted"} with 204 is invalid HTTP
 
 
@@ -235,7 +291,11 @@ class ActDocumentCreate(BaseModel):
 
 
 @router.get("/{act_id}/documents", response_model=List[ActDocumentOut])
-def get_act_documents(act_id: int, db: Session = Depends(get_db)):
+def get_act_documents(
+    act_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Returns all documents attached to a specific act."""
     # FIX: raise 404 if the act itself doesn't exist
     act = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
@@ -245,7 +305,12 @@ def get_act_documents(act_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{act_id}/documents", response_model=ActDocumentOut, status_code=201)
-def add_act_document(act_id: int, doc: ActDocumentCreate, db: Session = Depends(get_db)):
+def add_act_document(
+    act_id: int, 
+    doc: ActDocumentCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     """Attaches a document record to an existing act."""
     act = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
     if not act:

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getMedicalActs, deleteMedicalAct } from '../api/api';
+import { getMedicalActs, deleteMedicalAct } from '../../api/api';
 
 function MedicalActList({ onSelect }) {
   const [acts, setActs] = useState([]);

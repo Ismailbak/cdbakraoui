@@ -4,31 +4,25 @@ import StatCard from '../../components/cards/StatCard';
 import { FiUsers, FiLogIn, FiActivity, FiTrendingUp } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SkeletonCard, SkeletonChart, Skeleton } from '../../components/common';
+import { getAdminStats } from '../../api/api';
 import './AdminDashboard.css';
-
-const demoStats = [
-  { label: 'Utilisateurs actifs', value: '12', sub: 'sur 12 total', color: 'blue' },
-  { label: 'Connexions aujourd\'hui', value: '34', sub: 'vs 28 hier', color: 'green' },
-  { label: 'Actions totales', value: '210', sub: 'ce mois', color: 'yellow' },
-  { label: 'Taux d\'activité', value: '94%', sub: 'moyenne 7 jours', color: 'purple' },
-];
-
-const activityByDay = [
-  { day: 'Lun', connexions: 28, actions: 45 },
-  { day: 'Mar', connexions: 32, actions: 52 },
-  { day: 'Mer', connexions: 34, actions: 48 },
-  { day: 'Jeu', connexions: 29, actions: 61 },
-  { day: 'Ven', connexions: 41, actions: 58 },
-  { day: 'Sam', connexions: 12, actions: 18 },
-  { day: 'Dim', connexions: 8, actions: 12 },
-];
 
 function AdminAnalytics() {
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(t);
+    const fetchStats = async () => {
+      try {
+        const res = await getAdminStats();
+        setStats(res.data);
+      } catch (err) {
+        console.error('Failed to load admin stats', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStats();
   }, []);
 
   if (isLoading) {
@@ -57,6 +51,15 @@ function AdminAnalytics() {
     );
   }
 
+  const statCards = stats ? [
+    { label: 'Utilisateurs actifs', value: String(stats.active_users), sub: `sur ${stats.total_users} total`, color: 'blue' },
+    { label: 'Connexions aujourd\'hui', value: String(stats.today_logins), sub: 'aujourd\'hui', color: 'green' },
+    { label: 'Actions totales', value: String(stats.monthly_actions), sub: 'ce mois', color: 'yellow' },
+    { label: 'Taux d\'activité', value: `${stats.activity_rate}%`, sub: 'moyenne 7 jours', color: 'purple' },
+  ] : [];
+
+  const activityByDay = stats?.activity_by_day || [];
+
   return (
     <Layout>
       <div className="admin-section-page">
@@ -66,7 +69,7 @@ function AdminAnalytics() {
         </div>
 
         <div className="admin-stats-grid admin-analytics-stats">
-          {demoStats.map((stat, idx) => (
+          {statCards.map((stat, idx) => (
             <StatCard
               key={idx}
               icon={
@@ -103,10 +106,10 @@ function AdminAnalytics() {
         <div className="admin-card-wrap">
           <h3>Résumé</h3>
           <ul className="admin-stats-list">
-            <li><strong>12</strong> Utilisateurs actifs</li>
-            <li><strong>34</strong> Connexions aujourd'hui</li>
-            <li><strong>210</strong> Actions totales ce mois</li>
-            <li><strong>94%</strong> Taux d'activité moyen (7 jours)</li>
+            <li><strong>{stats?.active_users || 0}</strong> Utilisateurs actifs</li>
+            <li><strong>{stats?.today_logins || 0}</strong> Connexions aujourd'hui</li>
+            <li><strong>{stats?.monthly_actions || 0}</strong> Actions totales ce mois</li>
+            <li><strong>{stats?.activity_rate || 0}%</strong> Taux d'activité moyen (7 jours)</li>
           </ul>
         </div>
       </div>

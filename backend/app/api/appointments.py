@@ -7,6 +7,9 @@ from datetime import datetime
 from app.database import get_db
 from app.models.appointment import Appointment as AppointmentModel
 from app.models.patient import Patient as PatientModel
+from app.api.auth import get_current_user_orm
+from app.models.user import User
+from app.services.audit_service import log_action
 
 router = APIRouter()
 
@@ -70,16 +73,34 @@ def get_appointment(appointment_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=Appointment)
-def create_appointment(appointment: AppointmentBase, db: Session = Depends(get_db)):
+def create_appointment(
+    appointment: AppointmentBase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     db_app = AppointmentModel(**appointment.model_dump())
     db.add(db_app)
     db.commit()
     db.refresh(db_app)
+    log_action(
+        db,
+        action="CREATE_APPOINTMENT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="appointment",
+        resource_id=str(db_app.id),
+        details=f"Created appointment for patient {appointment.patient_id}",
+    )
     return _appointment_with_patient_name(db, db_app)
 
 
 @router.put("/{appointment_id}", response_model=Appointment)
-def update_appointment(appointment_id: int, appointment: AppointmentBase, db: Session = Depends(get_db)):
+def update_appointment(
+    appointment_id: int,
+    appointment: AppointmentBase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     row = db.query(AppointmentModel).filter(AppointmentModel.id == appointment_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Appointment not found")
@@ -87,14 +108,37 @@ def update_appointment(appointment_id: int, appointment: AppointmentBase, db: Se
         setattr(row, k, v)
     db.commit()
     db.refresh(row)
+    log_action(
+        db,
+        action="UPDATE_APPOINTMENT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="appointment",
+        resource_id=str(appointment_id),
+        details=f"Updated appointment for patient {appointment.patient_id}",
+    )
     return _appointment_with_patient_name(db, row)
 
 
 @router.delete("/{appointment_id}")
-def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
+def delete_appointment(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     row = db.query(AppointmentModel).filter(AppointmentModel.id == appointment_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Appointment not found")
+    patient_id = row.patient_id
     db.delete(row)
     db.commit()
+    log_action(
+        db,
+        action="DELETE_APPOINTMENT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="appointment",
+        resource_id=str(appointment_id),
+        details=f"Deleted appointment for patient {patient_id}",
+    )
     return {"message": "Deleted"}

@@ -12,12 +12,9 @@ const navItems = [
   { path: '/appointments', icon: FiCalendar, label: 'Rendez-vous' },
   { path: '/medical-acts', icon: FiFileText, label: 'Actes Médicaux' },
   { path: '/assistant', icon: FiMessageSquare, label: 'Assistant IA' },
-  { path: '/analytics', icon: FiBarChart2, label: 'Analytics' },
+  { path: '/analytics', icon: FiBarChart2, label: 'Analytics', roles: ['admin', 'doctor', 'department_head'] },
   { path: '/notifications', icon: FiBell, label: 'Notifications' },
 ];
-
-
-
 
 function Sidebar() {
   const location = useLocation();
@@ -25,6 +22,12 @@ function Sidebar() {
   const { warning } = useToast();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const filteredNavItems = navItems.filter(item => {
+    if (!item.roles) return true;
+    if (user.is_admin) return true;
+    return item.roles.includes(user.role);
+  });
 
   const handleLogoutClick = (e) => {
     e.preventDefault();
@@ -54,7 +57,7 @@ function Sidebar() {
 
           {/* Navigation */}
           <nav className="sidebar-nav">
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (

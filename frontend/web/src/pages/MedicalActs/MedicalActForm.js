@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
   FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
 } from 'react-icons/fi';
-import { getPatients, createMedicalAct, updateMedicalAct } from '../api/api';
+import { getPatients, createMedicalAct, updateMedicalAct } from '../../api/api';
 import './MedicalActForm.css';
 
 const CATEGORY_OPTIONS = [

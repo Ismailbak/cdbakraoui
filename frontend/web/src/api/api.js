@@ -14,6 +14,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401 && localStorage.getItem('token')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth
 export const login = (username, password) =>
   api.post('/auth/login', new URLSearchParams({ username, password }));
@@ -56,5 +68,47 @@ export const getNotifications = () => api.get('/notifications/');
 export const markNotificationRead = (id) => api.post(`/notifications/read/${id}`);
 
 export const getMedicalActsStats = () => api.get('/medical-acts/stats');
+
+// admin dashbaord
+export const getAuditLogs = (limit = 50, skip = 0, filters = {}) => {
+  const params = new URLSearchParams({ limit, skip });
+  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+  if (filters.action) params.append('action', filters.action);
+  if (filters.username) params.append('username', filters.username);
+  if (filters.date_from) params.append('date_from', filters.date_from);
+  if (filters.date_to) params.append('date_to', filters.date_to);
+  return api.get(`/analytics/audit-logs?${params.toString()}`);
+};
+
+export const exportAuditLogsCsv = (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+  if (filters.action) params.append('action', filters.action);
+  if (filters.username) params.append('username', filters.username);
+  if (filters.date_from) params.append('date_from', filters.date_from);
+  if (filters.date_to) params.append('date_to', filters.date_to);
+  return api.get(`/analytics/audit-logs/export?${params.toString()}`, { responseType: 'blob' });
+};
+
+export const getAdminStats = () => api.get('/analytics/admin-stats');
+export const getAdminUsers = () => api.get('/auth/users');
+export const toggleUserStatus = (userId) => api.patch(`/auth/users/${userId}/toggle`);
+export const createUser = (data) => api.post('/auth/signup', data);
+export const updateUser = (userId, data) => api.put(`/auth/users/${userId}`, data);
+export const deleteUser = (userId) => api.delete(`/auth/users/${userId}`);
+export const resetUserPassword = (userId, newPassword) =>
+  api.post(`/auth/users/${userId}/reset-password`, { new_password: newPassword });
+export const getUserDetail = (userId) => api.get(`/auth/users/${userId}`);
+
+// Settings
+export const getSettings = () => api.get('/analytics/settings');
+export const saveSettings = (data) => api.put('/analytics/settings', data);
+
+// System health
+export const getSystemHealth = () => api.get('/analytics/system-health');
+
+// Broadcast notification
+export const broadcastNotification = (title, message) =>
+  api.post('/analytics/broadcast', { title, message });
 
 export default api;

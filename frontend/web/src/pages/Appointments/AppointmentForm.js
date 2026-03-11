@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiChevronLeft, FiCheck, FiX,
   FiAlertCircle, FiPlus, FiSearch
 } from 'react-icons/fi';
-import { createAppointment, getPatients } from '../api/api';
+import { createAppointment, getPatients } from '../../api/api';
 import './AppointmentForm.css';
 
 const TIME_SLOTS = [

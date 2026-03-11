@@ -679,3 +679,133 @@
     flex-wrap: wrap;
   }
 }
+
+/* Admin form input */
+.admin-input {
+  padding: 10px 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #374151;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.admin-input::placeholder {
+  color: #9CA3AF;
+}
+
+select.admin-input {
+  appearance: auto;
+  cursor: pointer;
+}
+
+/* Danger button variant */
+.admin-btn-danger {
+  color: #DC2626 !important;
+}
+.admin-btn-danger:hover {
+  background: #FEE2E2 !important;
+}
+
+/* Clickable name in user table */
+.admin-clickable-name {
+  cursor: pointer;
+  color: #1D4ED8;
+  font-weight: 500;
+}
+.admin-clickable-name:hover {
+  text-decoration: underline;
+}
+
+/* Table actions row */
+.admin-table-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.admin-table-actions .admin-btn-secondary {
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+}
+
+/* System health grid */
+.admin-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.admin-health-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  background: #F9FAFB;
+  border-radius: 12px;
+}
+
+.admin-health-item svg {
+  color: #3B82F6;
+  flex-shrink: 0;
+}
+
+.admin-health-label {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-bottom: 2px;
+}
+
+.admin-health-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E2A4A;
+}
+
+/* User detail grid */
+.admin-user-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.admin-user-detail-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  background: #F9FAFB;
+  border-radius: 12px;
+}
+
+.admin-user-detail-item svg {
+  color: #3B82F6;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+/* IP code style */
+.admin-ip {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  background: #F3F4F6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #6B7280;
+}
+
+textarea.admin-input {
+  font-family: inherit;
+}

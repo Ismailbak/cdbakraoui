@@ -5,7 +5,7 @@ import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
 import { getPatients, getAppointments, updatePatient, deletePatient } from '../../api/api';
-import PatientForm from '../../components/PatientForm';
+import PatientForm from './PatientForm';
 import './PatientsPage.css';
 
 // Insurance / Mutuelle types for dropdown

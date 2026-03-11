@@ -7,6 +7,9 @@ from sqlalchemy import or_
 
 from app.database import get_db
 from app.models.patient import Patient as PatientModel
+from app.api.auth import get_current_user_orm, RoleChecker
+from app.models.user import User
+from app.services.audit_service import log_action
 
 router = APIRouter()
 
@@ -49,6 +52,7 @@ class Patient(PatientBase):
 @router.get("/", response_model=List[Patient])
 def get_patients(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
     q: Optional[str] = Query(None, description="Search by name, IPP, phone, or diagnosis"),
     ipp: Optional[str] = Query(None),
     name: Optional[str] = Query(None),
@@ -82,7 +86,11 @@ def get_patients(
 
 
 @router.get("/{patient_id}", response_model=Patient)
-def get_patient(patient_id: int, db: Session = Depends(get_db)):
+def get_patient(
+    patient_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -90,16 +98,34 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=Patient)
-def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
+def create_patient(
+    patient: PatientCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     db_patient = PatientModel(**patient.model_dump())
     db.add(db_patient)
     db.commit()
     db.refresh(db_patient)
+    log_action(
+        db,
+        action="CREATE_PATIENT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="patient",
+        resource_id=str(db_patient.id),
+        details=f"Created patient: {db_patient.name}",
+    )
     return db_patient
 
 
 @router.put("/{patient_id}", response_model=Patient)
-def update_patient(patient_id: int, patient: PatientBase, db: Session = Depends(get_db)):
+def update_patient(
+    patient_id: int, 
+    patient: PatientBase, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
     db_patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -107,14 +133,39 @@ def update_patient(patient_id: int, patient: PatientBase, db: Session = Depends(
         setattr(db_patient, k, v)
     db.commit()
     db.refresh(db_patient)
+    log_action(
+        db,
+        action="UPDATE_PATIENT",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="patient",
+        resource_id=str(patient_id),
+        details=f"Updated patient: {db_patient.name}",
+    )
     return db_patient
 
 
 @router.delete("/{patient_id}")
-def delete_patient(patient_id: int, db: Session = Depends(get_db)):
+def delete_patient(
+    patient_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker(["admin", "department_head"])),
+):
     db_patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+    
+    patient_name = db_patient.name
     db.delete(db_patient)
     db.commit()
+    
+    log_action(
+        db, 
+        action="DELETE_PATIENT", 
+        user_id=current_user.id, 
+        username=current_user.username,
+        resource_type="patient",
+        resource_id=str(patient_id),
+        details=f"Deleted patient: {patient_name}"
+    )
     return {"message": "Deleted"}

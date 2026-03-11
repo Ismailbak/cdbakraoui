@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { sendChatMessage } from '../api/api';
+import { sendChatMessage } from '../../api/api';
 
 function Chat({ patientId }) {
   const [messages, setMessages] = useState([]);

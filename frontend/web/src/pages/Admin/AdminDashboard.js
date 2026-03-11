@@ -1,21 +1,77 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
-import { FiUsers, FiBarChart2, FiShield, FiSettings, FiLogIn, FiUserPlus } from 'react-icons/fi';
+import { FiUsers, FiBarChart2, FiShield, FiSettings, FiLogIn, FiUserPlus, FiEdit2, FiTrash2, FiCalendar, FiFileText } from 'react-icons/fi';
+import { getAdminStats, getAuditLogs } from '../../api/api';
 import './AdminDashboard.css';
-
-const recentActivity = [
-  { id: 1, user: 'Admin Demo', action: 'Connexion', time: 'Il y a 2 min', status: 'Succès' },
-  { id: 2, user: 'Dr. Demo', action: 'Consultation dossier', time: 'Il y a 15 min', status: 'Succès' },
-  { id: 3, user: 'Dr. Fatima', action: 'Tentative connexion', time: 'Il y a 1 h', status: 'Échec' },
-];
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const adminName = user.name || 'Admin';
+  const adminName = user.first_name || user.name || 'Admin';
+
+  const [stats, setStats] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [statsRes, logsRes] = await Promise.all([
+          getAdminStats(),
+          getAuditLogs(10, 0),
+        ]);
+        setStats(statsRes.data);
+        setRecentActivity(logsRes.data);
+      } catch (err) {
+        console.error('Failed to fetch admin data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const formatAction = (action) => {
+    const actions = {
+      'LOGIN_SUCCESS': 'Connexion réussie',
+      'LOGIN_FAILURE': 'Échec de connexion',
+      'CREATE_PATIENT': 'Ajout patient',
+      'UPDATE_PATIENT': 'Modification patient',
+      'DELETE_PATIENT': 'Suppression patient',
+      'CREATE_MEDICAL_ACT': 'Ajout acte médical',
+      'UPDATE_MEDICAL_ACT': 'Modification acte',
+      'DELETE_MEDICAL_ACT': 'Suppression acte',
+      'CREATE_APPOINTMENT': 'Ajout rendez-vous',
+      'UPDATE_APPOINTMENT': 'Modification rendez-vous',
+      'DELETE_APPOINTMENT': 'Suppression rendez-vous',
+    };
+    return actions[action] || action;
+  };
+
+  const getActionIcon = (action) => {
+    if (action.includes('LOGIN')) return <FiLogIn />;
+    if (action.includes('PATIENT')) return <FiUserPlus />;
+    if (action.includes('MEDICAL')) return <FiFileText />;
+    if (action.includes('APPOINTMENT')) return <FiCalendar />;
+    return <FiEdit2 />;
+  };
+
+  const formatTime = (isoStr) => {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "À l'instant";
+    if (diffMin < 60) return `Il y a ${diffMin} min`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `Il y a ${diffH} h`;
+    const diffD = Math.floor(diffH / 24);
+    return `Il y a ${diffD} j`;
+  };
 
   return (
     <Layout>
@@ -33,15 +89,15 @@ function AdminDashboard() {
             <h3>Vue d'ensemble</h3>
             <div className="admin-overview-stats">
               <div className="admin-overview-item">
-                <span className="admin-overview-value">12</span>
+                <span className="admin-overview-value">{isLoading ? '...' : stats?.total_users ?? 0}</span>
                 <span className="admin-overview-label">Utilisateurs</span>
               </div>
               <div className="admin-overview-item">
-                <span className="admin-overview-value">34</span>
+                <span className="admin-overview-value">{isLoading ? '...' : stats?.today_logins ?? 0}</span>
                 <span className="admin-overview-label">Connexions aujourd'hui</span>
               </div>
               <div className="admin-overview-item">
-                <span className="admin-overview-value">210</span>
+                <span className="admin-overview-value">{isLoading ? '...' : stats?.monthly_actions ?? 0}</span>
                 <span className="admin-overview-label">Actions ce mois</span>
               </div>
             </div>
@@ -97,28 +153,34 @@ function AdminDashboard() {
                 Voir tout
               </button>
             </div>
-            <ul className="admin-activity-list">
-              {recentActivity.map((item) => (
-                <li key={item.id} className="admin-activity-item">
-                  <div className="admin-activity-icon">
-                    {item.action.includes('Connexion') ? <FiLogIn /> : <FiUserPlus />}
-                  </div>
-                  <div className="admin-activity-info">
-                    <span className="admin-activity-user">{item.user}</span>
-                    <span className="admin-activity-action">{item.action}</span>
-                  </div>
-                  <span className={`admin-activity-badge admin-activity-badge--${item.status === 'Succès' ? 'success' : 'error'}`}>
-                    {item.status}
-                  </span>
-                  <span className="admin-activity-time">{item.time}</span>
-                </li>
-              ))}
-            </ul>
+            {isLoading ? (
+              <p style={{ padding: '1rem', color: '#9CA3AF' }}>Chargement...</p>
+            ) : recentActivity.length === 0 ? (
+              <p style={{ padding: '1rem', color: '#9CA3AF' }}>Aucune activité récente</p>
+            ) : (
+              <ul className="admin-activity-list">
+                {recentActivity.map((item) => (
+                  <li key={item.id} className="admin-activity-item">
+                    <div className="admin-activity-icon">
+                      {getActionIcon(item.action)}
+                    </div>
+                    <div className="admin-activity-info">
+                      <span className="admin-activity-user">{item.username || 'Inconnu'}</span>
+                      <span className="admin-activity-action">{formatAction(item.action)}</span>
+                    </div>
+                    <span className={`admin-activity-badge admin-activity-badge--${item.status === 'success' ? 'success' : 'error'}`}>
+                      {item.status === 'success' ? 'Succès' : 'Échec'}
+                    </span>
+                    <span className="admin-activity-time">{formatTime(item.timestamp)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="admin-quick-actions-card">
             <h3>Actions rapides</h3>
             <div className="admin-quick-actions">
-              <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/users')}>
+              <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/users?action=add')}>
                 <FiUsers /> Ajouter un utilisateur
               </button>
               <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/security')}>

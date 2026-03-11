@@ -4,7 +4,7 @@ import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonListItem, useToast } from '../../components/common';
 import { getAppointments, getPatients, updateAppointment, deleteAppointment } from '../../api/api';
-import AppointmentForm from '../../components/AppointmentForm';
+import AppointmentForm from './AppointmentForm';
 import './AppointmentsPage.css';
 
 function mapApiAppointmentToUi(apt) {
