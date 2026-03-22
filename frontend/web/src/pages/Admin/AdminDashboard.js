@@ -188,7 +188,7 @@ function AdminDashboard() {
               </button>
               <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/settings')}>
                 <FiSettings /> Paramètres
-              </button>
+              </button>              
             </div>
           </div>
         </div>
