@@ -56,6 +56,14 @@ export const updateMedicalAct = (id, data) => api.put(`/medical-acts/${id}`, dat
 export const deleteMedicalAct = (id) => api.delete(`/medical-acts/${id}`);
 export const getPatientMedicalActs = (patientId) => api.get(`/medical-acts/patient/${patientId}`);
 export const getMedicalActTypes = () => api.get('/medical-acts/types');
+export const uploadMedicalActDocument = (actId, formData) =>
+  api.post(`/medical-acts/${actId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+export const downloadMedicalActDocument = (actId, docId) =>
+  api.get(`/medical-acts/${actId}/documents/${docId}/download`, { responseType: 'blob' });
+export const getMedicalActPdf = (actId) =>
+  api.get(`/medical-acts/${actId}/pdf`, { responseType: 'blob' });
 
 // Chat
 export const sendChatMessage = (message, patientId) =>

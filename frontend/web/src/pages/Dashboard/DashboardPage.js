@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart } from 'react-icons/fi';
+import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart, FiArrowRight } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
@@ -282,7 +282,10 @@ function DashboardPage() {
             <div className="promo-content">
               <h3>Assistant IA</h3>
               <p>Obtenez des résumés de dossiers patients et des suggestions médicales en temps réel.</p>
-              <button className="promo-btn" onClick={() => window.location.href = '/assistant'}>Essayer maintenant →</button>
+              <button className="promo-btn" onClick={() => window.location.href = '/assistant'}>
+                <span>Essayer maintenant</span>
+                <FiArrowRight />
+              </button>
             </div>
             <div className="promo-illustration">🤖</div>
           </div>

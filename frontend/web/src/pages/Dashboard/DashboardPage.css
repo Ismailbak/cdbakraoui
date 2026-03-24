@@ -213,20 +213,37 @@
 }
 
 .promo-btn {
-  background: #fff;
+  background: #1E2A4A;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
+  padding: 10px 24px;
+  border-radius: 50px; /* Pill shape */
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(30, 42, 74, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.promo-btn svg {
+  transition: transform 0.3s ease;
 }
 
 .promo-btn:hover {
-  background: #1E2A4A;
-  color: #fff;
+  background: #2a3b66;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30, 42, 74, 0.3);
+}
+
+.promo-btn:hover svg {
+  transform: translateX(4px);
+}
+
+.promo-btn:active {
+  transform: translateY(0);
 }
 
 .promo-illustration {
