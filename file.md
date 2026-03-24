@@ -56,11 +56,11 @@ This document provides a detailed explanation of every file and directory in the
 **Backend Feature Coverage:**
 - Core CRUD for patients, appointments, medical acts, users: **Implemented**
 - Authentication & role management: **Implemented**
-- Analytics: **Stub/Partial** (basic endpoints, logic incomplete)
+- Analytics: **Implemented** (Real-time aggregation of demographics, trends, and financial stats)
 - AI chat assistant: **Stub** (LLM logic not fully implemented)
-- Notifications: **Stub** (basic structure, logic incomplete)
+- Notifications: **Implemented** (Manual peer-to-peer messaging, categories, sender visibility)
 - Audit logging: **Implemented**
-- PDF generation: **Not implemented**
+- PDF generation: **Implemented** (Medical Act reports and Patient Dossier)
 - File/document upload: **Partial** (model exists, endpoints may be incomplete)
 
 ---
@@ -96,7 +96,7 @@ This document provides a detailed explanation of every file and directory in the
 - Admin dashboard, user management, analytics, logs, settings: **Implemented**
 - Patient management, appointments, medical acts, notifications: **Implemented**
 - AI chat assistant: **Implemented**
-- PDF generation: **Partial** (dependency present, feature may be incomplete)
+- PDF generation: **Implemented** (Medical Act reports and Patient Dossier)
 - File/document upload: **Not implemented**
 
 ---
@@ -106,10 +106,10 @@ This document provides a detailed explanation of every file and directory in the
 | Area         | Feature                | Status         |
 |--------------|------------------------|----------------|
 | Backend      | CRUD (patients, etc.)  | Implemented    |
-| Backend      | Analytics              | Partial/Stub   |
+| Backend      | Analytics              | Implemented    |
 | Backend      | AI Chat                | Stub           |
-| Backend      | Notifications          | Partial/Stub   |
-| Backend      | PDF Generation         | Not Impl.      |
+| Backend      | Notifications          | Implemented    |
+| Backend      | PDF Generation         | Implemented    |
 | Backend      | File Upload            | Partial        |
 | Mobile       | Patient List           | Implemented    |
 | Mobile       | Analytics              | Implemented    |
@@ -126,7 +126,7 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | Medical Acts           | Implemented    |
 | Web          | Notifications          | Implemented    |
 | Web          | Chat                   | Implemented    |
-| Web          | PDF Generation         | Partial        |
+| Web          | PDF Generation         | Implemented    |
 | Web          | File Upload            | Not Impl.      |
 
 ---

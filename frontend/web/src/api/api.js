@@ -38,6 +38,7 @@ export const getPatient = (id) => api.get(`/patients/${id}`);
 export const createPatient = (data) => api.post('/patients/', data);
 export const updatePatient = (id, data) => api.put(`/patients/${id}`, data);
 export const deletePatient = (id) => api.delete(`/patients/${id}`);
+export const exportPatientDossier = (id) => api.get(`/patients/${id}/dossier`, { responseType: 'blob' });
 
 // Appointments
 export const getAppointments = () => api.get('/appointments/');
@@ -73,6 +74,7 @@ export const sendChatMessage = (message, patientId) =>
 export const getAnalyticsSummary = () => api.get('/analytics/summary');
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
 export const getNotifications = () => api.get('/notifications/');
+export const createNotification = (data) => api.post('/notifications/', data);
 export const markNotificationRead = (id) => api.post(`/notifications/read/${id}`);
 
 export const getMedicalActsStats = () => api.get('/medical-acts/stats');
@@ -100,6 +102,7 @@ export const exportAuditLogsCsv = (filters = {}) => {
 
 export const getAdminStats = () => api.get('/analytics/admin-stats');
 export const getAdminUsers = () => api.get('/auth/users');
+export const getDoctors = () => api.get('/auth/doctors');
 export const toggleUserStatus = (userId) => api.patch(`/auth/users/${userId}/toggle`);
 export const createUser = (data) => api.post('/auth/signup', data);
 export const updateUser = (userId, data) => api.put(`/auth/users/${userId}`, data);

@@ -154,6 +154,25 @@ def get_current_user(current_user: User = Depends(get_current_user_orm)):
     }
 
 
+@router.get("/doctors")
+def list_doctors(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """Allows any authenticated user to see the list of doctors for peer-to-peer features."""
+    doctors = db.query(User).filter(User.role == "doctor").all()
+    return [
+        {
+            "id": d.id,
+            "first_name": d.first_name,
+            "last_name": d.last_name,
+            "specialty": d.specialty,
+            "username": d.username,
+        }
+        for d in doctors
+    ]
+
+
 # ─── Admin: User Management ───────────────────────────────────────────────────
 
 @router.get("/users")

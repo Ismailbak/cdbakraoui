@@ -14,6 +14,7 @@ from app.models.notification import Notification as NotificationModel
 from app.models.user import User
 from datetime import datetime, timedelta
 from app.api.auth import get_current_user_orm, RoleChecker, require_admin
+from app.services import analytics_service
 import csv
 import io
 import json
@@ -75,6 +76,11 @@ class AnalyticsSummary(BaseModel):
     total_patients: int
     avg_age: float
     common_diagnoses: List[str]
+    weekly_activity: List[dict]
+    demographics: List[dict]
+    activity_trends: List[dict]
+    revenue_trends: List[dict]
+    treatments: List[dict]
 
 
 @router.get("/summary", response_model=AnalyticsSummary)
@@ -82,20 +88,8 @@ def get_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker(["admin", "doctor", "department_head"])),
 ):
-    total = db.query(func.count(PatientModel.id)).scalar() or 0
-    avg_result = db.query(func.avg(PatientModel.age)).scalar()
-    avg_age = float(avg_result) if avg_result is not None else 0.0
-    # Top diagnoses (non-empty, grouped)
-    diag_rows = (
-        db.query(PatientModel.diagnosis, func.count(PatientModel.id))
-        .filter(PatientModel.diagnosis.isnot(None), PatientModel.diagnosis != "")
-        .group_by(PatientModel.diagnosis)
-        .order_by(func.count(PatientModel.id).desc())
-        .limit(10)
-        .all()
-    )
-    common_diagnoses = [d[0] for d in diag_rows if d[0]]
-    return {"total_patients": total, "avg_age": round(avg_age, 1), "common_diagnoses": common_diagnoses}
+    stats = analytics_service.get_summary_stats(db)
+    return stats
 
 
 @router.get("/trends")

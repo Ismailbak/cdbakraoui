@@ -7,17 +7,37 @@ import {
 import Layout from '../../components/layout/Layout';
 import { SkeletonListItem, useToast } from '../../components/common';
 import { getNotifications, markNotificationRead as apiMarkRead } from '../../api/api';
+import CreateNotificationModal from './CreateNotificationModal';
 import './NotificationsPage.css';
 
 function mapApiNotification(n) {
+  const category = n.category || 'message';
+  let type = category;
+  let icon = 'bell';
+
+  if (category === 'patients') {
+    type = 'new_patient';
+    icon = 'user';
+  } else if (category === 'results') {
+    type = 'lab_results';
+    icon = 'file';
+  } else if (category === 'message') {
+    type = n.is_public ? 'public' : 'message';
+    icon = 'message';
+  }
+
   return {
     id: n.id,
-    type: 'generic',
+    type: type,
+    category: category,
     title: n.title,
     message: n.message,
     isRead: n.read,
-    icon: 'bell',
-    date: new Date().toISOString().split('T')[0],
+    isPublic: n.is_public,
+    senderName: n.sender_name || 'Système',
+    icon: icon,
+    date: n.created_at ? n.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+    time: n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
     priority: 'normal',
   };
 }
@@ -28,19 +48,23 @@ function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('Toutes');
   const [showSettings, setShowSettings] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const toast = useToast();
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchNotifications = () => {
+    setIsLoading(true);
     getNotifications()
       .then(res => {
-        if (!cancelled) setNotifications((res.data || []).map(mapApiNotification));
+        setNotifications((res.data || []).map(mapApiNotification));
       })
-      .catch(() => { if (!cancelled) setNotifications([]); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => { setNotifications([]); })
+      .finally(() => { setIsLoading(false); });
+  };
+
+  useEffect(() => {
+    fetchNotifications();
   }, []);
 
 
@@ -49,10 +73,10 @@ function NotificationsPage() {
   const filteredNotifications = notifications.filter(notif => {
     switch(selectedFilter) {
       case 'Non lues': return !notif.isRead;
-      case 'RDV': return notif.type.includes('appointment');
-      case 'Patients': return notif.type === 'new_patient' || notif.type === 'follow_up';
-      case 'Résultats': return notif.type === 'lab_results';
-      case 'Messages': return notif.type === 'message';
+      case 'RDV': return notif.type === 'appointment' || notif.category === 'appointment';
+      case 'Patients': return notif.type === 'new_patient' || notif.category === 'patients';
+      case 'Résultats': return notif.type === 'lab_results' || notif.category === 'results';
+      case 'Messages': return notif.category === 'message';
       default: return true;
     }
   });
@@ -127,12 +151,16 @@ function NotificationsPage() {
               Notifications
               {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
             </h1>
-            <p className="page-subtitle">Restez informé de l'activité de vos patients</p>
+            <p className="page-subtitle">Messages et alertes du staff médical</p>
           </div>
           <div className="header-actions">
+            <button className="new-notif-btn" onClick={() => setShowCreateModal(true)}>
+              <FiMessageSquare />
+              <span>Nouvelle Notification</span>
+            </button>
             <button className="mark-all-btn" onClick={markAllAsRead} disabled={unreadCount === 0}>
               <FiCheck />
-              <span>Tout marquer comme lu</span>
+              <span>Marquer tout lu</span>
             </button>
             <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
               <FiSettings />
@@ -190,20 +218,18 @@ function NotificationsPage() {
                       
                       <div className="notification-content">
                         <div className="notification-header">
-                          <h4 className="notification-title">{notification.title}</h4>
+                          <h4 className="notification-title">
+                            {notification.title}
+                            {notification.isPublic && <span className="public-tag">Staff</span>}
+                          </h4>
                           <span className="notification-time">{notification.time}</span>
                         </div>
                         <p className="notification-message">{notification.message}</p>
-                        {notification.patient && (
-                          <span className="notification-patient">
-                            <FiUser /> {notification.patient}
+                        <div className="notification-meta">
+                          <span className="notification-sender">
+                            <FiUser /> {notification.senderName}
                           </span>
-                        )}
-                        {notification.action && (
-                          <button className="notification-action">
-                            {notification.action} →
-                          </button>
-                        )}
+                        </div>
                       </div>
 
                       <div className="notification-actions">
@@ -329,6 +355,11 @@ function NotificationsPage() {
             </div>
           </div>
         )}
+        <CreateNotificationModal 
+          isOpen={showCreateModal} 
+          onClose={() => setShowCreateModal(false)} 
+          onCreated={fetchNotifications}
+        />
       </div>
     </Layout>
   );

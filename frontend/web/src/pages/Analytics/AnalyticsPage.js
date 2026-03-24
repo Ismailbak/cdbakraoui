@@ -20,23 +20,14 @@ function AnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
-  const [appointments, setAppointments] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [medicalActs, setMedicalActs] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    Promise.all([
-      getAnalyticsSummary(),
-      import('../../api/api').then(mod => Promise.all([mod.getAppointments(), mod.getPatients(), mod.getMedicalActs()]))
-    ])
-      .then(([analyticsRes, [appointmentsRes, patientsRes, actsRes]]) => {
+    getAnalyticsSummary()
+      .then((analyticsRes) => {
         if (!cancelled) {
           setSummary(analyticsRes.data);
-          setAppointments(appointmentsRes.data || []);
-          setPatients(patientsRes.data || []);
-          setMedicalActs(actsRes.data || []);
           setIsLoading(false);
         }
       })
@@ -53,94 +44,12 @@ function AnalyticsPage() {
   const avgAge = summary?.avg_age ?? 0;
   const commonDiagnoses = summary?.common_diagnoses ?? [];
 
-  // Compute weekly appointments data for the current week
-  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-  const today = new Date();
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // Monday as first day
-  const weeklyAppointmentsData = weekDays.map((day, i) => {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
-    const dateStr = d.toISOString().slice(0, 10);
-    const dayAppointments = appointments.filter(a => a.date === dateStr);
-    return {
-      day,
-      consultations: dayAppointments.filter(a => a.type === 'Consultation').length,
-      suivis: dayAppointments.filter(a => a.type === 'Suivi').length,
-      urgences: dayAppointments.filter(a => a.type === 'Urgence').length,
-    };
-  });
-
-  // Compute age distribution data from patients
-  const ageGroups = [
-    { label: '18-30', min: 18, max: 30 },
-    { label: '31-45', min: 31, max: 45 },
-    { label: '46-60', min: 46, max: 60 },
-    { label: '61-75', min: 61, max: 75 },
-    { label: '75+', min: 76, max: 200 },
-  ];
-  const ageDistributionData = ageGroups.map(group => {
-    const males = patients.filter(p => p.age >= group.min && p.age <= group.max && (p.gender === 'Homme' || p.gender === 'homme')).length;
-    const females = patients.filter(p => p.age >= group.min && p.age <= group.max && (p.gender === 'Femme' || p.gender === 'femme')).length;
-    return { age: group.label, male: males, female: females };
-  });
-
-  // Compute activity trend data (per month)
-  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-  const currentYear = new Date().getFullYear();
-  const activityTrendData = months.map((month, i) => {
-    const monthStr = String(i + 1).padStart(2, '0');
-    const acts = medicalActs.filter(a => {
-      const d = new Date(a.date);
-      return d.getFullYear() === currentYear && d.getMonth() === i;
-    }).length;
-    const rdv = appointments.filter(a => {
-      const d = new Date(a.date);
-      return d.getFullYear() === currentYear && d.getMonth() === i;
-    }).length;
-    return { month, actes: acts, rdv };
-  });
-
-
-  // Compute monthly revenue and patient count data from medical acts
-  // For each month, sum up revenue (amount) and count unique patients
-  const monthlyRevenueData = months.map((month, i) => {
-    const monthActs = medicalActs.filter(a => {
-      const d = new Date(a.date);
-      return d.getFullYear() === currentYear && d.getMonth() === i;
-    });
-    // Use amount field from medical acts (may be string, parse to float)
-    const revenue = monthActs.reduce((sum, a) => {
-      const amt = parseFloat(a.amount) || 0;
-      return sum + amt;
-    }, 0);
-    // Count unique patients for the month
-    const patientIds = new Set(monthActs.map(a => a.patient_id));
-    return {
-      month,
-      revenue,
-      patients: patientIds.size
-    };
-  });
-
-
-  // Compute top treatments data from medicalActs
-  // Group by treatment field, count occurrences, sort, and calculate percentage
-  const treatmentCounts = {};
-  medicalActs.forEach(act => {
-    if (act.treatment && act.treatment.trim()) {
-      treatmentCounts[act.treatment] = (treatmentCounts[act.treatment] || 0) + 1;
-    }
-  });
-  const totalTreatments = Object.values(treatmentCounts).reduce((sum, count) => sum + count, 0);
-  const topTreatmentsData = Object.entries(treatmentCounts)
-    .map(([name, count]) => ({
-      name,
-      count,
-      percentage: totalTreatments > 0 ? Math.round((count / totalTreatments) * 100) : 0
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5); // Top 5 treatments
+  // Data now comes directly from the backend summary
+  const weeklyAppointmentsData = summary?.weekly_activity ?? [];
+  const ageDistributionData = summary?.demographics ?? [];
+  const activityTrendData = summary?.activity_trends ?? [];
+  const monthlyRevenueData = summary?.revenue_trends ?? [];
+  const topTreatmentsData = summary?.treatments ?? [];
 
   return (
     <Layout>

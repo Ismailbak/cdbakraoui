@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
@@ -9,7 +10,10 @@ from app.database import get_db
 from app.models.patient import Patient as PatientModel
 from app.api.auth import get_current_user_orm, RoleChecker
 from app.models.user import User
+from app.models.medical_act import MedicalAct
+from app.models.appointment import Appointment
 from app.services.audit_service import log_action
+from app.services import pdf_service
 
 router = APIRouter()
 
@@ -169,3 +173,32 @@ def delete_patient(
         details=f"Deleted patient: {patient_name}"
     )
     return {"message": "Deleted"}
+
+
+@router.get("/{patient_id}/dossier")
+def get_patient_dossier(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    # 1. Get Patient
+    patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # 2. Get Medical Acts
+    medical_acts = db.query(MedicalAct).filter(MedicalAct.patient_id == patient_id).order_by(MedicalAct.date.desc()).all()
+    
+    # 3. Get Appointments
+    appointments = db.query(Appointment).filter(Appointment.patient_id == patient_id).order_by(Appointment.date.desc()).all()
+    
+    # 4. Generate PDF
+    pdf_buffer = pdf_service.generate_patient_dossier_pdf(patient, medical_acts, appointments)
+    
+    filename = f"Dossier_{patient.name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer, 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

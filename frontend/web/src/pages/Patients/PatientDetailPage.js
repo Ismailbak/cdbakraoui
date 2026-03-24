@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getPatientAppointments, getPatientMedicalActs } from '../../api/api';
+import { getPatient, getPatientAppointments, getPatientMedicalActs, exportPatientDossier } from '../../api/api';
 import { 
   FiArrowLeft, FiEdit2, FiPhone, FiMail, FiMapPin, FiCalendar, 
   FiFileText, FiActivity, FiHeart, FiAlertCircle, FiClock,
-  FiUser, FiClipboard, FiPlusCircle
+  FiUser, FiClipboard, FiPlusCircle, FiDownload
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { LoadingSpinner, Breadcrumb } from '../../components/common';
@@ -76,6 +76,23 @@ function PatientDetailPage() {
     fetchPatient();
   }, [id]);
 
+  const handleExportDossier = async () => {
+    try {
+      const response = await exportPatientDossier(id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = `Dossier_${patient.name.replace(/\s+/g, '_')}.pdf`;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Erreur lors de l\'export du dossier:', error);
+      alert('Une erreur est survenue lors de la génération du PDF.');
+    }
+  };
+
   const handleEditSuccess = () => {
     setShowEditModal(false);
     fetchPatient();
@@ -115,6 +132,9 @@ function PatientDetailPage() {
             <FiArrowLeft /> Retour aux patients
           </button>
           <div className="header-actions">
+            <button className="export-btn" onClick={handleExportDossier}>
+              <FiDownload /> Exporter dossier
+            </button>
             <button className="edit-btn" onClick={() => setShowEditModal(true)}>
               <FiEdit2 /> Modifier
             </button>
