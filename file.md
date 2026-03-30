@@ -16,9 +16,11 @@ This document provides a detailed explanation of every file and directory in the
 
 ## Backend (`backend/`)
 
+- **.env**: Environment variables configuration.
 - **Dockerfile**: Builds the backend API image using Python 3.11, installs dependencies, and runs the FastAPI app with Uvicorn.
 - **requirements.txt**: Lists all Python dependencies for the backend (FastAPI, SQLAlchemy, transformers, etc.).
 - **setup_admin.py**: Script to initialize or update the admin user in the database.
+- **tests/**: Backend unit tests for API and services.
 - **app/**: Main backend application code.
   - **__init__.py**: Marks the directory as a Python package.
   - **config.py**: Loads environment variables and settings (database URL, secret keys, etc.).
@@ -42,16 +44,16 @@ This document provides a detailed explanation of every file and directory in the
     - **audit.py**: Audit logs for actions.
     - **llm.py**: LLM (AI model) interface (stub).
   - **services/**: Business logic and helpers:
-    - **analytics_service.py**: Analytics calculations (stub).
+    - **analytics_service.py**: Analytics calculations.
     - **audit_service.py**: Audit logging.
     - **auth_service.py**: User authentication and password hashing.
     - **chat_service.py**: AI chat logic (calls LLM).
-    - **notification_service.py**: Notification management (stub).
+    - **notification_service.py**: Notification management.
     - **patient_service.py**: Patient CRUD and anonymization (stub).
+    - **pdf_service.py**: Generates PDF reports for Medical Acts and Patient Dossiers.
   - **utils/**: Utility functions:
     - **preprocessing.py**: Text cleaning, keyword extraction, anonymization.
     - **security.py**: Password hashing/verification.
-  - **tests/**: Backend unit tests for API and services.
 
 **Backend Feature Coverage:**
 - Core CRUD for patients, appointments, medical acts, users: **Implemented**
@@ -87,7 +89,9 @@ This document provides a detailed explanation of every file and directory in the
 - **public/**: Static files (favicon, index.html).
 - **scripts/**: Utility scripts (e.g., copy-favicon.js for favicon generation).
 - **src/**: Source code for web app.
+  - **App.js** / **index.js**: Entry point and main app routing.
   - **api/**: API client (axios) for backend communication.
+  - **assets/**: Images and other static assets.
   - **components/**: UI components (cards, common, layout).
   - **pages/**: Page components for each app section (Admin, Analytics, Appointments, Assistant, Dashboard, Legal, Login, MedicalActs, Notifications, Patients, Profile, Signup).
   - **styles/**: Global CSS styles.
