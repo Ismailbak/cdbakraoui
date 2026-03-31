@@ -70,17 +70,40 @@ This document provides a detailed explanation of every file and directory in the
 ## Frontend (`frontend/`)
 
 ### Mobile (`frontend/mobile/`)
-- **App.js**: Entry point for React Native app. Sets up navigation.
-- **app.json**: Expo configuration for the mobile app.
+- **App.js**: Entry point for React Native app. Sets up NavigationContainer.
+- **app.json**: Expo configuration for the mobile app (SDK 54).
 - **package.json**: Lists dependencies and scripts for mobile app.
 - **src/**: Source code for mobile app.
   - **api/**: API client (axios) for backend communication.
-  - **components/**: UI components (Analytics, Dashboard, Notifications, PatientList).
-  - **navigation/**: App navigation (stack navigator).
-  - **screens/**: Screen components for each app section (Dashboard, Login, Patients, Analytics, Notifications).
+    - **api.js**: Axios instance with AsyncStorage token interceptor. Endpoints for login, patients, analytics, and notifications.
+  - **styles/**: Global design system.
+    - **theme.js**: Centralized color palette, typography, spacing, shadows, and border radii tokens.
+  - **components/**: UI components.
+    - **Analytics.js**: Legacy analytics data component.
+    - **Dashboard.js**: Legacy dashboard data component.
+    - **Notifications.js**: Legacy notifications list component.
+    - **PatientList.js**: Legacy patient list component.
+    - **common/**: Reusable design-system primitives.
+      - **Card.js**: KPI/data card with icon, accent color, and shadow elevation.
+      - **PrimaryButton.js**: Styled button with loading spinner and outline variant.
+      - **Input.js**: Text input with floating label, focus highlight, and error display.
+  - **navigation/**: App navigation.
+    - **AppNavigator.js**: Stack navigator (Login → Main) wrapping a Bottom Tab Navigator (Dashboard, Patients, Analytics, Notifications).
+  - **screens/**: Screen components (fully redesigned with responsive layouts).
+    - **LoginScreen.js**: Branded login with form card, KeyboardAvoidingView, and loading states.
+    - **DashboardScreen.js**: KPI card grid, top diagnoses, treatment progress bars, pull-to-refresh.
+    - **AnalyticsScreen.js**: Demographics table, weekly activity bars, monthly revenue breakdown.
+    - **PatientScreen.js**: Patient cards with avatar initials, diagnosis, count badge, empty state.
+    - **NotificationsScreen.js**: Category-coded notifications with unread indicators and sender visibility.
 
 **Mobile Feature Coverage:**
-- Patient list, analytics, notifications, login: **Implemented**
+- Login & authentication: **Implemented** (with token storage)
+- Dashboard with KPIs: **Implemented** (pull-to-refresh, responsive)
+- Patient list: **Implemented** (avatar initials, search-ready)
+- Analytics: **Implemented** (demographics, weekly activity, revenue)
+- Notifications: **Implemented** (categories, unread badges, sender info)
+- Bottom Tab Navigation: **Implemented**
+- Design System (theme, Card, Button, Input): **Implemented**
 - Appointments, medical acts, chat, PDF: **Not implemented**
 
 ### Web (`frontend/web/`)
@@ -115,9 +138,13 @@ This document provides a detailed explanation of every file and directory in the
 | Backend      | Notifications          | Implemented    |
 | Backend      | PDF Generation         | Implemented    |
 | Backend      | File Upload            | Partial        |
+| Mobile       | Login & Auth           | Implemented    |
+| Mobile       | Dashboard (KPIs)       | Implemented    |
 | Mobile       | Patient List           | Implemented    |
 | Mobile       | Analytics              | Implemented    |
 | Mobile       | Notifications          | Implemented    |
+| Mobile       | Design System          | Implemented    |
+| Mobile       | Bottom Tab Nav         | Implemented    |
 | Mobile       | Appointments           | Not Impl.      |
 | Mobile       | Medical Acts           | Not Impl.      |
 | Mobile       | Chat                   | Not Impl.      |
