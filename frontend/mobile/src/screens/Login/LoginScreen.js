@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login } from '../api/api';
-import { colors, fonts, spacing, radius } from '../styles/theme';
-import Input from '../components/common/Input';
-import PrimaryButton from '../components/common/PrimaryButton';
+import { login } from '../../api/api';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import Input from '../../components/common/Input';
+import PrimaryButton from '../../components/common/PrimaryButton';
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getNotifications } from '../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../styles/theme';
+import { getNotifications } from '../../api/api';
+import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
 
 const CATEGORY_MAP = {
   urgent: { bg: '#E53E3E15', clr: '#E53E3E', icon: '🚨' },

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getAnalyticsSummary } from '../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../styles/theme';
-import Card from '../components/common/Card';
+import { getAnalyticsSummary } from '../../api/api';
+import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
+import Card from '../../components/common/Card';
 
 export default function AnalyticsScreen() {
   const [data, setData] = useState(null);

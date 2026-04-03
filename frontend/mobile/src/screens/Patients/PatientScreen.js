@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, StyleSheet, FlatList, RefreshControl, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getPatients } from '../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../styles/theme';
+import { getPatients } from '../../api/api';
+import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
 
-export default function PatientScreen() {
+export default function PatientScreen({ navigation }) {
   const [patients, setPatients] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
   const { width } = useWindowDimensions();
   const isSmall = width < 360;
 
@@ -29,8 +30,16 @@ export default function PatientScreen() {
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const filtered = patients.filter((p) =>
+    !search || (p.name && p.name.toLowerCase().includes(search.toLowerCase()))
+  );
+
   const renderPatient = ({ item }) => (
-    <TouchableOpacity style={[styles.patientCard, { padding: isSmall ? spacing.sm : spacing.md }]} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[styles.patientCard, { padding: isSmall ? spacing.sm : spacing.md }]}
+      activeOpacity={0.7}
+      onPress={() => navigation.navigate('PatientDetail', { patientId: item.id })}
+    >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{getInitials(item.name)}</Text>
       </View>
@@ -50,11 +59,21 @@ export default function PatientScreen() {
       <View style={styles.header}>
         <Text style={[styles.title, isSmall && { fontSize: 22 }]}>{'Patients'}</Text>
         <View style={styles.countBadge}>
-          <Text style={styles.countText}>{String(patients.length)}</Text>
+          <Text style={styles.countText}>{String(filtered.length)}</Text>
         </View>
       </View>
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>{'🔍'}</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Rechercher un patient..."
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
       <FlatList
-        data={patients}
+        data={filtered}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderPatient}
         contentContainerStyle={[styles.list, { paddingHorizontal: isSmall ? spacing.md : spacing.lg }]}
@@ -101,4 +120,12 @@ const styles = StyleSheet.create({
   emptyContainer: { alignItems: 'center', marginTop: 60 },
   emptyIcon: { fontSize: 48, marginBottom: spacing.md },
   emptyText: { ...fonts.body },
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.inputBg, borderRadius: radius.sm,
+    marginHorizontal: spacing.lg, marginBottom: spacing.md,
+    paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border,
+  },
+  searchIcon: { fontSize: 16, marginRight: spacing.sm },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: colors.textPrimary },
 });
