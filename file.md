@@ -89,22 +89,28 @@ This document provides a detailed explanation of every file and directory in the
       - **Input.js**: Text input with floating label, focus highlight, and error display.
   - **navigation/**: App navigation.
     - **AppNavigator.js**: Stack navigator (Login → Main) wrapping a Bottom Tab Navigator (Dashboard, Patients, Analytics, Notifications).
-  - **screens/**: Screen components (fully redesigned with responsive layouts).
-    - **LoginScreen.js**: Branded login with form card, KeyboardAvoidingView, and loading states.
-    - **DashboardScreen.js**: KPI card grid, top diagnoses, treatment progress bars, pull-to-refresh.
-    - **AnalyticsScreen.js**: Demographics table, weekly activity bars, monthly revenue breakdown.
-    - **PatientScreen.js**: Patient cards with avatar initials, diagnosis, count badge, empty state.
-    - **NotificationsScreen.js**: Category-coded notifications with unread indicators and sender visibility.
+  - **screens/**: Screen components (fully redesigned and organized into feature directories).
+    - **Login/**: `LoginScreen.js`
+    - **Dashboard/**: `DashboardScreen.js`
+    - **Analytics/**: `AnalyticsScreen.js`
+    - **Patients/**: `PatientScreen.js`, `PatientDetailScreen.js`, `AddMedicalActScreen.js`
+    - **Notifications/**: `NotificationsScreen.js`
+    - **Appointments/**: `AppointmentsScreen.js`
+    - **Assistant/**: `ChatAssistantScreen.js`
+    - **Settings/**: `SettingsScreen.js`
 
 **Mobile Feature Coverage:**
 - Login & authentication: **Implemented** (with token storage)
 - Dashboard with KPIs: **Implemented** (pull-to-refresh, responsive)
-- Patient list: **Implemented** (avatar initials, search-ready)
+- Patient list & details: **Implemented** (avatar initials, medical history, stats)
 - Analytics: **Implemented** (demographics, weekly activity, revenue)
 - Notifications: **Implemented** (categories, unread badges, sender info)
-- Bottom Tab Navigation: **Implemented**
+- Bottom Tab Navigation & Stacks: **Implemented** (5 tabs + nested routing)
 - Design System (theme, Card, Button, Input): **Implemented**
-- Appointments, medical acts, chat, PDF: **Not implemented**
+- Appointments & Medical Acts: **Implemented** (CRUD)
+- AI Chat Assistant: **Implemented** (Chat UI with prompt suggestions)
+- PDF Export: **Implemented** (Native Linking to backend dossier generation)
+- User Settings: **Implemented** (Logout & metadata display)
 
 ### Web (`frontend/web/`)
 - **Dockerfile**: Builds the web frontend image using Node.js.
@@ -130,35 +136,36 @@ This document provides a detailed explanation of every file and directory in the
 
 ## Summary Table
 
-| Area         | Feature                | Status         |
-|--------------|------------------------|----------------|
-| Backend      | CRUD (patients, etc.)  | Implemented    |
-| Backend      | Analytics              | Implemented    |
-| Backend      | AI Chat                | Stub           |
-| Backend      | Notifications          | Implemented    |
-| Backend      | PDF Generation         | Implemented    |
-| Backend      | File Upload            | Partial        |
-| Mobile       | Login & Auth           | Implemented    |
-| Mobile       | Dashboard (KPIs)       | Implemented    |
-| Mobile       | Patient List           | Implemented    |
-| Mobile       | Analytics              | Implemented    |
-| Mobile       | Notifications          | Implemented    |
-| Mobile       | Design System          | Implemented    |
-| Mobile       | Bottom Tab Nav         | Implemented    |
-| Mobile       | Appointments           | Not Impl.      |
-| Mobile       | Medical Acts           | Not Impl.      |
-| Mobile       | Chat                   | Not Impl.      |
-| Web          | Admin Dashboard        | Implemented    |
-| Web          | User Management        | Implemented    |
-| Web          | Analytics              | Implemented    |
-| Web          | Logs                   | Implemented    |
-| Web          | Patient Management     | Implemented    |
-| Web          | Appointments           | Implemented    |
-| Web          | Medical Acts           | Implemented    |
-| Web          | Notifications          | Implemented    |
-| Web          | Chat                   | Implemented    |
-| Web          | PDF Generation         | Implemented    |
-| Web          | File Upload            | Not Impl.      |
+| Area         | Feature                | Status         | Last Updated   |
+|--------------|------------------------|----------------|----------------|
+| Backend      | CRUD (patients, etc.)  | Implemented    | -              |
+| Backend      | Analytics              | Implemented    | -              |
+| Backend      | AI Chat                | Stub           | -              |
+| Backend      | Notifications          | Implemented    | -              |
+| Backend      | PDF Generation         | Implemented    | -              |
+| Backend      | File Upload            | Partial        | -              |
+| Mobile       | Login & Auth           | Implemented    | -              |
+| Mobile       | Dashboard (KPIs)       | Implemented    | -              |
+| Mobile       | Patient List           | Implemented    | -              |
+| Mobile       | Analytics              | Implemented    | -              |
+| Mobile       | Notifications          | Implemented    | -              |
+| Mobile       | Design System          | Implemented    | April 3, 2026  |
+| Mobile       | Bottom Tab Nav         | Implemented    | April 3, 2026  |
+| Mobile       | Appointments           | Implemented    | April 3, 2026  |
+| Mobile       | Medical Acts           | Implemented    | April 3, 2026  |
+| Mobile       | Chat                   | Implemented    | April 3, 2026  |
+| Mobile       | PDF Generation         | Implemented    | April 3, 2026  |
+| Web          | Admin Dashboard        | Implemented    | -              |
+| Web          | User Management        | Implemented    | -              |
+| Web          | Analytics              | Implemented    | -              |
+| Web          | Logs                   | Implemented    | -              |
+| Web          | Patient Management     | Implemented    | -              |
+| Web          | Appointments           | Implemented    | -              |
+| Web          | Medical Acts           | Implemented    | -              |
+| Web          | Notifications          | Implemented    | -              |
+| Web          | Chat                   | Implemented    | -              |
+| Web          | PDF Generation         | Implemented    | -              |
+| Web          | File Upload            | Not Impl.      | -              |
 
 ---
 
