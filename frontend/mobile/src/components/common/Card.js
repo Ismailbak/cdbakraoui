@@ -1,18 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, spacing, shadows, radius } from '../../styles/theme';
 
-export default function Card({ title, value, subtitle, icon, accentColor, children, style }) {
+export default function Card({ 
+  title, 
+  value, 
+  subtitle, 
+  icon, 
+  accentColor, 
+  children, 
+  style, 
+  isGradient,
+  onPress,
+  gradientStart,
+  gradientEnd 
+}) {
   const accent = accentColor || colors.primary;
-
   const hasHeader = Boolean(title) || value !== undefined;
-
-  return (
-    <View style={[styles.card, style]}>
+  
+  const cardContent = (
+    <>
       {hasHeader ? (
         <View style={styles.header}>
           {icon ? (
-            <View style={[styles.iconWrap, { backgroundColor: accent + '15' }]}>
+            <View style={[styles.iconWrap, { backgroundColor: accent + '20' }]}>
               <Text style={[styles.iconText, { color: accent }]}>{icon}</Text>
             </View>
           ) : null}
@@ -24,17 +36,47 @@ export default function Card({ title, value, subtitle, icon, accentColor, childr
         </View>
       ) : null}
       {children}
-    </View>
+    </>
+  );
+
+  // Use gradient for AI assistant card or custom gradient
+  if (isGradient) {
+    return (
+      <TouchableOpacity onPress={onPress} disabled={!onPress} activeOpacity={0.85}>
+        <LinearGradient
+          colors={[gradientStart || colors.aiGradientStart, gradientEnd || colors.aiGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.cardGradient, style, shadows.card]}
+        >
+          {cardContent}
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity onPress={onPress} disabled={!onPress} activeOpacity={0.85}>
+      <View style={[styles.card, style, shadows.card]}>
+        {cardContent}
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    ...shadows.card,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  cardGradient: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -49,14 +91,16 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   iconText: {
-    fontSize: 20,
+    fontSize: 24,
+    fontWeight: '600',
   },
   headerText: {
     flex: 1,
   },
   label: {
     ...fonts.label,
-    marginBottom: 2,
+    marginBottom: spacing.xs,
+    color: colors.textMuted,
   },
   value: {
     fontSize: 28,
@@ -65,6 +109,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...fonts.caption,
-    marginTop: 2,
+    marginTop: spacing.xs,
+    color: colors.textMutedLight,
   },
 });

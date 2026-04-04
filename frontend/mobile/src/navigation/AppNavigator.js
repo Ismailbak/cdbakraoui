@@ -1,8 +1,10 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
-import { colors } from '../styles/theme';
+import { Feather } from '@expo/vector-icons';
+import { colors, spacing, fonts } from '../styles/theme';
 
 import LoginScreen from '../screens/Login/LoginScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
@@ -14,24 +16,18 @@ import AnalyticsScreen from '../screens/Analytics/AnalyticsScreen';
 import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 import ChatAssistantScreen from '../screens/Assistant/ChatAssistantScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
+import MoreMenuItemButton from '../components/navigation/MoreMenuItemButton';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const PatientStack = createNativeStackNavigator();
 
-function TabIcon({ label }) {
-  const icons = {
-    Dashboard: '🏠',
-    Patients: '👥',
-    Appointments: '📅',
-    Chat: '🤖',
-    More: '⚙️',
-  };
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: 22 }}>{icons[label] || '📋'}</Text>
-    </View>
-  );
+/**
+ * Tab Icon Component - Uses Feather Icons from Expo
+ * Shown inactive (#9CA3AF) by default, active (#3B82F6) when selected
+ */
+function TabIcon({ name, label, color }) {
+  return <Feather name={name} size={32} color={color} />;
 }
 
 // ─── Patient Stack (List → Detail → AddMedicalAct) ──────────────────────────
@@ -45,84 +41,86 @@ function PatientStackNavigator() {
   );
 }
 
-// ─── Bottom Tabs ─────────────────────────────────────────────────────────────
+// ─── Bottom Tabs with Premium Styling ────────────────────────────────────────
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: () => <TabIcon label={route.name} />,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarIcon: ({ color, focused }) => {
+          const iconMap = {
+            Dashboard: 'home',
+            Patients: 'users',
+            Chat: 'message-circle',
+            Appointments: 'calendar',
+            More: 'more-horizontal',
+          };
+          return <TabIcon name={iconMap[route.name]} label={route.name} color={color} />;
+        },
+        tabBarActiveTintColor: colors.primary,           // #3B82F6
+        tabBarInactiveTintColor: colors.textMuted,        // #6B7280 - darker for visibility
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 0,
-          elevation: 12,
+          borderTopColor: colors.divider,
+          elevation: 4,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.08,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
           shadowRadius: 8,
-          height: 65,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: 80,
+          paddingBottom: 12,
+          paddingTop: 12,
+          paddingHorizontal: spacing.xs,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
+          fontSize: 13,
+          fontWeight: '500',
+          marginTop: 6,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 8,
+          justifyContent: 'center',
+          alignItems: 'center',
         },
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Accueil' }} />
       <Tab.Screen name="Patients" component={PatientStackNavigator} options={{ tabBarLabel: 'Patients' }} />
-      <Tab.Screen name="Appointments" component={AppointmentsScreen} options={{ tabBarLabel: 'RDV' }} />
       <Tab.Screen name="Chat" component={ChatAssistantScreen} options={{ tabBarLabel: 'Assistant' }} />
+      <Tab.Screen name="Appointments" component={AppointmentsScreen} options={{ tabBarLabel: 'RDV' }} />
       <Tab.Screen name="More" component={MoreStackNavigator} options={{ tabBarLabel: 'Plus' }} />
     </Tab.Navigator>
   );
 }
 
-// ─── "More" Stack (Analytics, Notifications, Settings) ───────────────────────
-const MoreStack = createNativeStackNavigator();
-
+// ─── "More" Screen - Clean Menu ───────────────────────────────────────────────
 function MoreScreen({ navigation }) {
   const items = [
-    { icon: '📊', label: 'Statistiques', screen: 'Analytics' },
-    { icon: '🔔', label: 'Notifications', screen: 'Notifications' },
-    { icon: '⚙️', label: 'Paramètres', screen: 'Settings' },
+    { icon: 'bar-chart-2', label: 'Statistiques', screen: 'Analytics' },
+    { icon: 'bell', label: 'Notifications', screen: 'Notifications' },
+    { icon: 'settings', label: 'Paramètres', screen: 'Settings' },
   ];
 
   return (
-    <View style={{
-      flex: 1, backgroundColor: colors.background,
-      paddingTop: 60, paddingHorizontal: 24,
-    }}>
-      <Text style={{
-        fontSize: 26, fontWeight: '700',
-        color: colors.textPrimary, marginBottom: 24,
-      }}>
-        {'Plus'}
-      </Text>
-      {items.map((item) => (
-        <View
-          key={item.screen}
-          style={{
-            backgroundColor: colors.surface, borderRadius: 12,
-            padding: 16, marginBottom: 10,
-            shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
-          }}
-        >
-          <Text
-            style={{ fontSize: 16, color: colors.textPrimary, fontWeight: '500' }}
+    <SafeAreaView style={styles.moreContainer}>
+      <Text style={styles.moreTitle}>Plus</Text>
+      <View style={styles.moreMenuList}>
+        {items.map((item) => (
+          <MoreMenuItemButton
+            key={item.screen}
+            icon={item.icon}
+            label={item.label}
             onPress={() => navigation.navigate(item.screen)}
-          >
-            {item.icon + '   ' + item.label}
-          </Text>
-        </View>
-      ))}
-    </View>
+          />
+        ))}
+      </View>
+    </SafeAreaView>
   );
 }
+
+// ─── "More" Stack (Analytics, Notifications, Settings) ───────────────────────
+const MoreStack = createNativeStackNavigator();
 
 function MoreStackNavigator() {
   return (
@@ -144,3 +142,23 @@ export default function AppNavigator() {
     </Stack.Navigator>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  moreContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  moreTitle: {
+    ...fonts.heading,
+    fontSize: 26,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+  },
+  moreMenuList: {
+    gap: spacing.md,
+  },
+});

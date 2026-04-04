@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../../api/api';
 import { colors, fonts, spacing, radius } from '../../styles/theme';
@@ -12,8 +13,6 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { width, height } = useWindowDimensions();
-  const isSmall = width < 360;
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -40,12 +39,14 @@ export default function LoginScreen({ navigation }) {
         style={styles.container}
       >
         <View style={styles.headerSection}>
-          <Text style={[styles.logo, isSmall && { fontSize: 44 }]}>{'🩺'}</Text>
-          <Text style={[styles.title, isSmall && { fontSize: 26 }]}>{'MedAI'}</Text>
-          <Text style={styles.subtitle}>{'Assistant Médical Intelligent'}</Text>
+          <View style={styles.iconWrapper}>
+            <Feather name="heart" size={56} color={colors.primary} />
+          </View>
+          <Text style={styles.title}>MedAI</Text>
+          <Text style={styles.subtitle}>Assistant Médical Intelligent</Text>
         </View>
 
-        <View style={[styles.formSection, { paddingHorizontal: isSmall ? spacing.md : spacing.lg }]}>
+        <View style={[styles.formSection, { paddingHorizontal: spacing.lg }]}>
           <Input
             label="Nom d'utilisateur"
             placeholder="Entrez votre identifiant"
@@ -69,7 +70,7 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
-        <Text style={styles.footer}>{'© 2026 MedAI · Tous droits réservés'}</Text>
+        <Text style={styles.footer}>© 2026 MedAI · Tous droits réservés</Text>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -89,33 +90,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl + 8,
   },
-  logo: {
-    fontSize: 56,
-    marginBottom: spacing.sm,
+  iconWrapper: {
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
     color: colors.primary,
     letterSpacing: 1,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     ...fonts.body,
-    marginTop: spacing.xs,
+    color: colors.textMuted,
   },
   formSection: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
+    marginBottom: spacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   footer: {
     ...fonts.caption,
     textAlign: 'center',
+    color: colors.textMuted,
     marginTop: spacing.xl,
   },
 });

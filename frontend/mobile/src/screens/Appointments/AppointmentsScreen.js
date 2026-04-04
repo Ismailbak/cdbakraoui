@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Modal, Alert, useWindowDimensions, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import {
   getAppointments, createAppointment, getPatients, deleteAppointment,
 } from '../../api/api';
@@ -11,10 +12,11 @@ import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
 import Input from '../../components/common/Input';
 import PrimaryButton from '../../components/common/PrimaryButton';
 
+// Updated status colors using new palette
 const STATUS_COLORS = {
-  scheduled: { bg: '#0A66C215', text: '#0A66C2', label: 'Planifié' },
-  completed: { bg: '#38A16915', text: '#38A169', label: 'Terminé' },
-  cancelled: { bg: '#E53E3E15', text: '#E53E3E', label: 'Annulé' },
+  scheduled: { bg: colors.rdvLight, text: colors.rdv, label: 'Planifié', icon: 'calendar' },
+  completed: { bg: colors.appointmentSuccessLight, text: colors.appointmentSuccess, label: 'Terminé', icon: 'check-circle' },
+  cancelled: { bg: colors.errorLight, text: colors.error, label: 'Annulé', icon: 'x-circle' },
 };
 
 function getStatusStyle(status) {
