@@ -136,36 +136,37 @@ This document provides a detailed explanation of every file and directory in the
 
 ## Summary Table
 
-| Area         | Feature                | Status         | Last Updated   |
-|--------------|------------------------|----------------|----------------|
-| Backend      | CRUD (patients, etc.)  | Implemented    | -              |
-| Backend      | Analytics              | Implemented    | -              |
-| Backend      | AI Chat                | Stub           | -              |
-| Backend      | Notifications          | Implemented    | -              |
-| Backend      | PDF Generation         | Implemented    | -              |
-| Backend      | File Upload            | Partial        | -              |
-| Mobile       | Login & Auth           | Implemented    | -              |
-| Mobile       | Dashboard (KPIs)       | Implemented    | -              |
-| Mobile       | Patient List           | Implemented    | -              |
-| Mobile       | Analytics              | Implemented    | -              |
-| Mobile       | Notifications          | Implemented    | -              |
-| Mobile       | Design System          | Implemented    | April 3, 2026  |
-| Mobile       | Bottom Tab Nav         | Implemented    | April 3, 2026  |
-| Mobile       | Appointments           | Implemented    | April 3, 2026  |
-| Mobile       | Medical Acts           | Implemented    | April 3, 2026  |
-| Mobile       | Chat                   | Implemented    | April 3, 2026  |
-| Mobile       | PDF Generation         | Implemented    | April 3, 2026  |
-| Web          | Admin Dashboard        | Implemented    | -              |
-| Web          | User Management        | Implemented    | -              |
-| Web          | Analytics              | Implemented    | -              |
-| Web          | Logs                   | Implemented    | -              |
-| Web          | Patient Management     | Implemented    | -              |
-| Web          | Appointments           | Implemented    | -              |
-| Web          | Medical Acts           | Implemented    | -              |
-| Web          | Notifications          | Implemented    | -              |
-| Web          | Chat                   | Implemented    | -              |
-| Web          | PDF Generation         | Implemented    | -              |
-| Web          | File Upload            | Not Impl.      | -              |
+| Area         | Feature                | Status         | Last Updated   | Notes |
+|--------------|------------------------|----------------|----------------|-------|
+| Backend      | CRUD (patients, etc.)  | Implemented    | -              | -     |
+| Backend      | Analytics              | Implemented    | -              | -     |
+| Backend      | AI Chat                | Stub           | -              | -     |
+| Backend      | Notifications          | Implemented    | -              | -     |
+| Backend      | PDF Generation         | Implemented    | -              | -     |
+| Backend      | File Upload            | Partial        | -              | -     |
+| Mobile       | Login & Auth           | Implemented    | April 4, 2026  | ✅ Emoji → Feather icon |
+| Mobile       | Dashboard (KPIs)       | Implemented    | April 4, 2026  | ✅ Cleaned up, fixed white boxes |
+| Mobile       | Patient List           | Implemented    | April 4, 2026  | ✅ getInitials bug fixed |
+| Mobile       | Analytics              | Implemented    | -              | -     |
+| Mobile       | Notifications          | Implemented    | -              | -     |
+| Mobile       | Design System          | Implemented    | April 4, 2026  | ✅ Complete theme tokens |
+| Mobile       | Bottom Tab Nav         | Implemented    | April 4, 2026  | ✅ Larger (80px), centered Assistant, improved icons |
+| Mobile       | Appointments           | Implemented    | April 4, 2026  | ✅ Working correctly |
+| Mobile       | Medical Acts           | Implemented    | April 4, 2026  | ✅ Fully functional |
+| Mobile       | Chat                   | Implemented    | April 4, 2026  | ✅ Ready to use |
+| Mobile       | PDF Generation         | Implemented    | April 4, 2026  | ✅ Integrated |
+| Mobile       | More Menu Component    | Implemented    | April 4, 2026  | ✅ New MoreMenuItemButton created |
+| Web          | Admin Dashboard        | Implemented    | -              | -     |
+| Web          | User Management        | Implemented    | -              | -     |
+| Web          | Analytics              | Implemented    | -              | -     |
+| Web          | Logs                   | Implemented    | -              | -     |
+| Web          | Patient Management     | Implemented    | -              | -     |
+| Web          | Appointments           | Implemented    | -              | -     |
+| Web          | Medical Acts           | Implemented    | -              | -     |
+| Web          | Notifications          | Implemented    | -              | -     |
+| Web          | Chat                   | Implemented    | -              | -     |
+| Web          | PDF Generation         | Implemented    | -              | -     |
+| Web          | File Upload            | Not Impl.      | -              | -     |
 
 ---
 
