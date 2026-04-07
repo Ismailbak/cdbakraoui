@@ -40,10 +40,13 @@ class ChatHistoryItem(BaseModel):
     message: str
     response: str
     language: str
+    tokens_used: Optional[int] = None
+    model: str = Field(default="biomistral", alias="model_name")
     created_at: datetime
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 @router.post("/", response_model=ChatResponse)

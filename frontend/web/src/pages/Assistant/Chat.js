@@ -24,18 +24,22 @@ function Chat({ patientId, currentUser }) {
   const loadChatHistory = async () => {
     try {
       const res = await getChatHistory(patientId);
-      const history = res.data.map(msg => ({
-        id: msg.id,
-        role: 'user',
-        content: msg.message,
-        timestamp: new Date(msg.created_at)
-      })).concat(res.data.map(msg => ({
-        id: msg.id,
-        role: 'assistant',
-        content: msg.response,
-        tokens: msg.tokens_used,
-        timestamp: new Date(msg.created_at)
-      }))).sort((a, b) => a.timestamp - b.timestamp);
+      const history = res.data.flatMap(msg => [
+        {
+          id: `${msg.id}-user`,
+          role: 'user',
+          content: msg.message,
+          timestamp: new Date(msg.created_at)
+        },
+        {
+          id: `${msg.id}-assistant`,
+          role: 'assistant',
+          content: msg.response,
+          tokens: msg.tokens_used,
+          model: msg.model,
+          timestamp: new Date(msg.created_at)
+        }
+      ]).sort((a, b) => a.timestamp - b.timestamp);
       
       setMessages(history);
       setError('');
