@@ -48,6 +48,56 @@ function Chat({ patientId, currentUser }) {
     }
   };
 
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const formatDateSeparator = (date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const groupMessagesByDate = (msgs) => {
+    const grouped = [];
+    let lastDate = null;
+    
+    msgs.forEach(msg => {
+      const msgDate = msg.timestamp.toDateString();
+      if (lastDate !== msgDate) {
+        grouped.push({ type: 'date-separator', date: msg.timestamp });
+        lastDate = msgDate;
+      }
+      grouped.push(msg);
+    });
+    
+    return grouped;
+  };
+
+  const handleCopyMessage = (content) => {
+    navigator.clipboard.writeText(content);
+    // Could add a toast notification here
+  };
+
+  const handleRegenerateMessage = (messageId) => {
+    // Find the last user message and regenerate response
+    console.log('Regenerate:', messageId);
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -142,8 +192,24 @@ function Chat({ patientId, currentUser }) {
               <p>{msg.content}</p>
               {msg.role === 'assistant' && msg.tokens > 0 && (
                 <div className="message-meta">
-                  <span className="tokens">🔹 {msg.tokens} tokens</span>
-                  <span className="model">{msg.model}</span>
+                  <div>
+                    <span className="tokens">🔹 {msg.tokens} tokens</span>
+                    <span className="model" style={{marginLeft: '0.5rem'}}>{msg.model}</span>
+                  </div>
+                  <span className="message-time">{msg.timestamp ? `${msg.timestamp.getHours().toString().padStart(2, '0')}:${msg.timestamp.getMinutes().toString().padStart(2, '0')}` : ''}</span>
+                </div>
+              )}
+              {msg.role === 'user' && (
+                <span className="message-time">{msg.timestamp ? `${msg.timestamp.getHours().toString().padStart(2, '0')}:${msg.timestamp.getMinutes().toString().padStart(2, '0')}` : ''}</span>
+              )}
+              {msg.role === 'assistant' && (
+                <div className="message-actions">
+                  <button className="message-action-btn" title="Copy" onClick={() => handleCopyMessage(msg.content)}>
+                    📋
+                  </button>
+                  <button className="message-action-btn" title="Regenerate" onClick={() => handleRegenerateMessage(msg.id)}>
+                    🔄
+                  </button>
                 </div>
               )}
             </div>
@@ -171,14 +237,19 @@ function Chat({ patientId, currentUser }) {
       )}
 
       <div className="input-area">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Tapez votre question... (Shift+Entrée pour nouvelle ligne)"
-          disabled={loading}
-          rows="3"
-        />
+        <div className="input-wrapper">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Tapez votre question... (Shift+Entrée pour nouvelle ligne)"
+            disabled={loading}
+            rows="3"
+          />
+          <div className="input-footer">
+            <span className="char-count">{input.length} caractères</span>
+          </div>
+        </div>
         <button
           onClick={handleSend}
           disabled={loading || !input.trim()}
