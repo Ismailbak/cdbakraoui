@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts
 from app.database import engine, Base
 from app.models import user, patient, appointment, medical_act, notification, audit  # noqa: F401 - register models
+from app.models.chat_message import ChatMessage  # noqa: F401 - register model
+from app.models.llm import llm
+from app.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
 
 app = FastAPI(
     title="Medical AI Assistant",
@@ -18,6 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Setup rate limiting
+limiter = setup_rate_limiting(app)
+
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
 app.include_router(appointments.router, prefix="/api/appointments", tags=["appointments"])
@@ -30,17 +36,28 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["not
 @app.on_event("startup")
 def on_startup():
     import logging
+    import threading
     log = logging.getLogger("uvicorn.error")
     try:
         Base.metadata.create_all(bind=engine)
         log.info("Database tables created or already exist.")
+        
+        # Run LLM health check in background — don't block startup
+        def _check_llm():
+            log.info("Checking AI Assistant (BioMistral via Ollama) in background...")
+            if llm.load():
+                log.info(f"✅ AI Assistant ready: {llm.model_name}")
+            else:
+                log.warning("⚠️ Ollama not responding at startup. Chat will still attempt connections on demand.")
+        
+        threading.Thread(target=_check_llm, daemon=True).start()
+            
     except Exception as e:
         log.error(
-            "Database startup failed: %s. "
+            "Startup error: %s. "
             "Check that MySQL is running and DATABASE_URL in .env is correct (user, password, host, database name).",
             e,
         )
-        # Server still starts; API calls that need the DB will fail until the connection is fixed.
 
 
 @app.get("/")
@@ -49,4 +66,8 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "ai_assistant": "ready" if llm.is_available else "unavailable"
+    }
+

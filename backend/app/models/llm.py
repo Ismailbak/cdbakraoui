@@ -1,18 +1,139 @@
-# LLM model loading and inference
+"""
+LLM model integration with Ollama (BioMistral)
+Supports French, English, and Arabic medical queries
+"""
+
+import logging
+from typing import Dict
+import requests
+
+logger = logging.getLogger(__name__)
+
 
 class LLMModel:
-    def __init__(self):
-        self.model = None
+    def __init__(self,
+                 ollama_host: str = "http://10.13.19.180:11434",
+                 model_name: str = "cniongolo/biomistral"):
+        """
+        Initialize LLM model connection to Ollama
 
-    def load(self):
-        # Load distilled French LLM (e.g., DistilCamemBERT)
-        # from transformers import AutoModelForCausalLM, AutoTokenizer
-        # self.tokenizer = AutoTokenizer.from_pretrained("camembert-base")
-        # self.model = AutoModelForCausalLM.from_pretrained("camembert-base")
-        pass
+        Args:
+            ollama_host: Ollama API endpoint
+            model_name: Model to use (e.g., cniongolo/biomistral)
+        """
+        self.ollama_host = ollama_host
+        self.model_name = model_name
+        self.api_endpoint = f"{ollama_host}/api/generate"
+        self.is_available = False
 
-    def generate(self, prompt: str) -> str:
-        # Generate response from model
-        return f"[LLM Response to: {prompt}]"
+    def load(self) -> bool:
+        """
+        Soft health-check — failure does NOT disable generation.
+        generate() always tries Ollama directly.
 
-llm = LLMModel()
+        Returns:
+            bool: True if connection and model check passed
+        """
+        try:
+            response = requests.get(
+                f"{self.ollama_host}/api/tags",
+                timeout=10
+            )
+            if response.status_code == 200:
+                models = response.json().get("models", [])
+                model_names = [m["name"] for m in models]
+                logger.info(f"Available Ollama models: {model_names}")
+
+                # Mark available regardless — generate() will surface errors if wrong name
+                self.is_available = True
+
+                base = self.model_name.split(":")[0]
+                if any(base in m for m in model_names):
+                    logger.info(f"Model {self.model_name} confirmed on Ollama")
+                else:
+                    logger.warning(
+                        f"Model {self.model_name} not found in list {model_names}. "
+                        "Will attempt generation anyway."
+                    )
+                return True
+            else:
+                logger.error(f"Ollama health check failed: HTTP {response.status_code}")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to connect to Ollama at {self.ollama_host}: {e}")
+            return False
+
+    def generate(self, prompt: str, language: str = "fr", **kwargs) -> Dict:
+        """
+        Generate response using BioMistral via Ollama.
+        Always attempts the API call — does NOT depend on is_available.
+
+        Args:
+            prompt: The full prompt (may include patient context)
+            language: Language code (fr, en, ar)
+            **kwargs: Additional parameters (temperature, top_p, top_k)
+
+        Returns:
+            dict: {"response": str, "tokens": int, "model": str}
+        """
+        try:
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": kwargs.get("temperature", 0.7),
+                    "top_p": kwargs.get("top_p", 0.9),
+                    "top_k": kwargs.get("top_k", 40),
+                }
+            }
+
+            logger.debug(f"Calling Ollama ({self.model_name}): {prompt[:100]}...")
+            response = requests.post(
+                self.api_endpoint,
+                json=payload,
+                timeout=180  # Medical queries can take time on first load
+            )
+
+            if response.status_code == 200:
+                self.is_available = True
+                result = response.json()
+                return {
+                    "response": result.get("response", ""),
+                    "tokens": result.get("eval_count", 0),
+                    "model": self.model_name
+                }
+            else:
+                logger.error(
+                    f"Ollama API error: HTTP {response.status_code} — {response.text[:300]}"
+                )
+                return {
+                    "response": (
+                        f"[API Error {response.status_code}] "
+                        f"Model '{self.model_name}' may not be loaded on the Ollama server."
+                    ),
+                    "tokens": 0,
+                    "model": "error"
+                }
+
+        except requests.exceptions.Timeout:
+            logger.error("Ollama request timed out after 180s")
+            return {
+                "response": "[Timeout] The AI is taking too long. Please try again.",
+                "tokens": 0,
+                "model": "timeout"
+            }
+        except Exception as e:
+            logger.error(f"Error calling Ollama: {e}")
+            return {
+                "response": f"[Connection Error] Cannot reach AI server: {str(e)}",
+                "tokens": 0,
+                "model": "error"
+            }
+
+
+# Global singleton
+llm = LLMModel(
+    ollama_host="http://10.13.19.180:11434",
+    model_name="cniongolo/biomistral"
+)

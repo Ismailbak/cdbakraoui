@@ -67,8 +67,14 @@ export const getMedicalActPdf = (actId) =>
   api.get(`/medical-acts/${actId}/pdf`, { responseType: 'blob' });
 
 // Chat
-export const sendChatMessage = (message, patientId) =>
-  api.post('/chat/', { message, patient_id: patientId });
+export const sendChatMessage = (message, userId, patientId = null, language = 'fr') =>
+  api.post('/chat/', { message, patient_id: patientId, language });
+
+export const getChatHistory = (patientId = null, limit = 50) => {
+  const params = new URLSearchParams({ limit });
+  if (patientId) params.append('patient_id', patientId);
+  return api.get(`/chat/history?${params.toString()}`);
+};
 
 // Analytics & Notifications
 export const getAnalyticsSummary = () => api.get('/analytics/summary');
