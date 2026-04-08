@@ -56,7 +56,7 @@
 │  - Notification, AuditLog, ChatHistory                          │
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┙
                              ↕
-         PostgreSQL 15 (Port 5432)
+         PostgreSQL 15 (Internal LAN Only)
          Volume: postgres_data
 ```
 
@@ -90,9 +90,9 @@
 - **Theme**: Centralized design system (colors, typography, spacing)
 
 ### Infrastructure
-- **Orchestration**: Docker Compose (3 services: backend, postgre, frontend)
+- **Orchestration**: Docker Compose (3 services: backend, db, frontend)
 - **Deployment**: Local / On-Premise only (GDPR data sovereignty)
-- **Networking**: Internal LAN (mobile connects to 192.168.1.199:8000)
+- **Networking**: Internal LAN only (database port 5432 not exposed to public internet)
 
 ---
 
@@ -246,16 +246,18 @@ docker exec -it backend python setup_admin.py
 # 4. Access
 # Web: http://localhost:3000
 # API: http://localhost:8000/docs (Swagger)
-# Mobile: connect to http://192.168.1.199:8000 (LAN IP)
+# Mobile: connect to http://<LOCAL_NETWORK_IP>:8000 (replace with your LAN IP)
 ```
 
 ### Environment Variables
 Create `.env` in backend/:
 ```
-DATABASE_URL=postgresql://admin:changeme@db:5432/medical_ai
+DATABASE_URL=postgresql://<db-user>:<db-password>@db:5432/medical_ai
 SECRET_KEY=<your-jwt-secret>
 OLLAMA_API_URL=http://localhost:11434
 ```
+
+**⚠️ Security Note**: Never commit `.env` files with real credentials. Use strong passwords for production deployments.
 
 ---
 
