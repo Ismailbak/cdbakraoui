@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class LLMModel:
     def __init__(self,
                  ollama_host: str = "http://10.13.19.180:11434",
-                 model_name: str = "cniongolo/biomistral"):
+                 model_name: str = "gemma4:e4b"):
         """
         Initialize LLM model connection to Ollama
 
@@ -135,5 +135,5 @@ class LLMModel:
 # Global singleton
 llm = LLMModel(
     ollama_host="http://10.13.19.180:11434",
-    model_name="cniongolo/biomistral"
+    model_name="gemma4:e4b"
 )

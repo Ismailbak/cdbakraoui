@@ -140,7 +140,7 @@ This document provides a detailed explanation of every file and directory in the
 |--------------|------------------------|----------------|----------------|-------|
 | Backend      | CRUD (patients, etc.)  | Implemented    | -              | -     |
 | Backend      | Analytics              | Implemented    | -              | -     |
-| Backend      | AI Chat                | Implemented    | April 8, 2026  | ✅ Chat service with Ollama/BioMistral integration, response model enhanced, proper error handling |
+| Backend      | AI Chat                | Stub           | -              | -     |
 | Backend      | Notifications          | Implemented    | -              | -     |
 | Backend      | PDF Generation         | Implemented    | -              | -     |
 | Backend      | File Upload            | Partial        | -              | -     |
