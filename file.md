@@ -160,7 +160,7 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | User Management        | Implemented    | -              | -     |
 | Web          | Analytics              | Implemented    | -              | -     |
 | Web          | Logs                   | Implemented    | -              | -     |
-| Web          | Patient Management     | Implemented    | -              | -     |
+| Web          | Patient Management     | Implemented    | April 8, 2026  | ✅ Breadcrumb duplicate removed, displays patient name instead of ID; Layout.js conditional breadcrumb logic |
 | Web          | Appointments           | Implemented    | -              | -     |
 | Web          | Medical Acts           | Implemented    | -              | -     |
 | Web          | Notifications          | Implemented    | -              | -     |
