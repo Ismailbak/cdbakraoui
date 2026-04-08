@@ -140,7 +140,7 @@ This document provides a detailed explanation of every file and directory in the
 |--------------|------------------------|----------------|----------------|-------|
 | Backend      | CRUD (patients, etc.)  | Implemented    | -              | -     |
 | Backend      | Analytics              | Implemented    | -              | -     |
-| Backend      | AI Chat                | Stub           | -              | -     |
+| Backend      | AI Chat                | Implemented    | April 8, 2026  | ✅ Chat service with Ollama/BioMistral integration, response model enhanced, proper error handling |
 | Backend      | Notifications          | Implemented    | -              | -     |
 | Backend      | PDF Generation         | Implemented    | -              | -     |
 | Backend      | File Upload            | Partial        | -              | -     |
@@ -164,7 +164,7 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | Appointments           | Implemented    | -              | -     |
 | Web          | Medical Acts           | Implemented    | -              | -     |
 | Web          | Notifications          | Implemented    | -              | -     |
-| Web          | Chat                   | Implemented    | -              | -     |
+| Web          | Chat                   | Implemented    | April 8, 2026  | ✅ Chat history bug fixed (message pairing), response model updated, premium UI redesign with glass morphism, gradients, enhanced animations |
 | Web          | PDF Generation         | Implemented    | -              | -     |
 | Web          | File Upload            | Not Impl.      | -              | -     |
 
