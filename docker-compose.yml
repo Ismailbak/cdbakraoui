@@ -13,15 +13,16 @@ services:
       - db
 
   db:
-    image: postgres:15-alpine
+    image: mysql:8
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=changeme
-      - POSTGRES_DB=medical_ai
+      - MYSQL_ROOT_PASSWORD=changeme
+      - MYSQL_DATABASE=medical_ai
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=changeme
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     ports:
-      - "5432:5432"
+      - "3306:3306"
 
   frontend-web:
     build: ./frontend-web
@@ -34,4 +35,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  mysql_data:

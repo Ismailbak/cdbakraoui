@@ -1,7 +1,7 @@
 
 # RhumatoAI: Full-Stack Medical AI Assistant 🏥
 
-**Designed and implemented a full-stack clinical AI system supporting 20+ doctors, with on-prem LLM inference (BioMistral via Ollama), FastAPI backend, React/React Native frontends, and PostgreSQL database. Achieves ~2–5s response latency under concurrent usage, 100% local deployment for GDPR compliance.**
+**Designed and implemented a full-stack clinical AI system supporting 20+ doctors, with on-prem LLM inference (BioMistral via Ollama), FastAPI backend, React/React Native frontends, and MySQL database. Achieves ~2–5s response latency under concurrent usage, 100% local deployment for GDPR compliance.**
 
 *Target: Rheumatology clinic (CHU Ibn Rochd, Casablanca) | Feb–July 2026*
 
@@ -56,8 +56,8 @@
 │  - Notification, AuditLog, ChatHistory                          │
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┙
                              ↕
-         PostgreSQL 15 (Internal LAN Only)
-         Volume: postgres_data
+         MySQL 8 (Internal LAN Only)
+         Volume: mysql_data
 ```
 
 ---
@@ -66,7 +66,7 @@
 
 ### Backend
 - **Framework**: FastAPI (async Python)
-- **Database**: MySQL 15, SQLAlchemy ORM
+- **Database**: MySQL 8, SQLAlchemy ORM
 - **Auth**: JWT (HS256), bcrypt password hashing
 - **LLM**: Ollama (local container) + BioMistral model
 - **PDF**: ReportLab (medical acts, patient dossiers)
@@ -92,7 +92,7 @@
 ### Infrastructure
 - **Orchestration**: Docker Compose (3 services: backend, db, frontend)
 - **Deployment**: Local / On-Premise only (GDPR data sovereignty)
-- **Networking**: Internal LAN only (database port 5432 not exposed to public internet)
+- **Networking**: Internal LAN only (database port 3306 not exposed to public internet)
 
 ---
 
@@ -177,13 +177,13 @@
 |--------|-------|-------|
 | **Concurrent Users** | 10–20 | Tested in clinic environment |
 | **Chat Response Latency** | 2–5s | BioMistral on-device inference |
-| **Patient Load Latency** | 50–200ms | PostgreSQL query + JSON serialization |
+| **Patient Load Latency** | 50–200ms | MySQL query + JSON serialization |
 | **PDF Generation Time** | 500ms–3s | Depends on dossier length (single-threaded) |
 | **Database Size** | ~50MB | 100 patients + 1000 appointments + 2000 medical acts |
 | **API Memory Usage** | ~400MB | FastAPI + SQLAlchemy session pool |
 | **LLM Memory Usage** | ~8GB | BioMistral model loaded in Ollama container |
 | **Chat History Growth** | ~500 messages/month | Per clinic, not problematic |
-| **Total Docker Stack** | 12–16GB RAM required | Backend + PostgreSQL + Ollama |
+| **Total Docker Stack** | 12–16GB RAM required | Backend + MySQL + Ollama |
 
 ### Bottlenecks Identified
 
@@ -252,7 +252,7 @@ docker exec -it backend python setup_admin.py
 ### Environment Variables
 Create `.env` in backend/:
 ```
-DATABASE_URL=postgresql://<db-user>:<db-password>@db:5432/medical_ai
+DATABASE_URL=mysql+pymysql://admin:changeme@db:3306/medical_ai
 SECRET_KEY=<your-jwt-secret>
 OLLAMA_API_URL=http://localhost:11434
 ```
