@@ -12,6 +12,18 @@ import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
 import Card from '../../components/common/Card';
 import PrimaryButton from '../../components/common/PrimaryButton';
 
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 function InfoRow({ icon, label, value }) {
   if (!value) return null;
   return (
@@ -121,7 +133,7 @@ export default function PatientDetailScreen({ route, navigation }) {
           </View>
           <Text style={styles.patientName}>{String(patient.name)}</Text>
           <Text style={styles.patientSub}>
-            {(patient.age ? patient.age + ' ans' : '') +
+            {(patient.date_of_birth ? calculateAge(patient.date_of_birth) + ' ans' : '') +
               (patient.gender ? ' · ' + patient.gender : '') +
               (patient.ipp ? ' · IPP: ' + patient.ipp : '')}
           </Text>
@@ -211,21 +223,24 @@ export default function PatientDetailScreen({ route, navigation }) {
 
         {/* Appointments */}
         <SectionTitle icon="📅" title="Rendez-vous" count={appointments.length} />
-        {appointments.length > 0 ? appointments.slice(0, 5).map((apt) => (
-          <View key={String(apt.id)} style={styles.aptCard}>
-            <Text style={styles.aptTime}>{String(apt.date) + ' · ' + String(apt.time)}</Text>
-            {apt.reason && <Text style={styles.aptReason}>{String(apt.reason)}</Text>}
-            <View style={[styles.aptStatus, {
-              backgroundColor: apt.status === 'completed' ? colors.success + '15' : colors.primary + '15',
-            }]}>
-              <Text style={[styles.aptStatusText, {
-                color: apt.status === 'completed' ? colors.success : colors.primary,
+        {appointments.length > 0 ? appointments.slice(0, 5).map((apt) => {
+          const dateTime = apt.datetime_scheduled ? new Date(apt.datetime_scheduled).toLocaleString('fr-FR') : '--';
+          return (
+            <View key={String(apt.id)} style={styles.aptCard}>
+              <Text style={styles.aptTime}>{dateTime}</Text>
+              {apt.reason && <Text style={styles.aptReason}>{String(apt.reason)}</Text>}
+              <View style={[styles.aptStatus, {
+                backgroundColor: apt.status === 'completed' ? colors.success + '15' : colors.primary + '15',
               }]}>
-                {apt.status === 'completed' ? 'Terminé' : apt.status === 'cancelled' ? 'Annulé' : 'Planifié'}
-              </Text>
+                <Text style={[styles.aptStatusText, {
+                  color: apt.status === 'completed' ? colors.success : colors.primary,
+                }]}>
+                  {apt.status === 'completed' ? 'Terminé' : apt.status === 'cancelled' ? 'Annulé' : 'Planifié'}
+                </Text>
+              </View>
             </View>
-          </View>
-        )) : (
+          );
+        }) : (
           <Text style={styles.emptySmall}>{'Aucun rendez-vous'}</Text>
         )}
 

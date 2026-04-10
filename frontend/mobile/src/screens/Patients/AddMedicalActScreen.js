@@ -15,7 +15,7 @@ export default function AddMedicalActScreen({ route, navigation }) {
   const [selectedType, setSelectedType] = useState('');
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    act_date: new Date().toISOString().split('T')[0],
     diagnosis: '',
     treatment: '',
     description: '',
@@ -33,7 +33,7 @@ export default function AddMedicalActScreen({ route, navigation }) {
   }, []);
 
   const handleSubmit = async () => {
-    if (!selectedType || !form.date) {
+    if (!selectedType || !form.act_date) {
       Alert.alert('Erreur', "Le type d'acte et la date sont obligatoires.");
       return;
     }
@@ -42,7 +42,7 @@ export default function AddMedicalActScreen({ route, navigation }) {
       await createMedicalAct({
         patient_id: patientId,
         act_type: selectedType,
-        date: form.date,
+        act_date: form.act_date,
         diagnosis: form.diagnosis || null,
         treatment: form.treatment || null,
         description: form.description || null,

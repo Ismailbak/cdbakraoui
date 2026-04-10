@@ -6,6 +6,18 @@ import { getPatients } from '../../api/api';
 import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
 import Input from '../../components/common/Input';
 
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 export default function PatientScreen({ navigation }) {
   const [patients, setPatients] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,10 +75,10 @@ export default function PatientScreen({ navigation }) {
           <Feather name="activity" size={12} color={colors.textMuted} />
           <Text style={[styles.patientDiag, { marginLeft: spacing.xs }]}>{String(item.diagnosis || 'Aucun diagnostic')}</Text>
         </View>
-        {item.age ? (
+        {item.date_of_birth ? (
           <View style={styles.patientMeta}>
             <Feather name="user" size={12} color={colors.textMuted} />
-            <Text style={[styles.patientAge, { marginLeft: spacing.xs }]}>{String(item.age) + ' ans · ' + String(item.gender || 'N/A')}</Text>
+            <Text style={[styles.patientAge, { marginLeft: spacing.xs }]}>{String(calculateAge(item.date_of_birth)) + ' ans · ' + String(item.gender || 'N/A')}</Text>
           </View>
         ) : null}
       </View>

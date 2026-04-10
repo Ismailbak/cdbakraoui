@@ -26,9 +26,9 @@ function getStatusStyle(status) {
 function groupByDate(appointments) {
   const groups = {};
   appointments.forEach((a) => {
-    const key = a.date || 'Sans date';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(a);
+    const dateStr = a.datetime_scheduled ? a.datetime_scheduled.split('T')[0] : 'Sans date';
+    if (!groups[dateStr]) groups[dateStr] = [];
+    groups[dateStr].push(a);
   });
   return Object.entries(groups)
     .sort(([a], [b]) => b.localeCompare(a))
@@ -57,7 +57,7 @@ export default function AppointmentsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [patients, setPatients] = useState([]);
-  const [form, setForm] = useState({ patient_id: '', date: '', time: '', reason: '' });
+  const [form, setForm] = useState({ patient_id: '', datetime_scheduled: '', reason: '' });
   const [submitting, setSubmitting] = useState(false);
   const [showPatientPicker, setShowPatientPicker] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -79,7 +79,7 @@ export default function AppointmentsScreen() {
   };
 
   const openModal = () => {
-    setForm({ patient_id: '', date: '', time: '', reason: '' });
+    setForm({ patient_id: '', datetime_scheduled: '', reason: '' });
     setSelectedPatient(null);
     getPatients()
       .then((res) => setPatients(res.data))
@@ -88,7 +88,7 @@ export default function AppointmentsScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!form.patient_id || !form.date || !form.time) {
+    if (!form.patient_id || !form.datetime_scheduled) {
       Alert.alert('Erreur', 'Patient, date et heure sont obligatoires.');
       return;
     }
@@ -96,8 +96,7 @@ export default function AppointmentsScreen() {
     try {
       await createAppointment({
         patient_id: parseInt(form.patient_id, 10),
-        date: form.date,
-        time: form.time,
+        datetime_scheduled: form.datetime_scheduled,
         reason: form.reason || null,
         status: 'scheduled',
       });
@@ -131,11 +130,14 @@ export default function AppointmentsScreen() {
   const totalCount = appointments.length;
   const todayCount = appointments.filter((a) => {
     const today = new Date().toISOString().split('T')[0];
-    return a.date === today;
+    const appointmentDate = a.datetime_scheduled ? a.datetime_scheduled.split('T')[0] : null;
+    return appointmentDate === today;
   }).length;
 
   const renderAppointment = (item) => {
     const st = getStatusStyle(item.status);
+    const dateTime = item.datetime_scheduled ? new Date(item.datetime_scheduled) : null;
+    const timeStr = dateTime ? dateTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
     return (
       <TouchableOpacity
         key={String(item.id)}
@@ -144,7 +146,7 @@ export default function AppointmentsScreen() {
         onLongPress={() => handleDelete(item.id)}
       >
         <View style={styles.timeColumn}>
-          <Text style={styles.timeText}>{String(item.time || '--:--')}</Text>
+          <Text style={styles.timeText}>{timeStr}</Text>
           <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
             <Text style={[styles.statusText, { color: st.text }]}>{st.label}</Text>
           </View>
@@ -246,16 +248,10 @@ export default function AppointmentsScreen() {
               )}
 
               <Input
-                label="Date (AAAA-MM-JJ)"
-                placeholder="2026-04-03"
-                value={form.date}
-                onChangeText={(v) => setForm({ ...form, date: v })}
-              />
-              <Input
-                label="Heure (HH:MM)"
-                placeholder="09:30"
-                value={form.time}
-                onChangeText={(v) => setForm({ ...form, time: v })}
+                label="Date & Heure (AAAA-MM-JJTHH:MM)"
+                placeholder="2026-04-03T09:30"
+                value={form.datetime_scheduled}
+                onChangeText={(v) => setForm({ ...form, datetime_scheduled: v })}
               />
               <Input
                 label="Motif (optionnel)"
