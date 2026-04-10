@@ -116,6 +116,20 @@
 - **Pydantic Type Validators**: Added field validators for `Decimal` amount field to ensure proper JSON serialization (Decimal → float conversion).
 - **Schema Field Mapping**: Corrected all API request/response schemas to match database column names (`act_date`, `datetime_scheduled`).
 
+### AI & LLM Development
+- **AI Chat Fully Functional**: Chat assistant now working on both web and mobile interfaces.
+- **LLM Model Evaluation**: Active testing of BioMistral and Gemma4B to determine optimal model for clinical workflows.
+- **RAG System in Development**: Building Retrieval-Augmented Generation system to enable local data exploitation, allowing LLM to leverage patient records and clinical guidelines for contextualized responses.
+
+### Deployment & Infrastructure
+- **Proxmox VM Deployment**: Complete application stack being deployed on dedicated Proxmox virtual machine with resources provisioned for LLM inference engine.
+- **Mobile Demo Ready**: React Native mobile application (Expo 54) fully functional and ready for clinic demonstrations.
+- **Security Testing**: Continuous security testing throughout deployment phase covering JWT authentication, role-based access, audit logging, and GDPR compliance.
+
+### Notifications
+- **Peer-to-Peer & Broadcast Messaging**: Notification system supports both direct staff-to-staff messaging and general broadcast announcements to clinic users.
+- **Implemented on All Platforms**: Consistent notification delivery across web and mobile interfaces.
+
 ---
 
 ## 🧠 System Design Decisions
@@ -286,11 +300,11 @@ docker exec -it backend python setup_admin.py
 | Medical Acts (+ PDF) | ✅ Implemented | April 10, 2026 |
 | Auth (JWT + roles) | ✅ Implemented | — |
 | Audit Logging | ✅ Implemented | — |
-| Chat (LLM integrated) | ✅ Implemented | April 8, 2026 |
+| Chat (LLM integrated) | ✅ Implemented | April 10, 2026 |
 | Analytics | ✅ Implemented | April 10, 2026 |
-| Notifications | ✅ Implemented | — |
+| Notifications | ✅ Implemented (P2P + Broadcast) | April 10, 2026 |
 | Web UI | ✅ Production Ready | April 10, 2026 |
-| Mobile UI | ✅ Production Ready | April 10, 2026 |
+| Mobile UI | ✅ Demo Ready | April 10, 2026 |
 | File Upload | ⚠️ Partial | — |
 | CI/CD Pipeline | ❌ None | — |
 | Load Testing | ❌ None | — |
@@ -299,12 +313,11 @@ docker exec -it backend python setup_admin.py
 
 ## 🔧 Known Limitations & Future Improvements
 
-- **No real-time notifications** (polling only)
-- **No multi-agent reasoning** (single LLM instance)
-- **No vector search** (semantic patient lookup)
-- **No background job queue** (async tasks)
-- **Limited to single clinic** (no multi-tenant support)
-
+- **RAG System** (In Development): Implementing retrieval-augmented generation for local data exploitation to enhance LLM context awareness.
+- **LLM Model Selection** (In Progress): Evaluating BioMistral vs Gemma4B for optimal clinical performance.
+- **No multi-agent reasoning** (single LLM instance - async queuing planned for Q3 2026)
+- **No vector search** (semantic patient lookup - post-July 2026)
+- **No background job queue** (async tasks - planned for scaling phase)
 ---
 
 *Developed Feb–July 2026 | CHU Ibn Rochd, Casablanca*  
