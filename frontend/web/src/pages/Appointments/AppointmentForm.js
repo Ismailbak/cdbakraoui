@@ -35,8 +35,7 @@ const STEPS = [
 
 const initialForm = {
   patientId: '',
-  date: '',
-  time: '',
+  datetime_scheduled: '',
   type: '',
   duration: '60',
   notes: '',
@@ -75,8 +74,7 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
     const errs = {};
     if (s === 1 && !form.patientId) errs.patientId = 'Veuillez sélectionner un patient';
     if (s === 2) {
-      if (!form.date) errs.date = 'La date est requise';
-      if (!form.time) errs.time = 'L\'heure est requise';
+      if (!form.datetime_scheduled) errs.datetime_scheduled = 'La date et l\'heure sont requises';
     }
     if (s === 3 && !form.type) errs.type = 'Veuillez choisir un type de consultation';
     setErrors(errs);
@@ -93,14 +91,13 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
     try {
       await createAppointment({
         patient_id: parseInt(form.patientId, 10),
-        date: form.date,
-        time: form.time,
+        datetime_scheduled: form.datetime_scheduled,
         reason: [form.type, form.notes].filter(Boolean).join(' – ') || null,
         status: 'scheduled',
       });
       setSubmitted(true);
       setTimeout(() => {
-        setForm({ ...initialForm, date: defaultDate || '' });
+        setForm({ ...initialForm, datetime_scheduled: defaultDate || '' });
         setStep(1);
         setSubmitted(false);
         if (onSuccess) onSuccess();
@@ -121,7 +118,7 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
         <h3>Rendez-vous créé !</h3>
         <p>
           {selectedPatient?.name && <><strong>{selectedPatient.name}</strong> — </>}
-          {form.date} à {form.time}
+          {form.datetime_scheduled && new Date(form.datetime_scheduled).toLocaleString('fr-FR')}
         </p>
       </div>
     );
@@ -246,37 +243,19 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
             )}
 
             <div className="af-field">
-              <label className="af-label">Date <span className="af-required">*</span></label>
+              <label className="af-label">Date & Heure <span className="af-required">*</span></label>
               <div className="af-input-icon-wrapper">
                 <FiCalendar className="af-input-icon" />
                 <input
-                  className={`af-input af-input-with-icon ${errors.date ? 'af-input-error' : ''}`}
-                  type="date"
-                  name="date"
-                  value={form.date}
+                  className={`af-input af-input-with-icon ${errors.datetime_scheduled ? 'af-input-error' : ''}`}
+                  type="datetime-local"
+                  name="datetime_scheduled"
+                  value={form.datetime_scheduled}
                   onChange={handleChange}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={new Date().toISOString().slice(0, 16)}
                 />
               </div>
-              {errors.date && <span className="af-error-msg"><FiAlertCircle />{errors.date}</span>}
-            </div>
-
-            <div className="af-field">
-              <label className="af-label">Heure <span className="af-required">*</span></label>
-              <div className="af-time-grid">
-                {TIME_SLOTS.map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`af-time-chip ${form.time === t ? 'selected' : ''}`}
-                    onClick={() => { setForm(f => ({ ...f, time: t })); setErrors(e => ({ ...e, time: '' })); }}
-                  >
-                    <FiClock />
-                    {t}
-                  </button>
-                ))}
-              </div>
-              {errors.time && <span className="af-error-msg"><FiAlertCircle />{errors.time}</span>}
+              {errors.datetime_scheduled && <span className="af-error-msg"><FiAlertCircle />{errors.datetime_scheduled}</span>}
             </div>
           </div>
         )}
@@ -290,9 +269,9 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
             </div>
 
             {/* Summary pill */}
-            {form.date && form.time && (
+            {form.datetime_scheduled && (
               <div className="af-summary-pill">
-                <FiCalendar /> {form.date} &nbsp;·&nbsp; <FiClock /> {form.time}
+                <FiCalendar /> {new Date(form.datetime_scheduled).toLocaleString('fr-FR')}
               </div>
             )}
 
