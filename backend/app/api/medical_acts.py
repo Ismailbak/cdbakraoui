@@ -4,16 +4,17 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
+from pydantic import BaseModel, field_validator
+from typing import List, Optional, Union
+from datetime import datetime, date
+from decimal import Decimal
 import os
 import shutil
 import uuid
 from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 queries
 
 from app.database import get_db
-from app.models.medical_act import MedicalAct as MedicalActModel, ActDocument as ActDocumentModel
+from app.models.medical_act import MedicalAct as MedicalActModel, ActDocument as ActDocumentModel, MedicalActStaff as MedicalActStaffModel
 from app.models.patient import Patient as PatientModel
 from app.api.auth import get_current_user_orm
 from app.models.user import User
@@ -39,20 +40,37 @@ class ActDocumentOut(BaseModel):
         from_attributes = True
 
 
+class MedicalActStaffOut(BaseModel):
+    id: int
+    medical_act_id: int
+    staff_id: int
+    role: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class MedicalActBase(BaseModel):
     patient_id: int
     act_type: str
     description: Optional[str] = None
     report: Optional[str] = None
-    date: str  # TODO: change to `datetime.date` for proper validation
+    act_date: date  # Database column name
     notes: Optional[str] = None
     status: str = "completed"
     doctor_id: Optional[int] = None
-    assigned_staff_ids: Optional[str] = None  # JSON-encoded list e.g. "[1,2,3]"
-    amount: Optional[str] = None
+    amount: Optional[Union[float, Decimal]] = None
     category: Optional[str] = None
     diagnosis: Optional[str] = None
     treatment: Optional[str] = None
+    
+    @field_validator('amount', mode='before')
+    def convert_amount(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, Decimal):
+            return float(v)
+        return v
 
 
 class MedicalActCreate(MedicalActBase):
@@ -66,6 +84,7 @@ class MedicalActOut(MedicalActBase):
     patient_name: Optional[str] = None
     created_at: Optional[datetime] = None
     documents: List[ActDocumentOut] = []
+    assigned_staff: List[MedicalActStaffOut] = []
 
     class Config:
         from_attributes = True
@@ -73,7 +92,7 @@ class MedicalActOut(MedicalActBase):
 
 # ─── Internal Helper ──────────────────────────────────────────────────────────
 
-def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: List[ActDocumentModel] = None) -> dict:
+def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: List[ActDocumentModel] = None, assigned_staff: List[MedicalActStaffModel] = None) -> dict:
     """
     Converts a MedicalActModel ORM row to a plain dict, injecting patient_name.
     Used by every endpoint that returns a MedicalActOut.
@@ -81,6 +100,10 @@ def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: L
     doc_dicts = []
     if documents:
         doc_dicts = [{"id": d.id, "act_id": d.act_id, "filename": d.filename, "file_path": d.file_path, "mime_type": d.mime_type} for d in documents]
+    
+    staff_dicts = []
+    if assigned_staff:
+        staff_dicts = [{"id": s.id, "medical_act_id": s.medical_act_id, "staff_id": s.staff_id, "role": s.role} for s in assigned_staff]
         
     return {
         "id": act.id,
@@ -89,17 +112,17 @@ def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: L
         "act_type": act.act_type,
         "description": act.description,
         "report": act.report,
-        "date": act.date,
+        "act_date": act.act_date.isoformat() if isinstance(act.act_date, date) else act.act_date,
         "notes": act.notes,
         "status": act.status,
         "doctor_id": act.doctor_id,
-        "assigned_staff_ids": act.assigned_staff_ids,
         "amount": act.amount,
         "category": act.category,
         "diagnosis": act.diagnosis,
         "treatment": act.treatment,
-        "created_at": act.created_at.isoformat() if act.created_at else None,
         "documents": doc_dicts,
+        "assigned_staff": staff_dicts,
+        "created_at": act.created_at.isoformat() if act.created_at else None,
     }
 
 
@@ -187,7 +210,7 @@ def get_medical_acts(
     if act_type:
         query = query.filter(MedicalActModel.act_type == act_type)
 
-    rows = query.order_by(MedicalActModel.date.desc()).all()
+    rows = query.order_by(MedicalActModel.act_date.desc()).all()
     # FIX: use batch enrichment instead of one DB query per act
     return _enrich_acts(db, rows)
 
@@ -232,7 +255,7 @@ def get_patient_medical_acts(
     rows = (
         db.query(MedicalActModel)
         .filter(MedicalActModel.patient_id == patient_id)
-        .order_by(MedicalActModel.date.desc())
+        .order_by(MedicalActModel.act_date.desc())
         .all()
     )
     return _enrich_acts(db, rows)
