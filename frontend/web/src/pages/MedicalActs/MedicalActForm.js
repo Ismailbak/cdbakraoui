@@ -43,7 +43,7 @@ const EMPTY_FORM = {
 };
 
 function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
-  const [form, setForm] = useState(initialData || EMPTY_FORM);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [step, setStep] = useState(1);
   const [patients, setPatients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,6 +51,68 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [userIntentToSubmit, setUserIntentToSubmit] = useState(false);
+
+  // Initialize or update form when initialData changes
+  useEffect(() => {
+    if (initialData && isEdit) {
+      // Safely extract diagnosis from multiple sources
+      let diagnosisValue = '';
+      if (initialData.diagnoses && Array.isArray(initialData.diagnoses) && initialData.diagnoses.length > 0) {
+        diagnosisValue = initialData.diagnoses
+          .map(d => d.diagnosis_label || d.label || '')
+          .filter(d => d)
+          .join(', ');
+      } else if (initialData.diagnosis) {
+        diagnosisValue = String(initialData.diagnosis).trim();
+      }
+
+      // Safely extract treatment from multiple sources
+      let treatmentValue = '';
+      if (initialData.treatments && Array.isArray(initialData.treatments) && initialData.treatments.length > 0) {
+        treatmentValue = initialData.treatments
+          .map(t => t.drug_name || t.name || '')
+          .filter(t => t)
+          .join(', ');
+      } else if (initialData.treatment) {
+        treatmentValue = String(initialData.treatment).trim();
+      }
+
+      // Determine actType from various possible field names
+      const actType = initialData.act_type 
+        || initialData.actType 
+        || initialData.type
+        || 'Consultation';
+
+      setForm({
+        id: initialData.id,
+        patientId: initialData.patient_id || initialData.patientId,
+        patientName: initialData.patient_name || initialData.patientName,
+        date: initialData.act_date || initialData.date,
+        actType: actType,
+        category: initialData.category || 'rheumatology',
+        diagnosis: diagnosisValue,
+        report: initialData.report || '',
+        amount: initialData.amount || '',
+        status: initialData.status || 'pending',
+        treatment: treatmentValue,
+        notes: initialData.notes || '',
+      });
+      
+      // Reset step to 1 when editing
+      setStep(1);
+      setErrors({});
+      setSubmitted(false);
+      // Also clear searchQuery to avoid UI clutter
+      setSearchQuery('');
+    } else {
+      setForm(EMPTY_FORM);
+      setStep(1);
+      setErrors({});
+      setSubmitted(false);
+      setSearchQuery('');
+    }
+  }, [initialData, isEdit]);
 
   useEffect(() => {
     if (step === 1) {
@@ -71,21 +133,28 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   };
 
   const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.ipp && p.ipp.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    // Clear error for this specific field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const selectPatient = (patient) => {
     setForm(prev => ({
       ...prev,
       patientId: patient.id,
-      patientName: patient.name
+      patientName: `${patient.first_name} ${patient.last_name}`
     }));
     if (errors.patientId) setErrors(prev => ({ ...prev, patientId: '' }));
   };
@@ -97,25 +166,53 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       if (!form.date) newErrors.date = 'La date est requise';
     }
     if (s === 2) {
-      if (!form.diagnosis.trim()) newErrors.diagnosis = 'Le diagnostic est requis';
-      if (!form.actType) newErrors.actType = "Le type d'acte est requis";
+      // Ensure diagnosis is a string and validate
+      const diagnosisValue = form.diagnosis ? String(form.diagnosis).trim() : '';
+      if (!diagnosisValue) {
+        newErrors.diagnosis = 'Le diagnostic est requis';
+      }
+      // actType defaults to 'Consultation' so it should never be empty
+      if (!form.actType) {
+        newErrors.actType = "Le type d'acte est requis";
+      }
     }
     if (s === 3) {
-      if (!form.amount) newErrors.amount = 'Le montant est requis';
+      // Require amount only when actually submitting
+      const amountValue = String(form.amount || '').trim();
+      if (!amountValue) {
+        newErrors.amount = 'Le montant est requis';
+      }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (validateStep(step)) setStep(s => s + 1);
+    if (validateStep(step)) {
+      setStep(s => s + 1);
+      setUserIntentToSubmit(false); // Reset intent when navigating
+    }
   };
 
-  const handleBack = () => setStep(s => s - 1);
+  const handleBack = () => {
+    // Allow going back without validation
+    setStep(s => s - 1);
+    // Clear errors when going back to allow re-editing
+    setErrors({});
+    setUserIntentToSubmit(false); // Reset intent when navigating
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep(3)) return;
+    
+    // Only allow submit if we're actually on step 3 AND user clicked submit button
+    if (step !== 3 || !userIntentToSubmit) {
+      return;
+    }
+    
+    if (!validateStep(3)) {
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -147,6 +244,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       setErrors({ submit: "Erreur lors de l'enregistrement de l'acte." });
     } finally {
       setIsSubmitting(false);
+      setUserIntentToSubmit(false);
     }
   };
 
@@ -248,7 +346,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                       {p.gender === 'Femme' ? '👩' : '👨'}
                     </div>
                     <div className="maf-patient-info">
-                      <span className="maf-patient-name">{p.name}</span>
+                      <span className="maf-patient-name">{p.first_name} {p.last_name}</span>
                       <span className="maf-patient-meta">
                         {p.ipp ? `IPP: ${p.ipp}` : 'Sans IPP'} • {p.age || '?'} ans
                       </span>
@@ -476,7 +574,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                 Suivant <FiChevronRight />
               </button>
             ) : (
-              <button type="submit" className="maf-btn-submit" disabled={isSubmitting}>
+              <button 
+                type="submit" 
+                className="maf-btn-submit" 
+                disabled={isSubmitting}
+                onClick={() => setUserIntentToSubmit(true)}
+              >
                 {isSubmitting ? 'Enregistrement...' : (isEdit ? "Modifier l'acte" : "Valider l'acte")}
               </button>
             )}
