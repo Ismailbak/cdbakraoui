@@ -96,6 +96,28 @@
 
 ---
 
+## 📝 Recent Updates (April 10, 2026)
+
+### Database Schema & Data Integrity Fixes
+- **Consolidated Datetime Fields**: Unified appointment scheduling into single `datetime_scheduled` (DateTime) field for better data consistency.
+- **Removed Age Column**: Patient age now calculated dynamically from `date_of_birth` across all backend and frontend components (web + mobile).
+- **Medical Acts Corrections**: 
+  - Column renamed: `date` → `act_date` (Date type)
+  - Amount field: Changed to `Decimal(10,2)` for currency precision
+  - Doctor assignment: Added `medical_act_staff` junction table for proper many-to-many relationships
+- **Foreign Key Constraints**: Added FK constraints for `doctor_id` (medical_acts → users) ensuring referential integrity.
+- **Impact**: All backend services (analytics, PDF generation), API schemas, and frontend components (web + mobile) updated to use corrected field names and types.
+
+### Frontend UI Fixes
+- **AppointmentForm Success Screen**: Fixed malformed JSX displaying raw code; now properly formats and shows appointment datetime.
+- **All Components Synchronized**: Web (React) and mobile (React Native) components consistently use consolidated datetime fields and calculated age.
+
+### API Validation Updates
+- **Pydantic Type Validators**: Added field validators for `Decimal` amount field to ensure proper JSON serialization (Decimal → float conversion).
+- **Schema Field Mapping**: Corrected all API request/response schemas to match database column names (`act_date`, `datetime_scheduled`).
+
+---
+
 ## 🧠 System Design Decisions
 
 ### 1. **Local-First Deployment (Data Sovereignty)**
@@ -171,7 +193,7 @@
 
 ## 📊 Performance & Scale
 
-### Real-World Numbers (As of April 8, 2026)
+### Real-World Numbers (As of April 10, 2026)
 
 | Metric | Value | Notes |
 |--------|-------|-------|
@@ -259,16 +281,16 @@ docker exec -it backend python setup_admin.py
 
 | Feature | Status | Last Updated |
 |---------|--------|--------------|
-| Patient CRUD | ✅ Implemented | — |
-| Appointments | ✅ Implemented | — |
-| Medical Acts (+ PDF) | ✅ Implemented | — |
+| Patient CRUD | ✅ Implemented | April 10, 2026 |
+| Appointments | ✅ Implemented | April 10, 2026 |
+| Medical Acts (+ PDF) | ✅ Implemented | April 10, 2026 |
 | Auth (JWT + roles) | ✅ Implemented | — |
 | Audit Logging | ✅ Implemented | — |
 | Chat (LLM integrated) | ✅ Implemented | April 8, 2026 |
-| Analytics | ✅ Implemented | — |
+| Analytics | ✅ Implemented | April 10, 2026 |
 | Notifications | ✅ Implemented | — |
-| Web UI | ✅ Production Ready | April 8, 2026 (redesign + breadcrumb fixes) |
-| Mobile UI | ✅ Production Ready | April 4, 2026 |
+| Web UI | ✅ Production Ready | April 10, 2026 |
+| Mobile UI | ✅ Production Ready | April 10, 2026 |
 | File Upload | ⚠️ Partial | — |
 | CI/CD Pipeline | ❌ None | — |
 | Load Testing | ❌ None | — |

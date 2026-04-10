@@ -37,33 +37,35 @@ This document provides a detailed explanation of every file and directory in the
     - **routes.py**: Root API router.
   - **models/**: SQLAlchemy models for DB tables:
     - **user.py**: User accounts and roles.
-    - **patient.py**: Patient records.
-    - **appointment.py**: Appointments.
-    - **medical_act.py**: Medical acts and attached documents.
+    - **patient.py**: Patient records (includes `date_of_birth` field; age is calculated dynamically).
+    - **appointment.py**: Appointments (uses `datetime_scheduled` DateTime field for consolidated date/time).
+    - **medical_act.py**: Medical acts and attached documents (uses `act_date` Date field; `amount` is Decimal(10,2) for currency precision).
     - **notification.py**: Notifications.
     - **audit.py**: Audit logs for actions.
     - **llm.py**: LLM (AI model) interface (stub).
+    - **Note on Recent Schema Changes (April 10, 2026)**: Consolidated datetime fields, removed age column from patients (calculated dynamically), added `medical_act_staff` junction table for doctor assignments, added FK constraints for data integrity.
   - **services/**: Business logic and helpers:
-    - **analytics_service.py**: Analytics calculations.
+    - **analytics_service.py**: Analytics calculations (queries use `act_date` for medical acts, `datetime_scheduled` for appointments).
     - **audit_service.py**: Audit logging.
     - **auth_service.py**: User authentication and password hashing.
     - **chat_service.py**: AI chat logic (calls LLM).
     - **notification_service.py**: Notification management.
-    - **patient_service.py**: Patient CRUD and anonymization (stub).
-    - **pdf_service.py**: Generates PDF reports for Medical Acts and Patient Dossiers.
+    - **patient_service.py**: Patient CRUD, dynamic age calculation, and anonymization (stub).
+    - **pdf_service.py**: Generates PDF reports for Medical Acts and Patient Dossiers (handles `datetime_scheduled` and `act_date` fields).
   - **utils/**: Utility functions:
     - **preprocessing.py**: Text cleaning, keyword extraction, anonymization.
     - **security.py**: Password hashing/verification.
 
 **Backend Feature Coverage:**
-- Core CRUD for patients, appointments, medical acts, users: **Implemented**
-- Authentication & role management: **Implemented**
-- Analytics: **Implemented** (Real-time aggregation of demographics, trends, and financial stats)
+- Core CRUD for patients, appointments, medical acts, users: **Implemented** ✅
+- Authentication & role management: **Implemented** ✅
+- Analytics: **Implemented** ✅ (Real-time aggregation of demographics, trends, financial stats with corrected date/datetime fields)
 - AI chat assistant: **Stub** (LLM logic not fully implemented)
-- Notifications: **Implemented** (Manual peer-to-peer messaging, categories, sender visibility)
-- Audit logging: **Implemented**
-- PDF generation: **Implemented** (Medical Act reports and Patient Dossier)
+- Notifications: **Implemented** ✅ (Manual peer-to-peer messaging, categories, sender visibility)
+- Audit logging: **Implemented** ✅
+- PDF generation: **Implemented** ✅ (Medical Act reports and Patient Dossier with corrected field mappings)
 - File/document upload: **Partial** (model exists, endpoints may be incomplete)
+- **Database Schema Integrity**: **Implemented** ✅ (April 10, 2026: FK constraints, junction tables, consolidated datetime fields, dynamic age calculation)
 
 ---
 
@@ -138,11 +140,11 @@ This document provides a detailed explanation of every file and directory in the
 
 | Area         | Feature                | Status         | Last Updated   | Notes |
 |--------------|------------------------|----------------|----------------|-------|
-| Backend      | CRUD (patients, etc.)  | Implemented    | -              | -     |
-| Backend      | Analytics              | Implemented    | -              | -     |
+| Backend      | CRUD (patients, etc.)  | Implemented    | April 10, 2026 | Schema corrected (act_date, datetime_scheduled, date_of_birth) |
+| Backend      | Analytics              | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
 | Backend      | AI Chat                | Stub           | -              | -     |
 | Backend      | Notifications          | Implemented    | -              | -     |
-| Backend      | PDF Generation         | Implemented    | -              | -     |
+| Backend      | PDF Generation         | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
 | Backend      | File Upload            | Partial        | -              | -     |
 | Mobile       | Login & Auth           | Implemented    | April 4, 2026  | ✅ Emoji → Feather icon |
 | Mobile       | Dashboard (KPIs)       | Implemented    | April 4, 2026  | ✅ Cleaned up, fixed white boxes |
@@ -151,8 +153,8 @@ This document provides a detailed explanation of every file and directory in the
 | Mobile       | Notifications          | Implemented    | -              | -     |
 | Mobile       | Design System          | Implemented    | April 4, 2026  | ✅ Complete theme tokens |
 | Mobile       | Bottom Tab Nav         | Implemented    | April 4, 2026  | ✅ Larger (80px), centered Assistant, improved icons |
-| Mobile       | Appointments           | Implemented    | April 4, 2026  | ✅ Working correctly |
-| Mobile       | Medical Acts           | Implemented    | April 4, 2026  | ✅ Fully functional |
+| Mobile       | Appointments           | Implemented    | April 10, 2026 | ✅ DateTime consolidated into datetime_scheduled |
+| Mobile       | Medical Acts           | Implemented    | April 10, 2026 | ✅ act_date field, amount as Decimal(10,2) |
 | Mobile       | Chat                   | Implemented    | April 4, 2026  | ✅ Ready to use |
 | Mobile       | PDF Generation         | Implemented    | April 4, 2026  | ✅ Integrated |
 | Mobile       | More Menu Component    | Implemented    | April 4, 2026  | ✅ New MoreMenuItemButton created |
@@ -160,12 +162,12 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | User Management        | Implemented    | -              | -     |
 | Web          | Analytics              | Implemented    | -              | -     |
 | Web          | Logs                   | Implemented    | -              | -     |
-| Web          | Patient Management     | Implemented    | April 8, 2026  | ✅ Breadcrumb duplicate removed, displays patient name instead of ID; Layout.js conditional breadcrumb logic |
-| Web          | Appointments           | Implemented    | -              | -     |
-| Web          | Medical Acts           | Implemented    | -              | -     |
+| Web          | Patient Management     | Implemented    | April 10, 2026 | Schema corrected, age calculated from date_of_birth, consolidated datetime |
+| Web          | Appointments           | Implemented    | April 10, 2026 | DateTime consolidated into datetime_scheduled field |
+| Web          | Medical Acts           | Implemented    | April 10, 2026 | Column corrected (act_date), amount as Decimal(10,2) |
 | Web          | Notifications          | Implemented    | -              | -     |
-| Web          | Chat                   | Implemented    | April 8, 2026  | ✅ Chat history bug fixed (message pairing), response model updated, premium UI redesign with glass morphism, gradients, enhanced animations |
-| Web          | PDF Generation         | Implemented    | -              | -     |
+| Web          | Chat                   | Implemented    | April 8, 2026  | ✅ Chat history bug fixed (message pairing), response model updated, premium UI redesign |
+| Web          | PDF Generation         | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
 | Web          | File Upload            | Not Impl.      | -              | -     |
 
 ---
