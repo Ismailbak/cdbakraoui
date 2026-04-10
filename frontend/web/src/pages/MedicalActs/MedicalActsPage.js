@@ -39,8 +39,6 @@ const EMPTY_FORM = {
   type: 'Consultation',
   category: 'Rhumatologie',
   report: '',
-  diagnosis: '',
-  treatment: '',
   notes: '',
   status: 'completed',
   amount: '',
@@ -58,15 +56,12 @@ const medicalActsService = {
       act_type: data.type,
       description: data.notes || '',
       report: data.report || '',
-      date: data.date,
+      act_date: data.date,
       notes: data.notes || '',
       status: data.status,
       doctor_id: data.doctorId || null,
-      assigned_staff_ids: JSON.stringify(data.assignedStaffIds || []),
       amount: data.amount || '',
       category: data.category || '',
-      diagnosis: data.diagnosis || '',
-      treatment: data.treatment || '',
     };
     await import('../../api/api').then(api => api.updateMedicalAct(data.id, mapped));
   },
@@ -87,8 +82,7 @@ const medicalActsService = {
       type: act.act_type,
       category: act.category || '',
       date: act.act_date,
-      diagnosis: act.diagnosis || '',
-      treatment: act.treatment || '',
+      description: act.description || '',
       status: act.status,
       amount: act.amount || '',
       doctor: act.doctor_id || '',
@@ -97,6 +91,8 @@ const medicalActsService = {
       notes: act.notes || '',
       report: act.report || '',
       documents: act.documents || [],
+      diagnoses: act.diagnoses || [],
+      treatments: act.treatments || [],
     }));
   },
 
@@ -174,17 +170,22 @@ function ActCard({ act, onView, onDelete, onEdit }) {
             <span className="patient-id">{act.patientIdDisplay ?? act.patientId}</span>
           </div>
         </div>
-        {act.diagnosis && (
+        {act.description && (
           <p className="act-diagnosis">
-            <FiActivity size={14} /> {act.diagnosis}
+            <FiActivity size={14} /> {act.description}
           </p>
         )}
-        {act.treatment && <p className="act-treatment">{act.treatment}</p>}
+        {(act.diagnoses?.length > 0 || act.treatments?.length > 0) && (
+          <p className="act-treatment">
+            {act.diagnoses?.length > 0 && <span>{act.diagnoses.length} diagnostic(s)</span>}
+            {act.treatments?.length > 0 && <span>{act.treatments.length} traitement(s)</span>}
+          </p>
+        )}
       </div>
 
       <div className="act-card-footer">
         <div className="act-info">
-          <span className="act-date">{formatDate(act.act_date)}</span>
+          <span className="act-date">{formatDate(act.date)}</span>
           {act.amount && <span className="act-amount">{act.amount}</span>}
         </div>
         <div className="act-actions">
@@ -297,13 +298,17 @@ function DetailModal({ act, onClose, onSuccess }) {
             </div>
             <div className="detail-section">
               <h4>Date</h4>
-              <p className="detail-value">{formatDate(act.act_date)}</p>
+              <p className="detail-value">{formatDate(act.date)}</p>
             </div>
           </div>
 
           <div className="detail-section">
             <h4>Diagnostic</h4>
-            <p className="detail-value">{act.diagnosis}</p>
+            <p className="detail-value">
+              {act.diagnoses && act.diagnoses.length > 0
+                ? act.diagnoses.map((d) => d.diagnosis_label).join(', ')
+                : 'Aucun diagnostic'}
+            </p>
           </div>
 
           {act.report && (
@@ -315,7 +320,11 @@ function DetailModal({ act, onClose, onSuccess }) {
 
           <div className="detail-section">
             <h4>Traitement / Prescription</h4>
-            <p className="detail-value">{act.treatment}</p>
+            <p className="detail-value">
+              {act.treatments && act.treatments.length > 0
+                ? act.treatments.map((t) => `${t.drug_name}${t.dosage ? ` (${t.dosage})` : ''}`).join(', ')
+                : 'Aucun traitement'}
+            </p>
           </div>
 
           <div className="detail-row">
@@ -409,6 +418,9 @@ function MedicalActsPage() {
   const [selectedAct, setSelectedAct] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editAct, setEditAct] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 6;
 
   const loadActs = useCallback(async () => {
     try {
@@ -447,11 +459,21 @@ function MedicalActsPage() {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
       !term ||
-      act.patientName.toLowerCase().includes(term) ||
-      act.diagnosis.toLowerCase().includes(term) ||
+      (act.patientName && act.patientName.toLowerCase().includes(term)) ||
+      (act.description && act.description.toLowerCase().includes(term)) ||
       String(act.patientId).toLowerCase().includes(term);
     return matchesType && matchesSearch;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredActs.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedActs = filteredActs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedType, searchTerm]);
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, actId: null });
 
@@ -475,7 +497,35 @@ function MedicalActsPage() {
   };
 
   const handleEditAct = (act) => {
-    setEditAct(act);
+    // Ensure proper data structure for the form
+    const formData = {
+      ...act,
+      // Ensure diagnosis field exists as a string
+      diagnosis: act.diagnosis 
+        ? String(act.diagnosis).trim()
+        : (act.diagnoses && Array.isArray(act.diagnoses) && act.diagnoses.length > 0
+          ? act.diagnoses.map(d => d.diagnosis_label || d.label || '').filter(d => d).join(', ')
+          : ''),
+      // Ensure treatment field exists as a string
+      treatment: act.treatment
+        ? String(act.treatment).trim()
+        : (act.treatments && Array.isArray(act.treatments) && act.treatments.length > 0
+          ? act.treatments.map(t => t.drug_name || t.name || '').filter(t => t).join(', ')
+          : ''),
+      // Ensure amount is set correctly
+      amount: act.amount || '',
+      // Map backend fields to form fields
+      patientId: act.patientId,
+      patientName: act.patientName,
+      date: act.date,
+      actType: act.type || 'Consultation',
+      category: act.category || 'rheumatology',
+      report: act.report || '',
+      status: act.status || 'pending',
+      notes: act.notes || '',
+    };
+    
+    setEditAct(formData);
     setShowEditModal(true);
   };
 
@@ -543,7 +593,7 @@ function MedicalActsPage() {
           ) : filteredActs.length === 0 ? (
             <p className="empty-state">Aucun acte médical trouvé.</p>
           ) : (
-            filteredActs.map((act) => (
+            paginatedActs.map((act) => (
               <ActCard
                 key={act.id}
                 act={act}
@@ -554,6 +604,37 @@ function MedicalActsPage() {
             ))
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredActs.length > ITEMS_PER_PAGE && (
+          <div className="pagination-container">
+            <button
+              className="pagination-btn prev-btn"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              ←
+            </button>
+            <div className="pagination-pages">
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i + 1}
+                  className={`pagination-page ${currentPage === i + 1 ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              className="pagination-btn next-btn"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              →
+            </button>
+          </div>
+        )}
 
         <ConfirmDialog
           open={deleteDialog.open}
@@ -592,20 +673,7 @@ function MedicalActsPage() {
           <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <MedicalActForm
-                initialData={{
-                  id: editAct.id,
-                  patientId: editAct.patientId,
-                  patientName: editAct.patientName,
-                  date: editAct.act_date,
-                  type: editAct.type,
-                  category: editAct.category,
-                  diagnosis: editAct.diagnosis,
-                  report: editAct.report,
-                  amount: editAct.amount,
-                  status: editAct.status,
-                  treatment: editAct.treatment,
-                  notes: editAct.notes,
-                }}
+                initialData={editAct}
                 isEdit={true}
                 onSuccess={() => {
                   setShowEditModal(false);
