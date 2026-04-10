@@ -249,12 +249,6 @@ docker exec -it backend python setup_admin.py
 # Mobile: connect to http://<LOCAL_NETWORK_IP>:8000 (replace with your LAN IP)
 ```
 
-### Environment Variables
-Create `.env` in backend/:
-```
-DATABASE_URL=mysql+pymysql://admin:changeme@db:3306/medical_ai
-SECRET_KEY=<your-jwt-secret>
-OLLAMA_API_URL=http://localhost:11434
 ```
 
 **⚠️ Security Note**: Never commit `.env` files with real credentials. Use strong passwords for production deployments.
