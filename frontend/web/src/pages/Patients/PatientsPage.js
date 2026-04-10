@@ -24,17 +24,17 @@ function mapApiPatientToUi(p, appointments = []) {
   const now = new Date();
   const patientAppointments = appointments.filter(a => a.patient_id === p.id);
   
-  // Find last visit (past appointment)
+  // Find last visit (past appointment) - use datetime_scheduled if available, fallback to date
   const pastAppointments = patientAppointments
-    .filter(a => new Date(a.date) < now)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-  const lastVisit = pastAppointments.length > 0 ? pastAppointments[0].date : null;
+    .filter(a => new Date(a.datetime_scheduled || a.date) < now)
+    .sort((a, b) => new Date(b.datetime_scheduled || b.date) - new Date(a.datetime_scheduled || a.date));
+  const lastVisit = pastAppointments.length > 0 ? (pastAppointments[0].datetime_scheduled || pastAppointments[0].date) : null;
   
-  // Find next appointment (future appointment)
+  // Find next appointment (future appointment) - use datetime_scheduled if available, fallback to date
   const futureAppointments = patientAppointments
-    .filter(a => new Date(a.date) >= now)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  const nextAppointment = futureAppointments.length > 0 ? futureAppointments[0].date : null;
+    .filter(a => new Date(a.datetime_scheduled || a.date) >= now)
+    .sort((a, b) => new Date(a.datetime_scheduled || a.date) - new Date(b.datetime_scheduled || b.date));
+  const nextAppointment = futureAppointments.length > 0 ? (futureAppointments[0].datetime_scheduled || futureAppointments[0].date) : null;
   
   return {
     ...p,
@@ -159,7 +159,7 @@ function PatientsPage() {
     setEditFormData({
       ipp: patient.ipp || '',
       name: patient.name,
-      age: patient.age,
+      date_of_birth: patient.date_of_birth || '',
       gender: patient.gender,
       phone: patient.phone || '',
       email: patient.email || '',
@@ -179,7 +179,7 @@ function PatientsPage() {
     try {
       await updatePatient(selectedPatient.id, {
         name: editFormData.name,
-        age: editFormData.age,
+        date_of_birth: editFormData.date_of_birth || null,
         gender: editFormData.gender,
         phone: editFormData.phone || null,
         email: editFormData.email || null,
@@ -244,13 +244,11 @@ function PatientsPage() {
       return;
     }
 
-    const age = calculateAge(addFormData.birthDate);
     const genderLabel = addFormData.gender === 'homme' ? 'Homme' : 'Femme';
     try {
       const res = await createPatient({
         ipp: addFormData.ipp || null,
         name: addFormData.name,
-        age,
         gender: genderLabel,
         date_of_birth: addFormData.birthDate || null,
         phone: addFormData.phone || null,
@@ -395,7 +393,7 @@ function PatientsPage() {
                           <div className="patient-avatar">{patient.avatar}</div>
                           <div className="patient-details">
                             <span className="patient-name">{patient.name}</span>
-                            <span className="patient-meta">{patient.age} ans • {patient.gender}</span>
+                            <span className="patient-meta">{patient.date_of_birth ? calculateAge(patient.date_of_birth) : '-'} ans • {patient.gender}</span>
                           </div>
                         </div>
                       </td>

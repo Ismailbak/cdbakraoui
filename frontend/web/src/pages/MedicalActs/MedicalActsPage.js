@@ -86,7 +86,7 @@ const medicalActsService = {
       patientId: act.patient_id,
       type: act.act_type,
       category: act.category || '',
-      date: act.date,
+      date: act.act_date,
       diagnosis: act.diagnosis || '',
       treatment: act.treatment || '',
       status: act.status,
@@ -184,7 +184,7 @@ function ActCard({ act, onView, onDelete, onEdit }) {
 
       <div className="act-card-footer">
         <div className="act-info">
-          <span className="act-date">{formatDate(act.date)}</span>
+          <span className="act-date">{formatDate(act.act_date)}</span>
           {act.amount && <span className="act-amount">{act.amount}</span>}
         </div>
         <div className="act-actions">
@@ -297,7 +297,7 @@ function DetailModal({ act, onClose, onSuccess }) {
             </div>
             <div className="detail-section">
               <h4>Date</h4>
-              <p className="detail-value">{formatDate(act.date)}</p>
+              <p className="detail-value">{formatDate(act.act_date)}</p>
             </div>
           </div>
 
@@ -596,7 +596,7 @@ function MedicalActsPage() {
                   id: editAct.id,
                   patientId: editAct.patientId,
                   patientName: editAct.patientName,
-                  date: editAct.date,
+                  date: editAct.act_date,
                   type: editAct.type,
                   category: editAct.category,
                   diagnosis: editAct.diagnosis,

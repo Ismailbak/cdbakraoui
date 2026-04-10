@@ -34,7 +34,7 @@ function MedicalActList({ onSelect }) {
         <tbody>
           {acts.map((act) => (
             <tr key={act.id}>
-              <td>{act.date}</td>
+              <td>{act.act_date}</td>
               <td>{act.act_type}</td>
               <td>{act.patient_name || act.patient_id}</td>
               <td>{act.description}</td>

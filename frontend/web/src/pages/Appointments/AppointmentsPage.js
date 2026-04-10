@@ -8,14 +8,18 @@ import AppointmentForm from './AppointmentForm';
 import './AppointmentsPage.css';
 
 function mapApiAppointmentToUi(apt) {
+  const dateTime = apt.datetime_scheduled ? new Date(apt.datetime_scheduled) : null;
+  const dateStr = dateTime ? dateTime.toISOString().split('T')[0] : apt.date || '';
+  const timeStr = dateTime ? dateTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : apt.time || '';
   return {
     id: apt.id,
     patient_id: apt.patient_id,
     patientName: apt.patient_name || '-',
     patientPhone: '',
     type: 'Consultation',
-    date: apt.date,
-    time: apt.time,
+    date: dateStr,
+    time: timeStr,
+    datetime_scheduled: apt.datetime_scheduled,
     duration: 30,
     status: apt.status === 'scheduled' ? 'pending' : apt.status === 'cancelled' ? 'cancelled' : 'confirmed',
     notes: apt.reason || '',

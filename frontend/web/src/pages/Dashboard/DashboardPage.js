@@ -113,8 +113,10 @@ function DashboardPage() {
         const recentAppsData = appointments.slice(0, 5).map(app => ({
           type: 'appointment',
           title: `RDV: ${app.patient_name || app.patientName || 'Patient'}`,
-          subtitle: `${app.time || ''} - ${app.type || 'Cons'}`,
-          time: app.created_at || (app.date && app.time ? `${app.date}T${app.time}` : app.date ? `${app.date}T12:00:00` : null),
+          subtitle: app.datetime_scheduled 
+            ? new Date(app.datetime_scheduled).toLocaleString('fr-FR')
+            : (app.time || '') + (app.date ? ` - ${app.date}` : ''),
+          time: app.created_at || app.datetime_scheduled || (app.date && app.time ? `${app.date}T${app.time}` : app.date ? `${app.date}T12:00:00` : null),
           icon: '📅'
         }));
 

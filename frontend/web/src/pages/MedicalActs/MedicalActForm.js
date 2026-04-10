@@ -121,7 +121,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     try {
       const payload = {
         patient_id: form.patientId,
-        date: form.date,
+        act_date: form.date,
         act_type: form.actType,
         category: form.category,
         diagnosis: form.diagnosis,

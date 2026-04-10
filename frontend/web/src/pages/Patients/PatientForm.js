@@ -184,12 +184,10 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
     if (!validateStep(5)) return;
     setIsSubmitting(true);
     try {
-      const age = form.birthDate ? calculateAge(form.birthDate) : 0;
       const genderLabel = form.gender === 'homme' ? 'Homme' : 'Femme';
       const patientData = {
         ipp: form.ipp || null,
         name: form.name,
-        age,
         gender: genderLabel,
         date_of_birth: form.birthDate || null,
         phone: form.phone || null,

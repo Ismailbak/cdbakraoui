@@ -17,16 +17,20 @@ function AppointmentList({ onSelect }) {
     loadAppointments();
   };
 
+  const formatDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return '-';
+    return new Date(dateTimeStr).toLocaleString('fr-FR');
+  };
+
   return (
     <div>
       <h3>Appointments (Rendez-vous)</h3>
       <table>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Time</th>
+            <th>Date & Heure</th>
             <th>Patient</th>
-            <th>Reason</th>
+            <th>Raison</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -34,8 +38,7 @@ function AppointmentList({ onSelect }) {
         <tbody>
           {appointments.map((apt) => (
             <tr key={apt.id}>
-              <td>{apt.date}</td>
-              <td>{apt.time}</td>
+              <td>{formatDateTime(apt.datetime_scheduled)}</td>
               <td>{apt.patient_name || apt.patient_id}</td>
               <td>{apt.reason}</td>
               <td>{apt.status}</td>

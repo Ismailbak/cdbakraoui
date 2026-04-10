@@ -11,6 +11,16 @@ import { LoadingSpinner, Breadcrumb } from '../../components/common';
 import PatientForm from './PatientForm';
 import './PatientDetailPage.css';
 
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birth = new Date(dateOfBirth);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age > 0 ? age : null;
+}
+
 function PatientDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -148,7 +158,7 @@ function PatientDetailPage() {
             <div className="patient-identity">
               <h1>{patient.name}</h1>
               <p className="patient-meta-info">
-                {patient.age} ans • {patient.gender} • Né(e) le {formatDate(patient.date_of_birth)}
+                {calculateAge(patient.date_of_birth)} ans • {patient.gender} • Né(e) le {formatDate(patient.date_of_birth)}
               </p>
               <span className={`status-badge ${patient.status === 'Actif' ? 'active' : 'pending'}`}>
                 {patient.status}
@@ -335,21 +345,24 @@ function PatientDetailPage() {
               </div>
               <div className="appointments-list">
                 {(patient.appointments && Array.isArray(patient.appointments) && patient.appointments.length > 0)
-                  ? patient.appointments.map((apt, index) => (
-                      <div key={index} className="appointment-card">
-                        <div className="appointment-date">
-                          <span className="day">{new Date(apt.date).getDate()}</span>
-                          <span className="month">{new Date(apt.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                  ? patient.appointments.map((apt, index) => {
+                      const dateTime = apt.datetime_scheduled ? new Date(apt.datetime_scheduled) : new Date(apt.date);
+                      return (
+                        <div key={index} className="appointment-card">
+                          <div className="appointment-date">
+                            <span className="day">{dateTime.getDate()}</span>
+                            <span className="month">{dateTime.toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                          </div>
+                          <div className="appointment-info">
+                            <h4>{apt.type}</h4>
+                            <p>{dateTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          <span className={`appointment-status ${apt.status === 'Confirmé' ? 'confirmed' : 'planned'}`}>
+                            {apt.status}
+                          </span>
                         </div>
-                        <div className="appointment-info">
-                          <h4>{apt.type}</h4>
-                          <p>{apt.time}</p>
-                        </div>
-                        <span className={`appointment-status ${apt.status === 'Confirmé' ? 'confirmed' : 'planned'}`}>
-                          {apt.status}
-                        </span>
-                      </div>
-                    ))
+                      );
+                    })
                   : <p className="empty-state">Aucun rendez-vous planifié</p>
                 }
               </div>
