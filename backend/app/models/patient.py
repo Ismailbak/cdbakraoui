@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -8,9 +8,8 @@ class Patient(Base):
     id = Column(Integer, primary_key=True, index=True)
     ipp = Column(String(50), unique=True, index=True, nullable=True)  # Identifiant Permanent du Patient
     name = Column(String(255), index=True)
-    age = Column(Integer)
     gender = Column(String(10))
-    date_of_birth = Column(String(20), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
     phone = Column(String(30), index=True, nullable=True)
     email = Column(String(255), nullable=True)
     address = Column(Text, nullable=True)
