@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -18,11 +18,19 @@ from app.services import pdf_service
 router = APIRouter()
 
 
+def calculate_age(date_of_birth: Optional[date]) -> Optional[int]:
+    """Calculate age from date of birth."""
+    if not date_of_birth:
+        return None
+    today = datetime.now().date()
+    age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    return age if age > 0 else None
+
+
 class PatientBase(BaseModel):
     name: str
-    age: int
     gender: Optional[str] = None
-    date_of_birth: Optional[str] = None
+    date_of_birth: Optional[date] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
@@ -48,9 +56,39 @@ class Patient(PatientBase):
     id: int
     ipp: Optional[str] = None
     created_at: Optional[datetime] = None
+    age: Optional[int] = None  # Computed field
 
     class Config:
         from_attributes = True
+
+
+def _patient_to_dict(patient: PatientModel) -> dict:
+    """Convert PatientModel to dict with computed age."""
+    patient_dict = {
+        "id": patient.id,
+        "name": patient.name,
+        "gender": patient.gender,
+        "date_of_birth": patient.date_of_birth.isoformat() if isinstance(patient.date_of_birth, date) else patient.date_of_birth,
+        "age": calculate_age(patient.date_of_birth),
+        "phone": patient.phone,
+        "email": patient.email,
+        "address": patient.address,
+        "city": patient.city,
+        "insurance": patient.insurance,
+        "insurance_number": patient.insurance_number,
+        "blood_type": patient.blood_type,
+        "allergies": patient.allergies,
+        "emergency_contact_name": patient.emergency_contact_name,
+        "emergency_contact_relation": patient.emergency_contact_relation,
+        "emergency_contact_phone": patient.emergency_contact_phone,
+        "diagnosis": patient.diagnosis,
+        "notes": patient.notes,
+        "notes_admin": patient.notes_admin,
+        "status": patient.status,
+        "ipp": patient.ipp,
+        "created_at": patient.created_at.isoformat() if patient.created_at else None,
+    }
+    return patient_dict
 
 
 @router.get("/", response_model=List[Patient])
@@ -86,7 +124,8 @@ def get_patients(
         query = query.filter(PatientModel.diagnosis.ilike(f"%{diagnosis}%"))
     if status:
         query = query.filter(PatientModel.status == status)
-    return query.order_by(PatientModel.id.desc()).all()
+    patients = query.order_by(PatientModel.id.desc()).all()
+    return [_patient_to_dict(p) for p in patients]
 
 
 @router.get("/{patient_id}", response_model=Patient)
@@ -98,7 +137,7 @@ def get_patient(
     patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    return patient
+    return _patient_to_dict(patient)
 
 
 @router.post("/", response_model=Patient)
@@ -120,7 +159,7 @@ def create_patient(
         resource_id=str(db_patient.id),
         details=f"Created patient: {db_patient.name}",
     )
-    return db_patient
+    return _patient_to_dict(db_patient)
 
 
 @router.put("/{patient_id}", response_model=Patient)
@@ -146,7 +185,7 @@ def update_patient(
         resource_id=str(patient_id),
         details=f"Updated patient: {db_patient.name}",
     )
-    return db_patient
+    return _patient_to_dict(db_patient)
 
 
 @router.delete("/{patient_id}")

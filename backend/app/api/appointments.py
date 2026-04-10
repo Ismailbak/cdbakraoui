@@ -16,8 +16,7 @@ router = APIRouter()
 
 class AppointmentBase(BaseModel):
     patient_id: int
-    date: str
-    time: str
+    datetime_scheduled: datetime
     reason: Optional[str] = None
     status: str = "scheduled"
 
@@ -37,8 +36,7 @@ def _appointment_with_patient_name(db: Session, row: AppointmentModel) -> dict:
         "id": row.id,
         "patient_id": row.patient_id,
         "patient_name": patient.name if patient else None,
-        "date": row.date,
-        "time": row.time,
+        "datetime_scheduled": row.datetime_scheduled.isoformat() if row.datetime_scheduled else None,
         "reason": row.reason,
         "status": row.status,
         "created_at": row.created_at.isoformat() if row.created_at else None,
@@ -47,20 +45,23 @@ def _appointment_with_patient_name(db: Session, row: AppointmentModel) -> dict:
 
 @router.get("/", response_model=List[Appointment])
 def get_appointments(db: Session = Depends(get_db)):
-    rows = db.query(AppointmentModel).order_by(AppointmentModel.date.desc(), AppointmentModel.time.desc()).all()
+    rows = db.query(AppointmentModel).order_by(AppointmentModel.datetime_scheduled.desc()).all()
     return [_appointment_with_patient_name(db, r) for r in rows]
 
 
 @router.get("/today", response_model=List[Appointment])
 def get_today_appointments(db: Session = Depends(get_db)):
-    today = datetime.now().strftime("%Y-%m-%d")
-    rows = db.query(AppointmentModel).filter(AppointmentModel.date == today).order_by(AppointmentModel.time).all()
+    today = datetime.now().date()
+    rows = db.query(AppointmentModel).filter(
+        AppointmentModel.datetime_scheduled >= datetime.combine(today, datetime.min.time()),
+        AppointmentModel.datetime_scheduled < datetime.combine(today, datetime.max.time())
+    ).order_by(AppointmentModel.datetime_scheduled).all()
     return [_appointment_with_patient_name(db, r) for r in rows]
 
 
 @router.get("/patient/{patient_id}", response_model=List[Appointment])
 def get_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
-    rows = db.query(AppointmentModel).filter(AppointmentModel.patient_id == patient_id).order_by(AppointmentModel.date.desc()).all()
+    rows = db.query(AppointmentModel).filter(AppointmentModel.patient_id == patient_id).order_by(AppointmentModel.datetime_scheduled.desc()).all()
     return [_appointment_with_patient_name(db, r) for r in rows]
 
 

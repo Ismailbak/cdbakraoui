@@ -29,9 +29,9 @@ def get_recent_activity(
     # Get latest 5 patients
     recent_patients = db.query(PatientModel).order_by(PatientModel.created_at.desc()).limit(5).all()
     # Get latest 5 appointments
-    recent_appointments = db.query(AppointmentModel).order_by(AppointmentModel.date.desc()).limit(5).all()
+    recent_appointments = db.query(AppointmentModel).order_by(AppointmentModel.datetime_scheduled.desc()).limit(5).all()
     # Get latest 5 medical acts
-    recent_acts = db.query(MedicalActModel).order_by(MedicalActModel.date.desc()).limit(5).all()
+    recent_acts = db.query(MedicalActModel).order_by(MedicalActModel.act_date.desc()).limit(5).all()
 
     activities = []
     for p in recent_patients:
@@ -45,15 +45,15 @@ def get_recent_activity(
         activities.append({
             "type": "appointment",
             "title": "Rendez-vous confirmé",
-            "subtitle": f"Patient ID {a.patient_id} - {a.date}",
-            "time": _to_iso(getattr(a, "date", None))
+            "subtitle": f"Patient ID {a.patient_id} - {a.datetime_scheduled.strftime('%Y-%m-%d %H:%M') if a.datetime_scheduled else 'N/A'}",
+            "time": _to_iso(getattr(a, "datetime_scheduled", None))
         })
     for m in recent_acts:
         activities.append({
             "type": "medical_act",
             "title": "Acte médical créé",
             "subtitle": f"{m.act_type} (Patient ID {m.patient_id})",
-            "time": _to_iso(getattr(m, "date", None))
+            "time": _to_iso(getattr(m, "act_date", None))
         })
 
     # Sort all activities by time descending (most recent first)
