@@ -143,7 +143,14 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
         appt_header = ["Date", "Heure", "Motif", "Statut"]
         appt_data = [appt_header]
         for appt in appointments[:20]: # Show more in full dossier
-            appt_data.append([appt.date, appt.time, appt.reason or "", appt.status])
+            if appt.datetime_scheduled:
+                dt = appt.datetime_scheduled if isinstance(appt.datetime_scheduled, str) else appt.datetime_scheduled.isoformat()
+                date_str = dt.split('T')[0]
+                time_str = dt.split('T')[1][:5] if 'T' in dt else '--:--'
+            else:
+                date_str = '--'
+                time_str = '--:--'
+            appt_data.append([date_str, time_str, appt.reason or "", appt.status])
         
         at = Table(appt_data, colWidths=[80, 60, 250, 80])
         at.setStyle(TableStyle([
@@ -164,10 +171,11 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
     if medical_acts:
         elements.append(Paragraph("Historique des Actes Médicaux", subtitle_style))
         for act in medical_acts:
+            act_date_str = act.act_date.isoformat() if hasattr(act, 'act_date') and act.act_date else 'N/A'
             elements.append(KeepTogether([
-                Paragraph(f"Acte: {act.act_type} - {act.date}", styles['Heading3']),
+                Paragraph(f"Acte: {act.act_type} - {act_date_str}", styles['Heading3']),
                 Paragraph(f"<b>Traitement:</b> {act.treatment or 'N/A'}", styles['Normal']),
-                Paragraph(f"<b>Observations:</b> {act.observations or 'Aucune'}", styles['Normal']),
+                Paragraph(f"<b>Observations:</b> {act.notes or 'Aucune'}", styles['Normal']),
                 Spacer(1, 10),
                 HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey),
                 Spacer(1, 10)
