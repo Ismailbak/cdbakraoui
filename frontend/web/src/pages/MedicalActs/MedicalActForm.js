@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
   FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
 } from 'react-icons/fi';
-import { getPatients, createMedicalAct, updateMedicalAct, getDoctors } from '../../api/api';
+import { getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult } from '../../api/api';
 import './MedicalActForm.css';
 
 const CATEGORY_OPTIONS = [
@@ -25,7 +25,8 @@ const ACT_TYPES = [
 const STEPS = [
   { id: 1, label: 'Patient', icon: FiUser },
   { id: 2, label: 'Clinique', icon: FiActivity },
-  { id: 3, label: 'Facturation', icon: FiDollarSign },
+  { id: 3, label: 'Labo', icon: FiTarget },
+  { id: 4, label: 'Facturation', icon: FiDollarSign },
 ];
 
 const EMPTY_FORM = {
@@ -41,6 +42,7 @@ const EMPTY_FORM = {
   status: 'pending',
   treatment: '',
   notes: '',
+  labResults: [],
 };
 
 function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
@@ -100,6 +102,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         status: initialData.status || 'pending',
         treatment: treatmentValue,
         notes: initialData.notes || '',
+        labResults: [],
       });
       
       // Reset step to 1 when editing
@@ -197,6 +200,10 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       }
     }
     if (s === 3) {
+      // Lab results step is optional
+      // Just return success here
+    }
+    if (s === 4) {
       // Require amount only when actually submitting
       const amountValue = String(form.amount || '').trim();
       if (!amountValue) {
@@ -225,12 +232,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Only allow submit if we're actually on step 3 AND user clicked submit button
-    if (step !== 3 || !userIntentToSubmit) {
+    // Only allow submit if we're actually on step 4 AND user clicked submit button
+    if (step !== 4 || !userIntentToSubmit) {
       return;
     }
     
-    if (!validateStep(3)) {
+    if (!validateStep(4)) {
       return;
     }
 
@@ -250,10 +257,29 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         notes: form.notes || null,
       };
 
+      let actId = form.id;
       if (isEdit && form.id) {
         await updateMedicalAct(form.id, payload);
       } else {
-        await createMedicalAct(payload);
+        const res = await createMedicalAct(payload);
+        actId = res.data?.id;
+      }
+      
+      // Create lab results if any were added
+      if (form.labResults.length > 0 && actId) {
+        for (const labResult of form.labResults) {
+          await createActResult({
+            act_id: actId,
+            patient_id: form.patientId,
+            result_date: labResult.date,
+            result_name: labResult.name,
+            result_value: labResult.value,
+            result_unit: labResult.unit || null,
+            result_category: labResult.category || null,
+            is_abnormal: labResult.abnormal || false,
+            notes: labResult.notes || null,
+          });
+        }
       }
 
       setSubmitted(true);
@@ -505,8 +531,150 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           </div>
         )}
 
-        {/* Step 3 — Billing */}
+        {/* Step 3 — Lab Results */}
         {step === 3 && (
+          <div className="maf-section">
+            <div className="maf-section-title">
+              <FiTarget className="maf-section-icon" />
+              <span>Résultats de laboratoire</span>
+            </div>
+            
+            {form.labResults.length > 0 && (
+              <div className="maf-lab-results-list">
+                {form.labResults.map((result, idx) => (
+                  <div key={idx} className="maf-lab-result-item">
+                    <div className="maf-lab-result-content">
+                      <div className="maf-lab-result-header">
+                        <span className="maf-lab-result-name">{result.name}</span>
+                        <span className="maf-lab-result-value">{result.value} {result.unit}</span>
+                      </div>
+                      <span className="maf-lab-result-date">{result.date}</span>
+                      {result.abnormal && <span className="maf-lab-result-abnormal">Anormal</span>}
+                    </div>
+                    <button
+                      type="button"
+                      className="maf-lab-result-remove"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        labResults: prev.labResults.filter((_, i) => i !== idx)
+                      }))}
+                    >
+                      <FiX />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="maf-lab-result-form">
+              <div className="maf-grid-2">
+                <div className="maf-field">
+                  <label className="maf-label">Analyse</label>
+                  <input
+                    type="text"
+                    id="lab-name"
+                    className="maf-input"
+                    placeholder="Ex: Glycémie"
+                  />
+                </div>
+                <div className="maf-field">
+                  <label className="maf-label">Valeur</label>
+                  <input
+                    type="text"
+                    id="lab-value"
+                    className="maf-input"
+                    placeholder="Ex: 95"
+                  />
+                </div>
+              </div>
+              
+              <div className="maf-grid-2">
+                <div className="maf-field">
+                  <label className="maf-label">Unité</label>
+                  <input
+                    type="text"
+                    id="lab-unit"
+                    className="maf-input"
+                    placeholder="Ex: mg/dL"
+                  />
+                </div>
+                <div className="maf-field">
+                  <label className="maf-label">Date</label>
+                  <input
+                    type="date"
+                    id="lab-date"
+                    className="maf-input"
+                    defaultValue={form.date}
+                  />
+                </div>
+              </div>
+              
+              <div className="maf-field">
+                <label className="maf-label">Catégorie</label>
+                <select id="lab-category" className="maf-input">
+                  <option value="">-- Sélectionner --</option>
+                  <option value="Hématologie">Hématologie</option>
+                  <option value="Biochimie">Biochimie</option>
+                  <option value="Immunologie">Immunologie</option>
+                  <option value="Microbiologie">Microbiologie</option>
+                </select>
+              </div>
+              
+              <div className="maf-field checkbox">
+                <label>
+                  <input type="checkbox" id="lab-abnormal" />
+                  <span>Résultat anormal</span>
+                </label>
+              </div>
+              
+              <div className="maf-field">
+                <label className="maf-label">Notes</label>
+                <textarea
+                  id="lab-notes"
+                  className="maf-textarea"
+                  placeholder="Observations supplémentaires..."
+                  rows={2}
+                />
+              </div>
+              
+              <button
+                type="button"
+                className="maf-btn-add-lab"
+                onClick={() => {
+                  const name = document.getElementById('lab-name').value.trim();
+                  const value = document.getElementById('lab-value').value.trim();
+                  if (!name || !value) {
+                    alert('Veuillez entrer l\'analyse et la valeur');
+                    return;
+                  }
+                  setForm(prev => ({
+                    ...prev,
+                    labResults: [...prev.labResults, {
+                      name,
+                      value,
+                      unit: document.getElementById('lab-unit').value.trim(),
+                      date: document.getElementById('lab-date').value,
+                      category: document.getElementById('lab-category').value || null,
+                      abnormal: document.getElementById('lab-abnormal').checked,
+                      notes: document.getElementById('lab-notes').value.trim() || null,
+                    }]
+                  }));
+                  document.getElementById('lab-name').value = '';
+                  document.getElementById('lab-value').value = '';
+                  document.getElementById('lab-unit').value = '';
+                  document.getElementById('lab-category').value = '';
+                  document.getElementById('lab-abnormal').checked = false;
+                  document.getElementById('lab-notes').value = '';
+                }}
+              >
+                <FiPlus /> Ajouter un résultat
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Billing */}
+        {step === 4 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiDollarSign className="maf-section-icon" />
@@ -611,7 +779,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
             <button type="button" className="maf-btn-cancel" onClick={onClose}>
               Annuler
             </button>
-            {step < 3 ? (
+            {step < 4 ? (
               <button type="button" className="maf-btn-next" onClick={handleNext}>
                 Suivant <FiChevronRight />
               </button>

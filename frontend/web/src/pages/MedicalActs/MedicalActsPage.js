@@ -7,10 +7,10 @@ import { useSearchParams } from 'react-router-dom';
 import {
   FiFileText, FiPlus, FiSearch, FiEye, FiEdit2, FiDownload, FiPrinter,
   FiClipboard, FiActivity, FiUser, FiPaperclip, FiTrash2, FiChevronRight,
-  FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiClock
+  FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiClock, FiTarget
 } from 'react-icons/fi';
 
-import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors } from '../../api/api';
+import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults } from '../../api/api';
 import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
 import { SkeletonCard } from '../../components/common/Skeleton';
@@ -215,6 +215,26 @@ function ActCard({ act, onView, onDelete, onEdit }) {
 function DetailModal({ act, doctors = [], onClose, onSuccess }) {
   const [showAttachModal, setShowAttachModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [labResults, setLabResults] = useState([]);
+  const [labResultsLoading, setLabResultsLoading] = useState(false);
+
+  // Fetch lab results when modal opens or act changes
+  useEffect(() => {
+    if (!act?.patientId) return;
+    const fetchLabResults = async () => {
+      try {
+        setLabResultsLoading(true);
+        const response = await getPatientResults(act.patientId);
+        setLabResults(response.data || []);
+      } catch (err) {
+        console.error('Erreur lors du chargement des résultats de labo:', err);
+        setLabResults([]);
+      } finally {
+        setLabResultsLoading(false);
+      }
+    };
+    fetchLabResults();
+  }, [act?.patientId]);
 
   // Helper function to get doctor name from ID
   const getDoctorName = (doctorId) => {
@@ -347,6 +367,40 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
               <p className="detail-value amount">{act.amount} DH</p>
             </div>
           </div>
+
+          {labResults && labResults.length > 0 && (
+            <div className="detail-section lab-results-section">
+              <h4><FiTarget /> Résultats de laboratoire</h4>
+              <div className="lab-results-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Analyse</th>
+                      <th>Résultat</th>
+                      <th>Unité</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {labResults.map((result) => (
+                      <tr key={result.id} className={result.is_abnormal ? 'abnormal' : ''}>
+                        <td>{formatDate(result.result_date)}</td>
+                        <td>{result.result_name}</td>
+                        <td className="result-value">{result.result_value}</td>
+                        <td>{result.result_unit || '-'}</td>
+                        <td className="status-cell">
+                          <span className={`status-badge ${result.is_abnormal ? 'abnormal' : 'normal'}`}>
+                            {result.is_abnormal ? 'Anormal' : 'Normal'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="detail-section documents-section">
             <h4><FiPaperclip /> Documents attachés</h4>

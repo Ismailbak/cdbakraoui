@@ -807,3 +807,88 @@
   border-color: #3B82F6;
   font-weight: 600;
 }
+
+/* Lab Results Section */
+.lab-results-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.lab-results-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #059669;
+}
+
+.lab-results-table {
+  overflow-x: auto;
+}
+
+.lab-results-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #F9FAFB;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lab-results-table thead {
+  background: #F3F4F6;
+}
+
+.lab-results-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #6B7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.lab-results-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #E5E7EB;
+  color: #374151;
+}
+
+.lab-results-table tbody tr:hover {
+  background: #F0FDF4;
+}
+
+.lab-results-table td.result-value {
+  font-weight: 600;
+  color: #1E2A4A;
+}
+
+.lab-results-table tr.abnormal {
+  background-color: #FEF2F2;
+}
+
+.lab-results-table tr.abnormal td {
+  color: #DC2626;
+}
+
+.status-cell .status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.normal {
+  background: #DBEAFE;
+  color: #0366D6;
+}
+
+.status-badge.abnormal {
+  background: #FECACA;
+  color: #DC2626;
+}
