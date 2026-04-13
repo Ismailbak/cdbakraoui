@@ -4,7 +4,7 @@ import {
   FiFileText, FiChevronRight, FiChevronLeft, FiCheck, FiX,
   FiAlertCircle, FiUserPlus, FiEdit2, FiHeart, FiAlertTriangle, FiHome
 } from 'react-icons/fi';
-import { createPatient, updatePatient } from '../../api/api';
+import { createPatient, updatePatient, createPatientAllergy } from '../../api/api';
 import './PatientForm.css';
 
 
@@ -43,6 +43,24 @@ const BLOOD_TYPE_OPTIONS = [
   { value: 'O-', label: 'O-' },
 ];
 
+const REACTION_TYPE_OPTIONS = [
+  { value: '', label: 'Sélectionner un type de réaction' },
+  { value: 'rash', label: 'Éruption cutanée' },
+  { value: 'anaphylaxis', label: 'Anaphylaxie' },
+  { value: 'swelling', label: 'Gonflement' },
+  { value: 'itching', label: 'Démangeaisons' },
+  { value: 'respiratory', label: 'Problème respiratoire' },
+  { value: 'gastrointestinal', label: 'Problème GI' },
+  { value: 'other', label: 'Autre' },
+];
+
+const SEVERITY_OPTIONS = [
+  { value: '', label: 'Sélectionner une sévérité' },
+  { value: 'mild', label: 'Légère' },
+  { value: 'moderate', label: 'Modérée' },
+  { value: 'severe', label: 'Sévère' },
+];
+
 const STEPS = [
   { id: 1, label: 'Identité', icon: FiUser },
   { id: 2, label: 'Contact', icon: FiPhone },
@@ -53,18 +71,22 @@ const STEPS = [
 
 const initialForm = {
   ipp: '',
-  name: '',
+  firstName: '',
+  lastName: '',
+  civility: '',
   birthDate: '',
   gender: '',
   phone: '',
   email: '',
   address: '',
   city: '',
+  maritalStatus: '',
+  nationality: '',
+  profession: '',
   insurance: '',
   insuranceNumber: '',
   bloodType: '',
-  allergies: '',
-  diagnosis: '',
+  primaryDiagnosis: '',
   notes: '',
   notesAdmin: '',
   emergencyName: '',
@@ -86,7 +108,9 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
     if (initialData) {
       return {
         ipp: initialData.ipp || '',
-        name: initialData.name || '',
+        firstName: initialData.first_name || initialData.firstName || '',
+        lastName: initialData.last_name || initialData.lastName || '',
+        civility: initialData.civility || '',
         birthDate: initialData.date_of_birth || initialData.birthDate || '',
         gender: initialData.gender?.toLowerCase() === 'homme' ? 'homme' : 
                 initialData.gender?.toLowerCase() === 'femme' ? 'femme' : '',
@@ -94,11 +118,13 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
         email: initialData.email || '',
         address: initialData.address || '',
         city: initialData.city || '',
+        maritalStatus: initialData.marital_status || initialData.maritalStatus || '',
+        nationality: initialData.nationality || '',
+        profession: initialData.profession || '',
         insurance: initialData.insurance || '',
         insuranceNumber: initialData.insurance_number || initialData.insuranceNumber || '',
         bloodType: initialData.blood_type || initialData.bloodType || '',
-        allergies: initialData.allergies || '',
-        diagnosis: initialData.diagnosis || '',
+        primaryDiagnosis: initialData.primary_diagnosis || initialData.primaryDiagnosis || '',
         notes: initialData.notes || '',
         notesAdmin: initialData.notes_admin || initialData.notesAdmin || '',
         emergencyName: initialData.emergency_contact_name || initialData.emergencyName || '',
@@ -115,6 +141,9 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [canSubmit, setCanSubmit] = useState(false); // Only allow submit after step 5 is visible
+  const [allergies, setAllergies] = useState([]);
+  const [newAllergy, setNewAllergy] = useState({ allergen: '', reaction_type: '', severity: '', notes: '' });
+  const [editingAllergyIndex, setEditingAllergyIndex] = useState(null);
 
   // Update form if initialData changes (for reuse in editing different patients)
   useEffect(() => {
@@ -140,15 +169,61 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
+  const handleAllergyChange = (e) => {
+    const { name, value } = e.target;
+    setNewAllergy(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddAllergy = () => {
+    if (!newAllergy.allergen.trim()) {
+      setErrors(prev => ({ ...prev, allergyError: 'L\'allergène est requis' }));
+      return;
+    }
+    if (editingAllergyIndex !== null) {
+      // Update existing allergy
+      setAllergies(prev => {
+        const updated = [...prev];
+        updated[editingAllergyIndex] = newAllergy;
+        return updated;
+      });
+      setEditingAllergyIndex(null);
+    } else {
+      // Add new allergy
+      setAllergies(prev => [...prev, newAllergy]);
+    }
+    setNewAllergy({ allergen: '', reaction_type: '', severity: '', notes: '' });
+    setErrors(prev => ({ ...prev, allergyError: '' }));
+  };
+
+  const handleEditAllergy = (index) => {
+    setNewAllergy(allergies[index]);
+    setEditingAllergyIndex(index);
+  };
+
+  const handleRemoveAllergy = (index) => {
+    setAllergies(prev => prev.filter((_, i) => i !== index));
+    if (editingAllergyIndex === index) {
+      setNewAllergy({ allergen: '', reaction_type: '', severity: '', notes: '' });
+      setEditingAllergyIndex(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNewAllergy({ allergen: '', reaction_type: '', severity: '', notes: '' });
+    setEditingAllergyIndex(null);
+    setErrors(prev => ({ ...prev, allergyError: '' }));
+  };
+
   const validateStep = (s) => {
     const newErrors = {};
     if (s === 1) {
-      if (!form.name.trim()) newErrors.name = 'Le nom est requis';
+      if (!form.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
+      if (!form.lastName.trim()) newErrors.lastName = 'Le nom de famille est requis';
       if (!form.birthDate) newErrors.birthDate = 'La date de naissance est requise';
       if (!form.gender) newErrors.gender = 'Le genre est requis';
     }
     if (s === 4) {
-      if (!form.diagnosis) newErrors.diagnosis = 'Le diagnostic est requis';
+      if (!form.primaryDiagnosis) newErrors.primaryDiagnosis = 'Le diagnostic principal est requis';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -187,18 +262,22 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
       const genderLabel = form.gender === 'homme' ? 'Homme' : 'Femme';
       const patientData = {
         ipp: form.ipp || null,
-        name: form.name,
+        first_name: form.firstName,
+        last_name: form.lastName,
+        civility: form.civility || null,
         gender: genderLabel,
         date_of_birth: form.birthDate || null,
         phone: form.phone || null,
         email: form.email || null,
         address: form.address || null,
         city: form.city || null,
+        marital_status: form.maritalStatus || null,
+        nationality: form.nationality || null,
+        profession: form.profession || null,
         insurance: form.insurance || null,
         insurance_number: form.insuranceNumber || null,
         blood_type: form.bloodType || null,
-        allergies: form.allergies || null,
-        diagnosis: form.diagnosis,
+        primary_diagnosis: form.primaryDiagnosis,
         notes: form.notes || null,
         notes_admin: form.notesAdmin || null,
         emergency_contact_name: form.emergencyName || null,
@@ -207,16 +286,38 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
         status: initialData?.status || 'Actif',
       };
 
+      let patientId = initialData?.id;
       if (isEdit && initialData?.id) {
         await updatePatient(initialData.id, patientData);
       } else {
-        await createPatient(patientData);
+        const response = await createPatient(patientData);
+        patientId = response?.data?.id;
       }
+
+      // Create allergies if any
+      if (allergies.length > 0 && patientId) {
+        try {
+          for (const allergy of allergies) {
+            await createPatientAllergy(patientId, {
+              allergen: allergy.allergen,
+              reaction_type: allergy.reaction_type || null,
+              severity: allergy.severity || null,
+              notes: allergy.notes || null,
+            });
+          }
+        } catch (allergyError) {
+          console.warn('Allergies could not be created, but patient was saved successfully', allergyError);
+        }
+      }
+
       setSubmitted(true);
       setTimeout(() => {
         setForm(initialForm);
         setStep(1);
         setSubmitted(false);
+        setAllergies([]);
+        setNewAllergy({ allergen: '', reaction_type: '', severity: '', notes: '' });
+        setEditingAllergyIndex(null);
         if (onSuccess) onSuccess();
         if (onClose) onClose();
       }, 1400);
@@ -234,7 +335,7 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
           <FiCheck />
         </div>
         <h3>{isEdit ? 'Patient modifié avec succès !' : 'Patient ajouté avec succès !'}</h3>
-        <p>{form.name} a été {isEdit ? 'mis à jour' : 'enregistré'} dans le système.</p>
+        <p>{form.firstName} {form.lastName} a été {isEdit ? 'mis à jour' : 'enregistré'} dans le système.</p>
       </div>
     );
   }
@@ -306,17 +407,44 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
               </div>
               <div className="pf-field">
                 <label className="pf-label">
-                  Nom complet <span className="pf-required">*</span>
+                  Prénom <span className="pf-required">*</span>
                 </label>
                 <input
-                  className={`pf-input ${errors.name ? 'pf-input-error' : ''}`}
+                  className={`pf-input ${errors.firstName ? 'pf-input-error' : ''}`}
                   type="text"
-                  name="name"
-                  value={form.name}
+                  name="firstName"
+                  value={form.firstName}
                   onChange={handleChange}
-                  placeholder="Prénom et nom"
+                  placeholder="Prénom"
                 />
-                {errors.name && <span className="pf-error-msg"><FiAlertCircle />{errors.name}</span>}
+                {errors.firstName && <span className="pf-error-msg"><FiAlertCircle />{errors.firstName}</span>}
+              </div>
+              <div className="pf-field">
+                <label className="pf-label">
+                  Nom de famille <span className="pf-required">*</span>
+                </label>
+                <input
+                  className={`pf-input ${errors.lastName ? 'pf-input-error' : ''}`}
+                  type="text"
+                  name="lastName"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  placeholder="Nom de famille"
+                />
+                {errors.lastName && <span className="pf-error-msg"><FiAlertCircle />{errors.lastName}</span>}
+              </div>
+              <div className="pf-field">
+                <label className="pf-label">
+                  Civilité <span className="pf-optional">(optionnel)</span>
+                </label>
+                <input
+                  className="pf-input"
+                  type="text"
+                  name="civility"
+                  value={form.civility}
+                  onChange={handleChange}
+                  placeholder="Ex: M., Mme, Mlle"
+                />
               </div>
               <div className="pf-field">
                 <label className="pf-label">
@@ -483,19 +611,19 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
             <div className="pf-grid-2">
               <div className="pf-field">
                 <label className="pf-label">
-                  Diagnostic initial <span className="pf-required">*</span>
+                  Diagnostic principal <span className="pf-required">*</span>
                 </label>
                 <select
-                  className={`pf-select ${errors.diagnosis ? 'pf-input-error' : ''}`}
-                  name="diagnosis"
-                  value={form.diagnosis}
+                  className={`pf-select ${errors.primaryDiagnosis ? 'pf-input-error' : ''}`}
+                  name="primaryDiagnosis"
+                  value={form.primaryDiagnosis}
                   onChange={handleChange}
                 >
                   {DIAGNOSIS_OPTIONS.map(opt => (
                     <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-                {errors.diagnosis && <span className="pf-error-msg"><FiAlertCircle />{errors.diagnosis}</span>}
+                {errors.primaryDiagnosis && <span className="pf-error-msg"><FiAlertCircle />{errors.primaryDiagnosis}</span>}
               </div>
               <div className="pf-field">
                 <label className="pf-label">Groupe sanguin</label>
@@ -512,19 +640,6 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
               </div>
               <div className="pf-field pf-field-full">
                 <label className="pf-label">
-                  Allergies <span className="pf-optional">(séparées par des virgules)</span>
-                </label>
-                <input
-                  className="pf-input"
-                  type="text"
-                  name="allergies"
-                  value={form.allergies}
-                  onChange={handleChange}
-                  placeholder="Ex: Pénicilline, Aspirine, Latex..."
-                />
-              </div>
-              <div className="pf-field pf-field-full">
-                <label className="pf-label">
                   Notes médicales <span className="pf-optional">(optionnel)</span>
                 </label>
                 <textarea
@@ -535,6 +650,117 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                   placeholder="Antécédents médicaux, observations cliniques..."
                   rows={3}
                 />
+              </div>
+            </div>
+
+            {/* Allergies Section */}
+            <div className="pf-allergies-section">
+              <h3 className="pf-allergies-title">
+                <FiAlertTriangle className="pf-allergies-icon" />
+                Allergies <span className="pf-optional">(optionnel)</span>
+              </h3>
+
+              {allergies.length > 0 && (
+                <div className="pf-allergies-list">
+                  {allergies.map((allergy, index) => (
+                    <div key={index} className="pf-allergy-item">
+                      <div className="pf-allergy-content">
+                        <strong>{allergy.allergen}</strong>
+                        {allergy.severity && <span className={`pf-severity pf-severity-${allergy.severity}`}>{allergy.severity}</span>}
+                      </div>
+                      <div className="pf-allergy-actions">
+                        <button
+                          type="button"
+                          className="pf-allergy-btn pf-allergy-edit"
+                          onClick={() => handleEditAllergy(index)}
+                          title="Modifier"
+                        >
+                          <FiEdit2 />
+                        </button>
+                        <button
+                          type="button"
+                          className="pf-allergy-btn pf-allergy-delete"
+                          onClick={() => handleRemoveAllergy(index)}
+                          title="Supprimer"
+                        >
+                          <FiX />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pf-allergy-form">
+                <div className="pf-grid-2">
+                  <div className="pf-field">
+                    <label className="pf-label">Allergène</label>
+                    <input
+                      className="pf-input"
+                      type="text"
+                      name="allergen"
+                      value={newAllergy.allergen}
+                      onChange={handleAllergyChange}
+                      placeholder="e.g., Pénicilline, Cacahuètes..."
+                    />
+                  </div>
+                  <div className="pf-field">
+                    <label className="pf-label">Type de réaction</label>
+                    <select
+                      className="pf-select"
+                      name="reaction_type"
+                      value={newAllergy.reaction_type}
+                      onChange={handleAllergyChange}
+                    >
+                      {REACTION_TYPE_OPTIONS.map(opt => (
+                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="pf-field">
+                    <label className="pf-label">Sévérité</label>
+                    <select
+                      className="pf-select"
+                      name="severity"
+                      value={newAllergy.severity}
+                      onChange={handleAllergyChange}
+                    >
+                      {SEVERITY_OPTIONS.map(opt => (
+                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="pf-field">
+                    <label className="pf-label">Notes</label>
+                    <input
+                      className="pf-input"
+                      type="text"
+                      name="notes"
+                      value={newAllergy.notes}
+                      onChange={handleAllergyChange}
+                      placeholder="Notes supplémentaires..."
+                    />
+                  </div>
+                </div>
+                {errors.allergyError && <span className="pf-error-msg"><FiAlertCircle />{errors.allergyError}</span>}
+                <div className="pf-allergy-buttons">
+                  <button
+                    type="button"
+                    className="pf-btn pf-btn-primary pf-btn-sm"
+                    onClick={handleAddAllergy}
+                  >
+                    {editingAllergyIndex !== null ? 'Mettre à jour' : 'Ajouter allergies'}
+                  </button>
+                  {editingAllergyIndex !== null && (
+                    <button
+                      type="button"
+                      className="pf-btn pf-btn-secondary pf-btn-sm"
+                      onClick={handleCancelEdit}
+                    >
+                      Annuler
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -32,12 +32,12 @@ def build_patient_context(db: Session, patient_id: int) -> str:
         
         context = f"""
 [Patient Medical Context]
-- Name: {patient.name}
-- Age: {patient.age}
+- Name: {patient.first_name} {patient.last_name}
+- Date of Birth: {patient.date_of_birth or 'Unknown'}
 - Gender: {patient.gender}
 - Blood Type: {patient.blood_type or 'Unknown'}
-- Allergies: {patient.allergies or 'None documented'}
-- Diagnosis: {patient.diagnosis or 'None documented'}
+- Allergies: {patient.notes or 'None documented'}
+- Diagnosis: {patient.primary_diagnosis or 'None documented'}
 - Insurance: {patient.insurance}
 - Medical Notes: {patient.notes or 'No notes'}
 """

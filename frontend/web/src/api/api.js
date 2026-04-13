@@ -40,6 +40,12 @@ export const updatePatient = (id, data) => api.put(`/patients/${id}`, data);
 export const deletePatient = (id) => api.delete(`/patients/${id}`);
 export const exportPatientDossier = (id) => api.get(`/patients/${id}/dossier`, { responseType: 'blob' });
 
+// Patient Allergies
+export const getPatientAllergies = (patientId) => api.get(`/patients/${patientId}/allergies`);
+export const createPatientAllergy = (patientId, data) => api.post(`/patients/${patientId}/allergies`, data);
+export const updatePatientAllergy = (patientId, allergyId, data) => api.put(`/patients/${patientId}/allergies/${allergyId}`, data);
+export const deletePatientAllergy = (patientId, allergyId) => api.delete(`/patients/${patientId}/allergies/${allergyId}`);
+
 // Appointments
 export const getAppointments = () => api.get('/appointments/');
 export const getAppointment = (id) => api.get(`/appointments/${id}`);
@@ -65,6 +71,14 @@ export const downloadMedicalActDocument = (actId, docId) =>
   api.get(`/medical-acts/${actId}/documents/${docId}/download`, { responseType: 'blob' });
 export const getMedicalActPdf = (actId) =>
   api.get(`/medical-acts/${actId}/pdf`, { responseType: 'blob' });
+
+// Act Results (Lab Tests)
+export const getActResults = (actId) => api.get(`/act-results/act/${actId}`);
+export const getPatientResults = (patientId) => api.get(`/act-results/patient/${patientId}`);
+export const getActResult = (resultId) => api.get(`/act-results/${resultId}`);
+export const createActResult = (data) => api.post('/act-results/', data);
+export const updateActResult = (resultId, data) => api.put(`/act-results/${resultId}`, data);
+export const deleteActResult = (resultId) => api.delete(`/act-results/${resultId}`);
 
 // Chat
 export const sendChatMessage = (message, userId, patientId = null, language = 'fr') =>

@@ -98,6 +98,31 @@
 
 ## 📝 Recent Updates (April 10, 2026)
 
+### Lab Results Management (ActResults) - NEW ✨
+- **Backend API**: Complete CRUD REST endpoints for laboratory test results
+  - `POST /api/act-results/` - Create new lab result with validation
+  - `GET /api/act-results/patient/{id}` - Fetch all results for patient (sorted by date)
+  - `GET /api/act-results/act/{id}` - Fetch results for specific medical act
+  - `GET /api/act-results/{id}` - Fetch single result
+  - `PUT /api/act-results/{id}` - Update result fields
+  - `DELETE /api/act-results/{id}` - Delete result with audit logging
+- **Database Model**: ActResult table with 13 fields including result date, value, unit, abnormality flag, category, and audit timestamps
+- **Frontend Integration**:
+  - New LabResultForm modal component for adding results
+  - Lab Results tab in patient detail page with formatted table display
+  - Auto-refresh after result creation via fetchPatient()
+  - Status indicators: Normal (green) / Abnormal (red)
+- **Validation**: Foreign key constraints to medical_acts and patients; Pydantic schema validation on creation
+- **Audit Logging**: All lab result mutations logged via audit_service for compliance
+
+### Doctor Assignment Feature - COMPLETED ✅
+- **Medical Acts**: doctor_id now required field in form (Step 2 - Clinical Details)
+  - Dropdown selector populated from getDoctors() API
+  - Form validation ensures doctor is selected before submission
+- **Detail Modal**: Doctor names display correctly instead of numeric IDs
+  - getDoctorName() helper function maps ID to full name
+  - Loads doctors list on page init via Promise.all()
+
 ### Database Schema & Data Integrity Fixes
 - **Consolidated Datetime Fields**: Unified appointment scheduling into single `datetime_scheduled` (DateTime) field for better data consistency.
 - **Removed Age Column**: Patient age now calculated dynamically from `date_of_birth` across all backend and frontend components (web + mobile).
@@ -285,9 +310,6 @@ docker exec -it backend python setup_admin.py
 # Mobile: connect to http://<LOCAL_NETWORK_IP>:8000 (replace with your LAN IP)
 ```
 
-```
-
-**⚠️ Security Note**: Never commit `.env` files with real credentials. Use strong passwords for production deployments.
 
 ---
 

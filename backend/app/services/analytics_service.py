@@ -2,7 +2,7 @@ from typing import List, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, desc, cast, Float, case, Date
 from app.models.patient import Patient
-from app.models.medical_act import MedicalAct
+from app.models.medical_act import MedicalAct, ActTreatment
 from app.models.appointment import Appointment
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -27,10 +27,10 @@ def get_summary_stats(db: Session) -> Dict:
     
     # Top 5 diagnoses
     top_diagnoses = (
-        db.query(Patient.diagnosis, func.count(Patient.diagnosis))
-        .filter(Patient.diagnosis != "", Patient.diagnosis.isnot(None))
-        .group_by(Patient.diagnosis)
-        .order_by(desc(func.count(Patient.diagnosis)))
+        db.query(Patient.primary_diagnosis, func.count(Patient.primary_diagnosis))
+        .filter(Patient.primary_diagnosis != "", Patient.primary_diagnosis.isnot(None))
+        .group_by(Patient.primary_diagnosis)
+        .order_by(desc(func.count(Patient.primary_diagnosis)))
         .limit(5)
         .all()
     )
@@ -143,10 +143,10 @@ def get_summary_stats(db: Session) -> Dict:
 
     # Top Treatments
     treatment_query = (
-        db.query(MedicalAct.treatment, func.count(MedicalAct.id))
-        .filter(MedicalAct.treatment != "", MedicalAct.treatment.isnot(None))
-        .group_by(MedicalAct.treatment)
-        .order_by(desc(func.count(MedicalAct.id)))
+        db.query(ActTreatment.drug_name, func.count(ActTreatment.id))
+        .filter(ActTreatment.drug_name != "", ActTreatment.drug_name.isnot(None))
+        .group_by(ActTreatment.drug_name)
+        .order_by(desc(func.count(ActTreatment.id)))
         .limit(5)
         .all()
     )

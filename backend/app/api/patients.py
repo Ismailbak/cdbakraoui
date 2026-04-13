@@ -8,6 +8,7 @@ from sqlalchemy import or_
 
 from app.database import get_db
 from app.models.patient import Patient as PatientModel
+from app.models.patient_allergy import PatientAllergy as PatientAllergyModel
 from app.api.auth import get_current_user_orm, RoleChecker
 from app.models.user import User
 from app.models.medical_act import MedicalAct
@@ -28,21 +29,25 @@ def calculate_age(date_of_birth: Optional[date]) -> Optional[int]:
 
 
 class PatientBase(BaseModel):
-    name: str
+    first_name: str
+    last_name: str
+    civility: Optional[str] = None  # M., Mme, Mlle, etc.
     gender: Optional[str] = None
-    date_of_birth: Optional[date] = None
+    date_of_birth: Optional[date] = None  # Age calculated dynamically, never stored
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    marital_status: Optional[str] = None  # Célibataire, Marié, Divorcé, Veuf
+    nationality: Optional[str] = None
+    profession: Optional[str] = None
     insurance: Optional[str] = None
     insurance_number: Optional[str] = None
     blood_type: Optional[str] = None
-    allergies: Optional[str] = None
     emergency_contact_name: Optional[str] = None
     emergency_contact_relation: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
-    diagnosis: Optional[str] = None
+    primary_diagnosis: Optional[str] = None  # Renamed from diagnosis
     notes: Optional[str] = None
     notes_admin: Optional[str] = None
     status: Optional[str] = "Actif"
@@ -56,32 +61,56 @@ class Patient(PatientBase):
     id: int
     ipp: Optional[str] = None
     created_at: Optional[datetime] = None
-    age: Optional[int] = None  # Computed field
+    age: Optional[int] = None  # Computed field - never stored
+
+    class Config:
+        from_attributes = True
+
+
+class PatientAllergyBase(BaseModel):
+    allergen: str
+    reaction_type: Optional[str] = None
+    severity: Optional[str] = None  # e.g., "mild", "moderate", "severe"
+    notes: Optional[str] = None
+
+
+class PatientAllergyCreate(PatientAllergyBase):
+    patient_id: int
+
+
+class PatientAllergyOut(PatientAllergyBase):
+    id: int
+    patient_id: int
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
 def _patient_to_dict(patient: PatientModel) -> dict:
-    """Convert PatientModel to dict with computed age."""
+    """Convert PatientModel to dict with computed age and full name."""
     patient_dict = {
         "id": patient.id,
-        "name": patient.name,
+        "first_name": patient.first_name,
+        "last_name": patient.last_name,
+        "civility": patient.civility,
         "gender": patient.gender,
         "date_of_birth": patient.date_of_birth.isoformat() if isinstance(patient.date_of_birth, date) else patient.date_of_birth,
-        "age": calculate_age(patient.date_of_birth),
+        "age": calculate_age(patient.date_of_birth),  # Computed, never stored
         "phone": patient.phone,
         "email": patient.email,
         "address": patient.address,
         "city": patient.city,
+        "marital_status": patient.marital_status,
+        "nationality": patient.nationality,
+        "profession": patient.profession,
         "insurance": patient.insurance,
         "insurance_number": patient.insurance_number,
         "blood_type": patient.blood_type,
-        "allergies": patient.allergies,
         "emergency_contact_name": patient.emergency_contact_name,
         "emergency_contact_relation": patient.emergency_contact_relation,
         "emergency_contact_phone": patient.emergency_contact_phone,
-        "diagnosis": patient.diagnosis,
+        "primary_diagnosis": patient.primary_diagnosis,
         "notes": patient.notes,
         "notes_admin": patient.notes_admin,
         "status": patient.status,
@@ -95,11 +124,11 @@ def _patient_to_dict(patient: PatientModel) -> dict:
 def get_patients(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
-    q: Optional[str] = Query(None, description="Search by name, IPP, phone, or diagnosis"),
+    q: Optional[str] = Query(None, description="Search by first_name, last_name, IPP, or phone"),
     ipp: Optional[str] = Query(None),
-    name: Optional[str] = Query(None),
+    first_name: Optional[str] = Query(None),
+    last_name: Optional[str] = Query(None),
     phone: Optional[str] = Query(None),
-    diagnosis: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
 ):
     query = db.query(PatientModel)
@@ -107,21 +136,21 @@ def get_patients(
         q_filter = f"%{q}%"
         query = query.filter(
             or_(
-                PatientModel.name.ilike(q_filter),
+                PatientModel.first_name.ilike(q_filter),
+                PatientModel.last_name.ilike(q_filter),
                 PatientModel.ipp.ilike(q_filter),
                 PatientModel.phone.ilike(q_filter),
-                PatientModel.diagnosis.ilike(q_filter),
                 PatientModel.city.ilike(q_filter),
             )
         )
     if ipp:
         query = query.filter(PatientModel.ipp.ilike(f"%{ipp}%"))
-    if name:
-        query = query.filter(PatientModel.name.ilike(f"%{name}%"))
+    if first_name:
+        query = query.filter(PatientModel.first_name.ilike(f"%{first_name}%"))
+    if last_name:
+        query = query.filter(PatientModel.last_name.ilike(f"%{last_name}%"))
     if phone:
         query = query.filter(PatientModel.phone.ilike(f"%{phone}%"))
-    if diagnosis:
-        query = query.filter(PatientModel.diagnosis.ilike(f"%{diagnosis}%"))
     if status:
         query = query.filter(PatientModel.status == status)
     patients = query.order_by(PatientModel.id.desc()).all()
@@ -157,7 +186,7 @@ def create_patient(
         username=current_user.username,
         resource_type="patient",
         resource_id=str(db_patient.id),
-        details=f"Created patient: {db_patient.name}",
+        details=f"Created patient: {db_patient.first_name} {db_patient.last_name}",
     )
     return _patient_to_dict(db_patient)
 
@@ -183,7 +212,7 @@ def update_patient(
         username=current_user.username,
         resource_type="patient",
         resource_id=str(patient_id),
-        details=f"Updated patient: {db_patient.name}",
+        details=f"Updated patient: {db_patient.first_name} {db_patient.last_name}",
     )
     return _patient_to_dict(db_patient)
 
@@ -198,7 +227,7 @@ def delete_patient(
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     
-    patient_name = db_patient.name
+    patient_name = f"{db_patient.first_name} {db_patient.last_name}"
     db.delete(db_patient)
     db.commit()
     
@@ -226,18 +255,127 @@ def get_patient_dossier(
         raise HTTPException(status_code=404, detail="Patient not found")
     
     # 2. Get Medical Acts
-    medical_acts = db.query(MedicalAct).filter(MedicalAct.patient_id == patient_id).order_by(MedicalAct.date.desc()).all()
+    medical_acts = db.query(MedicalAct).filter(MedicalAct.patient_id == patient_id).order_by(MedicalAct.act_date.desc()).all()
     
     # 3. Get Appointments
-    appointments = db.query(Appointment).filter(Appointment.patient_id == patient_id).order_by(Appointment.date.desc()).all()
+    appointments = db.query(Appointment).filter(Appointment.patient_id == patient_id).order_by(Appointment.appointment_date.desc()).all()
     
     # 4. Generate PDF
     pdf_buffer = pdf_service.generate_patient_dossier_pdf(patient, medical_acts, appointments)
     
-    filename = f"Dossier_{patient.name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    filename = f"Dossier_{patient.first_name}_{patient.last_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
     
     return StreamingResponse(
         pdf_buffer, 
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# ── Allergy Management Endpoints ──
+@router.get("/{patient_id}/allergies", response_model=List[PatientAllergyOut])
+def get_patient_allergies(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """Get all allergies for a patient."""
+    patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    allergies = db.query(PatientAllergyModel).filter(PatientAllergyModel.patient_id == patient_id).all()
+    return allergies
+
+
+@router.post("/{patient_id}/allergies", response_model=PatientAllergyOut)
+def create_patient_allergy(
+    patient_id: int,
+    allergy: PatientAllergyCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """Create a new allergy for a patient."""
+    patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    new_allergy = PatientAllergyModel(
+        patient_id=patient_id,
+        allergen=allergy.allergen,
+        reaction_type=allergy.reaction_type,
+        severity=allergy.severity,
+        notes=allergy.notes,
+        created_at=datetime.now(),
+        created_by=current_user.id,
+    )
+    db.add(new_allergy)
+    db.commit()
+    db.refresh(new_allergy)
+    
+    log_action(db, current_user.id, f"Create allergy: {allergy.allergen} for patient {patient_id}", "CREATE")
+    
+    return new_allergy
+
+
+@router.put("/{patient_id}/allergies/{allergy_id}", response_model=PatientAllergyOut)
+def update_patient_allergy(
+    patient_id: int,
+    allergy_id: int,
+    allergy: PatientAllergyCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """Update an allergy for a patient."""
+    patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    db_allergy = db.query(PatientAllergyModel).filter(
+        PatientAllergyModel.id == allergy_id,
+        PatientAllergyModel.patient_id == patient_id
+    ).first()
+    if not db_allergy:
+        raise HTTPException(status_code=404, detail="Allergy not found")
+    
+    db_allergy.allergen = allergy.allergen
+    db_allergy.reaction_type = allergy.reaction_type
+    db_allergy.severity = allergy.severity
+    db_allergy.notes = allergy.notes
+    db_allergy.updated_at = datetime.now()
+    db_allergy.updated_by = current_user.id
+    
+    db.commit()
+    db.refresh(db_allergy)
+    
+    log_action(db, current_user.id, f"Update allergy: {allergy.allergen} for patient {patient_id}", "UPDATE")
+    
+    return db_allergy
+
+
+@router.delete("/{patient_id}/allergies/{allergy_id}")
+def delete_patient_allergy(
+    patient_id: int,
+    allergy_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """Delete an allergy for a patient."""
+    patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    db_allergy = db.query(PatientAllergyModel).filter(
+        PatientAllergyModel.id == allergy_id,
+        PatientAllergyModel.patient_id == patient_id
+    ).first()
+    if not db_allergy:
+        raise HTTPException(status_code=404, detail="Allergy not found")
+    
+    allergen_name = db_allergy.allergen
+    db.delete(db_allergy)
+    db.commit()
+    
+    log_action(db, current_user.id, f"Delete allergy: {allergen_name} for patient {patient_id}", "DELETE")
+    
+    return {"message": "Allergy deleted successfully"}

@@ -4,8 +4,23 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, HRFlowable
 from app.models.patient import Patient
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, date
 import os
+
+
+def calculate_age(date_of_birth):
+    """Calculate age from date of birth."""
+    if not date_of_birth:
+        return None
+    if isinstance(date_of_birth, str):
+        date_of_birth = datetime.fromisoformat(date_of_birth).date()
+    if isinstance(date_of_birth, datetime):
+        date_of_birth = date_of_birth.date()
+    
+    today = date.today()
+    age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    return age if age > 0 else None
+
 
 def generate_medical_act_pdf(act_data: dict):
     """
@@ -120,13 +135,13 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
     # Patient Information
     elements.append(Paragraph("Informations du Patient", subtitle_style))
     patient_data = [
-        [Paragraph("Nom Complet:", label_style), Paragraph(patient.name or "N/A", value_style)],
-        [Paragraph("Âge:", label_style), Paragraph(f"{patient.age} ans" if patient.age else "N/A", value_style)],
+        [Paragraph("Nom Complet:", label_style), Paragraph(f"{patient.first_name} {patient.last_name}" if patient.first_name and patient.last_name else "N/A", value_style)],
+        [Paragraph("Âge:", label_style), Paragraph(f"{calculate_age(patient.date_of_birth)} ans" if patient.date_of_birth else "N/A", value_style)],
         [Paragraph("Genre:", label_style), Paragraph(patient.gender or "N/A", value_style)],
         [Paragraph("Email:", label_style), Paragraph(patient.email or "N/A", value_style)],
         [Paragraph("Téléphone:", label_style), Paragraph(patient.phone or "N/A", value_style)],
         [Paragraph("Adresse:", label_style), Paragraph(patient.address or "N/A", value_style)],
-        [Paragraph("Diagnostic Principal:", label_style), Paragraph(patient.diagnosis or "Aucun", value_style)],
+        [Paragraph("Diagnostic Principal:", label_style), Paragraph(patient.primary_diagnosis or "Aucun", value_style)],
     ]
     t = Table(patient_data, colWidths=[120, 350])
     t.setStyle(TableStyle([
@@ -174,7 +189,7 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
             act_date_str = act.act_date.isoformat() if hasattr(act, 'act_date') and act.act_date else 'N/A'
             elements.append(KeepTogether([
                 Paragraph(f"Acte: {act.act_type} - {act_date_str}", styles['Heading3']),
-                Paragraph(f"<b>Traitement:</b> {act.treatment or 'N/A'}", styles['Normal']),
+                Paragraph(f"<b>Description:</b> {act.description or 'Aucune'}", styles['Normal']),
                 Paragraph(f"<b>Observations:</b> {act.notes or 'Aucune'}", styles['Normal']),
                 Spacer(1, 10),
                 HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey),

@@ -139,9 +139,10 @@ function PatientsPage() {
     const term = searchTerm.toLowerCase().trim();
     const matchesSearch = !term ||
       (patient.ipp && patient.ipp.toLowerCase().includes(term)) ||
-      (patient.name && patient.name.toLowerCase().includes(term)) ||
+      (patient.first_name && patient.first_name.toLowerCase().includes(term)) ||
+      (patient.last_name && patient.last_name.toLowerCase().includes(term)) ||
       (patient.phone && patient.phone.replace(/\s/g, '').includes(term.replace(/\s/g, ''))) ||
-      (patient.diagnosis && patient.diagnosis.toLowerCase().includes(term)) ||
+      (patient.primary_diagnosis && patient.primary_diagnosis.toLowerCase().includes(term)) ||
       (patient.city && patient.city.toLowerCase().includes(term));
     const matchesFilter = selectedFilter === 'Tous' || patient.status === selectedFilter;
     return matchesSearch && matchesFilter;
@@ -207,7 +208,7 @@ function PatientsPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    const patientName = selectedPatient.name;
+    const patientName = `${selectedPatient.first_name} ${selectedPatient.last_name}`;
     try {
       await deletePatient(selectedPatient.id);
       setPatients(patients.filter(p => p.id !== selectedPatient.id));
@@ -392,7 +393,7 @@ function PatientsPage() {
                         <div className="patient-info">
                           <div className="patient-avatar">{patient.avatar}</div>
                           <div className="patient-details">
-                            <span className="patient-name">{patient.name}</span>
+                            <span className="patient-name">{patient.first_name} {patient.last_name}</span>
                             <span className="patient-meta">{patient.date_of_birth ? calculateAge(patient.date_of_birth) : '-'} ans • {patient.gender}</span>
                           </div>
                         </div>
@@ -405,7 +406,7 @@ function PatientsPage() {
                       </td>
                       <td>{patient.city || '-'}</td>
                       <td>
-                        <span className="diagnosis-badge">{patient.diagnosis}</span>
+                        <span className="diagnosis-badge">{patient.primary_diagnosis}</span>
                       </td>
                       <td>{formatDate(patient.lastVisit)}</td>
                       <td>
@@ -487,7 +488,7 @@ function PatientsPage() {
                 <FiAlertTriangle />
               </div>
               <h2>Supprimer le patient</h2>
-              <p>Êtes-vous sûr de vouloir supprimer <strong>{selectedPatient.name}</strong> ?</p>
+              <p>Êtes-vous sûr de vouloir supprimer <strong>{selectedPatient.first_name} {selectedPatient.last_name}</strong> ?</p>
               <p className="delete-warning">Cette action est irréversible. Toutes les données du patient seront définitivement supprimées.</p>
               <div className="delete-actions">
                 <button className="btn-cancel" onClick={() => setShowDeleteModal(false)}>

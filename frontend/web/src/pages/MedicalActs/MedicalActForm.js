@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
   FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
 } from 'react-icons/fi';
-import { getPatients, createMedicalAct, updateMedicalAct } from '../../api/api';
+import { getPatients, createMedicalAct, updateMedicalAct, getDoctors } from '../../api/api';
 import './MedicalActForm.css';
 
 const CATEGORY_OPTIONS = [
@@ -31,6 +31,7 @@ const STEPS = [
 const EMPTY_FORM = {
   patientId: '',
   patientName: '',
+  doctorId: '',
   date: new Date().toISOString().split('T')[0],
   actType: 'Consultation',
   category: 'rheumatology',
@@ -46,6 +47,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [step, setStep] = useState(1);
   const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +90,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         id: initialData.id,
         patientId: initialData.patient_id || initialData.patientId,
         patientName: initialData.patient_name || initialData.patientName,
+        doctorId: initialData.doctor_id || initialData.doctorId || '',
         date: initialData.act_date || initialData.date,
         actType: actType,
         category: initialData.category || 'rheumatology',
@@ -120,6 +123,10 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     }
   }, [step]);
 
+  useEffect(() => {
+    loadDoctors();
+  }, []);
+
   const loadPatients = async () => {
     setIsLoadingPatients(true);
     try {
@@ -129,6 +136,15 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       console.error("Error loading patients:", err);
     } finally {
       setIsLoadingPatients(false);
+    }
+  };
+
+  const loadDoctors = async () => {
+    try {
+      const res = await getDoctors();
+      setDoctors(res.data || []);
+    } catch (err) {
+      console.error("Error loading doctors:", err);
     }
   };
 
@@ -174,6 +190,10 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       // actType defaults to 'Consultation' so it should never be empty
       if (!form.actType) {
         newErrors.actType = "Le type d'acte est requis";
+      }
+      // Doctor is required
+      if (!form.doctorId) {
+        newErrors.doctorId = 'Veuillez sélectionner un médecin';
       }
     }
     if (s === 3) {
@@ -222,6 +242,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         act_type: form.actType,
         category: form.category,
         diagnosis: form.diagnosis,
+        doctor_id: form.doctorId || null,
         report: form.report || null,
         amount: form.amount ? String(form.amount) : null,
         status: form.status,
@@ -430,6 +451,27 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* Doctor */}
+            <div className="maf-field">
+              <label className="maf-label">
+                Médecin responsable <span className="maf-required">*</span>
+              </label>
+              <select
+                name="doctorId"
+                className={`maf-input ${errors.doctorId ? 'maf-input-error' : ''}`}
+                value={form.doctorId}
+                onChange={handleChange}
+              >
+                <option value="">-- Sélectionner un médecin --</option>
+                {doctors.map(doc => (
+                  <option key={doc.id} value={doc.id}>
+                    {doc.first_name} {doc.last_name} {doc.specialization ? `(${doc.specialization})` : ''}
+                  </option>
+                ))}
+              </select>
+              {errors.doctorId && <span className="maf-error-msg"><FiAlertCircle />{errors.doctorId}</span>}
             </div>
 
             {/* Diagnosis */}

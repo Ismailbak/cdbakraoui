@@ -59,7 +59,7 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
   }, []);
 
   const filteredPatients = patients.filter(p =>
-    !patSearch || p.name.toLowerCase().includes(patSearch.toLowerCase())
+    !patSearch || `${p.first_name} ${p.last_name}`.toLowerCase().includes(patSearch.toLowerCase())
   );
 
   const selectedPatient = patients.find(p => p.id === parseInt(form.patientId, 10));
@@ -209,8 +209,8 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
                       {p.gender?.toLowerCase() === 'femme' ? '👩' : '👨'}
                     </div>
                     <div className="af-patient-info">
-                      <span className="af-patient-name">{p.name}</span>
-                      <span className="af-patient-meta">{p.age} ans • {p.diagnosis || '-'}</span>
+                      <span className="af-patient-name">{p.first_name} {p.last_name}</span>
+                      <span className="af-patient-meta">{p.age} ans • {p.primary_diagnosis || '-'}</span>
                     </div>
                     {form.patientId == p.id && (
                       <div className="af-patient-check"><FiCheck /></div>

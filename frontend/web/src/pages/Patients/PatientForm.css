@@ -562,6 +562,173 @@
     margin: 0;
 }
 
+/* ── Allergies Section ─────────────────── */
+.pf-allergies-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 2px solid #F3F4F6;
+}
+
+.pf-allergies-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1E2A4A;
+    margin: 0 0 16px;
+}
+
+.pf-allergies-icon {
+    font-size: 18px;
+    color: #DC2626;
+}
+
+.pf-allergies-list {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pf-allergy-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #FEF2F2;
+    border-left: 4px solid #DC2626;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.pf-allergy-item:hover {
+    background: #FEE2E2;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+}
+
+.pf-allergy-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.pf-allergy-content strong {
+    color: #DC2626;
+    font-weight: 600;
+}
+
+.pf-severity {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.pf-severity-mild {
+    background: #DBEAFE;
+    color: #0369A1;
+}
+
+.pf-severity-moderate {
+    background: #FEF08A;
+    color: #854D0E;
+}
+
+.pf-severity-severe {
+    background: #FECACA;
+    color: #991B1B;
+}
+
+.pf-allergy-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.pf-allergy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.pf-allergy-edit {
+    color: #0369A1;
+    border: 1px solid #BAE6FD;
+}
+
+.pf-allergy-edit:hover {
+    background: #EFF6FF;
+    border-color: #0284C7;
+}
+
+.pf-allergy-delete {
+    color: #DC2626;
+    border: 1px solid #FECACA;
+}
+
+.pf-allergy-delete:hover {
+    background: #FEE2E2;
+    border-color: #EF4444;
+}
+
+.pf-allergy-form {
+    background: #F9FAFB;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+}
+
+.pf-allergy-form .pf-grid-2 {
+    margin-bottom: 16px;
+}
+
+.pf-allergy-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.pf-btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.pf-btn-primary.pf-btn-sm {
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.pf-btn-primary.pf-btn-sm:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.pf-btn-secondary.pf-btn-sm {
+    background: #E5E7EB;
+    color: #1E2A4A;
+}
+
+.pf-btn-secondary.pf-btn-sm:hover {
+    background: #D1D5DB;
+}
+
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 600px) {
 

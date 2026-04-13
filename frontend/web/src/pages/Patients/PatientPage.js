@@ -18,7 +18,7 @@ function PatientPage() {
       <PatientList key={refresh} onSelect={setSelectedPatient} />
       {selectedPatient && (
         <div>
-          <h3>Selected: {selectedPatient.name}</h3>
+          <h3>Selected: {selectedPatient.first_name} {selectedPatient.last_name}</h3>
           <Chat patientId={selectedPatient.id} />
         </div>
       )}

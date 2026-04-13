@@ -19,7 +19,7 @@ class LLMModel:
 
         Args:
             ollama_host: Ollama API endpoint
-            model_name: Model to use (e.g., cniongolo/biomistral)
+            model_name: Model to use (e.g., cniongolo/biomistral or gemma4:e4b)
         """
         self.ollama_host = ollama_host
         self.model_name = model_name

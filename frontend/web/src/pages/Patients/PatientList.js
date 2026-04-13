@@ -13,7 +13,7 @@ function PatientList({ onSelect }) {
       <h3>Patients</h3>
       <ul>
         {patients.map((p) => (
-          <li key={p.id} onClick={() => onSelect(p)}>{p.name} - {p.diagnosis}</li>
+          <li key={p.id} onClick={() => onSelect(p)}>{p.first_name} {p.last_name} - {p.primary_diagnosis}</li>
         ))}
       </ul>
     </div>

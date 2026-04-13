@@ -67,8 +67,8 @@ def _to_iso(dt):
     return str(dt) if dt else None
 
 def get_patient_names(db, patient_ids):
-    patients = db.query(PatientModel.id, PatientModel.name).filter(PatientModel.id.in_(patient_ids)).all()
-    return {p.id: p.name for p in patients}
+    patients = db.query(PatientModel.id, PatientModel.first_name, PatientModel.last_name).filter(PatientModel.id.in_(patient_ids)).all()
+    return {p.id: f"{p.first_name} {p.last_name}" for p in patients}
 
 
 

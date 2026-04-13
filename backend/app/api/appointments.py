@@ -35,7 +35,7 @@ def _appointment_with_patient_name(db: Session, row: AppointmentModel) -> dict:
     return {
         "id": row.id,
         "patient_id": row.patient_id,
-        "patient_name": patient.name if patient else None,
+        "patient_name": f"{patient.first_name} {patient.last_name}" if patient else None,
         "datetime_scheduled": row.datetime_scheduled.isoformat() if row.datetime_scheduled else None,
         "reason": row.reason,
         "status": row.status,

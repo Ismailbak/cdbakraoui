@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getPatientAppointments, getPatientMedicalActs, exportPatientDossier } from '../../api/api';
+import { getPatient, getPatientAppointments, getPatientMedicalActs, exportPatientDossier, getPatientResults } from '../../api/api';
 import { 
   FiArrowLeft, FiEdit2, FiPhone, FiMail, FiMapPin, FiCalendar, 
   FiFileText, FiActivity, FiHeart, FiAlertCircle, FiClock,
@@ -9,6 +9,7 @@ import {
 import Layout from '../../components/layout/Layout';
 import { LoadingSpinner, Breadcrumb } from '../../components/common';
 import PatientForm from './PatientForm';
+import LabResultForm from './LabResultForm';
 import './PatientDetailPage.css';
 
 function calculateAge(dateOfBirth) {
@@ -28,6 +29,7 @@ function PatientDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLabResultModal, setShowLabResultModal] = useState(false);
 
   const fetchPatient = async () => {
     setIsLoading(true);
@@ -35,30 +37,61 @@ function PatientDetailPage() {
       const res = await getPatient(id);
       const patientData = res.data;
 
-      // Fetch appointments and acts
-      const [appointmentsRes, actsRes] = await Promise.all([
-        getPatientAppointments(id),
-        getPatientMedicalActs(id)
-      ]);
+      // Fetch appointments, acts, and lab results with individual error handling
+      let appointmentsData = [];
+      let actsData = [];
+      let resultsData = [];
 
-      patientData.appointments = appointmentsRes.data || [];
-      patientData.acts = actsRes.data || [];
+      try {
+        const appointmentsRes = await getPatientAppointments(id);
+        appointmentsData = appointmentsRes.data || [];
+      } catch (error) {
+        console.warn('Erreur lors du chargement des rendez-vous:', error);
+      }
+
+      try {
+        const actsRes = await getPatientMedicalActs(id);
+        actsData = actsRes.data || [];
+      } catch (error) {
+        console.warn('Erreur lors du chargement des actes:', error);
+      }
+
+      try {
+        const resultsRes = await getPatientResults(id);
+        resultsData = resultsRes.data || [];
+      } catch (error) {
+        console.warn('Erreur lors du chargement des résultats:', error);
+      }
+
+      patientData.appointments = appointmentsData;
+      patientData.acts = actsData;
+      patientData.labResults = resultsData;
 
       // Build medical history from acts
       patientData.medicalHistory = patientData.acts.map(act => ({
-        date: act.date,
-        event: `${act.act_type}: ${act.diagnosis || act.description || 'Consultation'}`,
+        date: act.date || act.act_date,
+        event: `${act.act_type}: ${
+          act.diagnoses?.length > 0 
+            ? act.diagnoses
+                .filter(d => d && d.diagnosis_label && d.diagnosis_label.trim())
+                .map(d => d.diagnosis_label)
+                .join(', ') || (act.description || 'Consultation')
+            : (act.description || 'Consultation')
+        }`,
         doctor: act.doctor_name || 'Dr.',
       }));
 
       // Build current treatments from acts that have treatment
       patientData.currentTreatments = patientData.acts
-        .filter(act => act.treatment)
-        .map(act => ({
-          name: act.treatment,
-          dosage: act.notes || '',
-          startDate: act.date,
-        }));
+        .flatMap(act => 
+          act.treatments
+            ?.filter(t => t && t.drug_name && t.drug_name.trim())
+            .map(treatment => ({
+              name: treatment.drug_name || 'Médicament',
+              dosage: treatment.dosage || '',
+              startDate: act.date || act.act_date,
+            })) || []
+        );
 
       // Parse allergies from comma-separated string to array
       if (patientData.allergies && typeof patientData.allergies === 'string') {
@@ -87,12 +120,16 @@ function PatientDetailPage() {
   }, [id]);
 
   const handleExportDossier = async () => {
+    if (!patient) {
+      alert('Impossible d\'exporter : dossier non chargé');
+      return;
+    }
     try {
       const response = await exportPatientDossier(id);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const filename = `Dossier_${patient.name.replace(/\s+/g, '_')}.pdf`;
+      const filename = `Dossier_${patient.first_name}_${patient.last_name}.pdf`;
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
@@ -125,6 +162,44 @@ function PatientDetailPage() {
     );
   }
 
+  if (!patient) {
+    return (
+      <Layout>
+        <div className="patient-detail-page">
+          <Breadcrumb 
+            items={[
+              { label: 'Patients', path: '/patients' }
+            ]} 
+          />
+          <div className="detail-header">
+            <button className="back-btn" onClick={() => navigate('/patients')}>
+              <FiArrowLeft /> Retour aux patients
+            </button>
+          </div>
+          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+            <p style={{ fontSize: '18px', marginBottom: '20px' }}>
+              Erreur lors du chargement du dossier patient.
+            </p>
+            <button 
+              onClick={() => fetchPatient()}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Réessayer
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="patient-detail-page">
@@ -132,7 +207,7 @@ function PatientDetailPage() {
         <Breadcrumb 
           items={[
             { label: 'Patients', path: '/patients' },
-            { label: patient.name }
+            { label: `${patient.first_name} ${patient.last_name}` }
           ]} 
         />
 
@@ -154,9 +229,9 @@ function PatientDetailPage() {
         {/* Patient Info Card */}
         <div className="patient-info-card">
           <div className="patient-main-info">
-            <div className="patient-avatar-large">{patient.name?.charAt(0)?.toUpperCase() || '?'}</div>
+            <div className="patient-avatar-large">{patient.first_name?.charAt(0)?.toUpperCase() || '?'}</div>
             <div className="patient-identity">
-              <h1>{patient.name}</h1>
+              <h1>{patient.first_name} {patient.last_name}</h1>
               <p className="patient-meta-info">
                 {calculateAge(patient.date_of_birth)} ans • {patient.gender} • Né(e) le {formatDate(patient.date_of_birth)}
               </p>
@@ -183,7 +258,7 @@ function PatientDetailPage() {
 
           <div className="patient-diagnosis-banner">
             <FiActivity />
-            <span><strong>Diagnostic:</strong> {patient.diagnosis}</span>
+            <span><strong>Diagnostic:</strong> {patient.primary_diagnosis || 'Aucun diagnostic'}</span>
           </div>
         </div>
 
@@ -287,6 +362,23 @@ function PatientDetailPage() {
                   <p className="notes-content">{patient.notes_admin}</p>
                 </div>
               )}
+
+              {/* Current Treatments */}
+              <div className="info-card full-width">
+                <h3><FiHeart /> Traitement en cours</h3>
+                <div className="treatments-container">
+                  {(patient.currentTreatments && Array.isArray(patient.currentTreatments) && patient.currentTreatments.length > 0)
+                    ? patient.currentTreatments.map((treatment, index) => (
+                        <div key={index} className="treatment-badge">
+                          <div className="treatment-badge-name">{treatment.name}</div>
+                          {treatment.dosage && <div className="treatment-badge-dosage">{treatment.dosage}</div>}
+                          {treatment.startDate && <div className="treatment-badge-date">Depuis {formatDate(treatment.startDate)}</div>}
+                        </div>
+                      ))
+                    : <p className="empty-state">Aucun traitement en cours</p>
+                  }
+                </div>
+              </div>
             </div>
           )}
 
@@ -373,6 +465,9 @@ function PatientDetailPage() {
             <div className="labs-section">
               <div className="section-header">
                 <h3>Résultats de laboratoire</h3>
+                <button className="add-btn" onClick={() => setShowLabResultModal(true)}>
+                  <FiPlusCircle /> Ajouter un résultat
+                </button>
               </div>
               <table className="labs-table">
                 <thead>
@@ -380,6 +475,7 @@ function PatientDetailPage() {
                     <th>Date</th>
                     <th>Analyse</th>
                     <th>Résultat</th>
+                    <th>Unité</th>
                     <th>Statut</th>
                   </tr>
                 </thead>
@@ -387,12 +483,13 @@ function PatientDetailPage() {
                   {(patient.labResults && Array.isArray(patient.labResults) && patient.labResults.length > 0)
                     ? patient.labResults.map((result, index) => (
                         <tr key={index}>
-                          <td>{formatDate(result.date)}</td>
-                          <td>{result.test}</td>
-                          <td>{result.value}</td>
+                          <td>{formatDate(result.result_date)}</td>
+                          <td>{result.result_name}</td>
+                          <td>{result.result_value}</td>
+                          <td>{result.result_unit || '-'}</td>
                           <td>
-                            <span className={`lab-status ${result.status === 'Normal' ? 'normal' : 'abnormal'}`}>
-                              {result.status}
+                            <span className={`lab-status ${result.is_abnormal ? 'abnormal' : 'normal'}`}>
+                              {result.is_abnormal ? 'Anormal' : 'Normal'}
                             </span>
                           </td>
                         </tr>
@@ -450,6 +547,22 @@ function PatientDetailPage() {
               isEdit={true} 
               onSuccess={handleEditSuccess}
               onClose={() => setShowEditModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Lab Result Modal */}
+      {showLabResultModal && (
+        <div className="modal-overlay" onClick={() => setShowLabResultModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <LabResultForm
+              patientId={patient.id}
+              onSuccess={() => {
+                setShowLabResultModal(false);
+                fetchPatient();
+              }}
+              onClose={() => setShowLabResultModal(false)}
             />
           </div>
         </div>
