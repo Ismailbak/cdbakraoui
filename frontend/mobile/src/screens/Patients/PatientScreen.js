@@ -39,7 +39,8 @@ export default function PatientScreen({ navigation }) {
     fetchData();
   };
 
-  const getInitials = (name) => {
+  const getInitials = (firstName, lastName) => {
+    const name = `${firstName || ''} ${lastName || ''}`.trim();
     if (!name) return '?';
     return name
       .split(' ')
@@ -54,9 +55,10 @@ export default function PatientScreen({ navigation }) {
     return colors_palette[index % colors_palette.length];
   };
 
-  const filtered = patients.filter((p) =>
-    !search || (p.name && p.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = patients.filter((p) => {
+    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+    return !search || fullName.includes(search.toLowerCase());
+  });
 
   const renderPatient = ({ item, index }) => (
     <TouchableOpacity
@@ -66,14 +68,14 @@ export default function PatientScreen({ navigation }) {
     >
       <View style={[styles.avatar, { backgroundColor: getAvatarColor(index) + '20' }]}>
         <Text style={[styles.avatarText, { color: getAvatarColor(index) }]}>
-          {getInitials(item.name)}
+          {getInitials(item.first_name, item.last_name)}
         </Text>
       </View>
       <View style={styles.patientInfo}>
-        <Text style={styles.patientName}>{String(item.name || 'Inconnu')}</Text>
+        <Text style={styles.patientName}>{`${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Inconnu'}</Text>
         <View style={styles.patientMeta}>
           <Feather name="activity" size={12} color={colors.textMuted} />
-          <Text style={[styles.patientDiag, { marginLeft: spacing.xs }]}>{String(item.diagnosis || 'Aucun diagnostic')}</Text>
+          <Text style={[styles.patientDiag, { marginLeft: spacing.xs }]}>{String(item.primary_diagnosis || 'Aucun diagnostic')}</Text>
         </View>
         {item.date_of_birth ? (
           <View style={styles.patientMeta}>
