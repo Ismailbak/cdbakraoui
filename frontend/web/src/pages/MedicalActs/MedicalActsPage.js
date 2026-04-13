@@ -10,7 +10,7 @@ import {
   FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiClock
 } from 'react-icons/fi';
 
-import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct } from '../../api/api';
+import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors } from '../../api/api';
 import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
 import { SkeletonCard } from '../../components/common/Skeleton';
@@ -212,9 +212,16 @@ function ActCard({ act, onView, onDelete, onEdit }) {
 // ─── DetailModal ──────────────────────────────────────────────────────────────
 // Read-only detail view for a selected medical act.
 
-function DetailModal({ act, onClose, onSuccess }) {
+function DetailModal({ act, doctors = [], onClose, onSuccess }) {
   const [showAttachModal, setShowAttachModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Helper function to get doctor name from ID
+  const getDoctorName = (doctorId) => {
+    if (!doctorId) return 'Non assigné';
+    const doctor = doctors.find(d => d.id === doctorId);
+    return doctor ? `${doctor.first_name} ${doctor.last_name}` : `Médecin #${doctorId}`;
+  };
 
   // Print handler - fetches professional PDF from backend and opens print dialog
   const handlePrint = async () => {
@@ -331,7 +338,7 @@ function DetailModal({ act, onClose, onSuccess }) {
             <div className="detail-section">
               <h4>Médecin(s) / Équipe</h4>
               <p className="detail-value">
-                {act.doctor}
+                {getDoctorName(act.doctor)}
                 {act.assignedStaff?.length > 1 && ` + ${act.assignedStaff.length - 1} autre(s)`}
               </p>
             </div>
@@ -408,6 +415,7 @@ function MedicalActsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState(null);
   const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [staffOptions, setStaffOptions] = useState([]);
   const [acts, setActs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -436,14 +444,16 @@ function MedicalActsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const [statsData, patientsData, staffData] = await Promise.all([
+        const [statsData, patientsData, staffData, doctorsData] = await Promise.all([
           medicalActsService.getStats(),
           medicalActsService.getPatients(),
           medicalActsService.getStaff(),
+          getDoctors(),
         ]);
         setStats(statsData);
         setPatients(patientsData);
         setStaffOptions(staffData);
+        setDoctors(doctorsData.data || []);
         await loadActs();
       } catch (err) {
         setError(err.message ?? 'Erreur inconnue');
@@ -517,6 +527,7 @@ function MedicalActsPage() {
       // Map backend fields to form fields
       patientId: act.patientId,
       patientName: act.patientName,
+      doctorId: act.doctor || '',
       date: act.date,
       actType: act.type || 'Consultation',
       category: act.category || 'rheumatology',
@@ -647,6 +658,7 @@ function MedicalActsPage() {
         {selectedAct && (
           <DetailModal
             act={selectedAct}
+            doctors={doctors}
             onClose={() => setSelectedAct(null)}
             onSuccess={async () => {
               await loadActs();
