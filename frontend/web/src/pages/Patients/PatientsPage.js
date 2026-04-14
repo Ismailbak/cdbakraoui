@@ -63,9 +63,10 @@ function PatientsPage() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const newThisMonth = Array.isArray(patients) ? patients.filter(p => {
-    if (!p.createdAt && !p.date_of_birth) return false;
-    const created = p.createdAt ? new Date(p.createdAt) : new Date(p.date_of_birth);
-    return created >= startOfMonth && created <= now;
+    // Check created_at field from API
+    if (!p.created_at) return false;
+    const createdDate = new Date(p.created_at);
+    return createdDate >= startOfMonth && createdDate <= now;
   }).length : 0;
   const todayStr = now.toISOString().slice(0, 10);
   const rdvToday = Array.isArray(patients) ? patients.filter(p => {

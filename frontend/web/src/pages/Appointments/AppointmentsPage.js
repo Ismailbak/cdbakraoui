@@ -99,6 +99,8 @@ function AppointmentsPage() {
   const confirmedThisMonth = appointments.filter(a => a.status === 'confirmed' && isSameMonth(a.date)).length;
   const pending = appointments.filter(a => a.status === 'pending').length;
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
@@ -203,10 +205,9 @@ function AppointmentsPage() {
     try {
       await updateAppointment(id, {
         patient_id: apt.patient_id,
-        date: apt.date,
-        time: apt.time,
+        datetime_scheduled: apt.datetime_scheduled,
         reason: apt.notes,
-        status: 'scheduled',
+        status: 'confirmed',
       });
       setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'confirmed' } : a));
       toast.success('Rendez-vous confirmé');
@@ -221,8 +222,7 @@ function AppointmentsPage() {
     try {
       await updateAppointment(id, {
         patient_id: apt.patient_id,
-        date: apt.date,
-        time: apt.time,
+        datetime_scheduled: apt.datetime_scheduled,
         reason: apt.notes,
         status: 'cancelled',
       });
@@ -233,6 +233,11 @@ function AppointmentsPage() {
     }
   };
 
+  const handleEditClick = (appointment) => {
+    setEditingAppointment(appointment);
+    setShowEditModal(true);
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!addFormData.patientId || !addFormData.date || !addFormData.time) {
@@ -241,10 +246,13 @@ function AppointmentsPage() {
     }
     const patient = patientsData.find(p => p.id === parseInt(addFormData.patientId, 10));
     try {
+      // Combine date and time into ISO datetime string
+      const [hours, minutes] = addFormData.time.split(':');
+      const datetimeScheduled = new Date(`${addFormData.date}T${addFormData.time}:00`).toISOString();
+      
       const res = await createAppointment({
         patient_id: parseInt(addFormData.patientId, 10),
-        date: addFormData.date,
-        time: addFormData.time,
+        datetime_scheduled: datetimeScheduled,
         reason: [addFormData.type, addFormData.notes].filter(Boolean).join(' – ') || null,
         status: 'scheduled',
       });
@@ -449,7 +457,7 @@ function AppointmentsPage() {
                               </button>
                             </>
                           )}
-                          <button className="action-btn edit" title="Modifier">
+                          <button className="action-btn edit" title="Modifier" onClick={() => handleEditClick(appointment)}>
                             <FiEdit2 />
                           </button>
                         </div>
@@ -554,6 +562,24 @@ function AppointmentsPage() {
                 defaultDate={selectedDate.toISOString().split('T')[0]}
                 onSuccess={() => { loadAppointments(); toast.success('Rendez-vous créé avec succès'); }}
                 onClose={() => { setShowAddModal(false); resetAddForm(); }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {showEditModal && editingAppointment && (
+          <div className="modal-overlay" onClick={() => { setShowEditModal(false); setEditingAppointment(null); }}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <AppointmentForm
+                defaultDate={editingAppointment.date}
+                defaultTime={editingAppointment.time}
+                defaultPatientId={editingAppointment.patient_id}
+                defaultNotes={editingAppointment.notes}
+                isEditing={true}
+                appointmentId={editingAppointment.id}
+                onSuccess={() => { loadAppointments(); setShowEditModal(false); setEditingAppointment(null); toast.success('Rendez-vous modifié avec succès'); }}
+                onClose={() => { setShowEditModal(false); setEditingAppointment(null); }}
               />
             </div>
           </div>

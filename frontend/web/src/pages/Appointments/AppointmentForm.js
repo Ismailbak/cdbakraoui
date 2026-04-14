@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiChevronLeft, FiCheck, FiX,
   FiAlertCircle, FiPlus, FiSearch
 } from 'react-icons/fi';
-import { createAppointment, getPatients } from '../../api/api';
+import { createAppointment, getPatients, updateAppointment } from '../../api/api';
 import './AppointmentForm.css';
 
 const TIME_SLOTS = [
@@ -41,8 +41,23 @@ const initialForm = {
   notes: '',
 };
 
-function AppointmentForm({ onSuccess, onClose, defaultDate }) {
-  const [form, setForm] = useState({ ...initialForm, date: defaultDate || '' });
+function AppointmentForm({ 
+  onSuccess, 
+  onClose, 
+  defaultDate, 
+  defaultTime,
+  defaultPatientId,
+  defaultNotes,
+  isEditing,
+  appointmentId
+}) {
+  const [form, setForm] = useState({ 
+    ...initialForm, 
+    date: defaultDate || '',
+    time: defaultTime || '',
+    patientId: defaultPatientId || '',
+    notes: defaultNotes || ''
+  });
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,12 +104,21 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
     if (!validateStep(3)) return;
     setIsSubmitting(true);
     try {
-      await createAppointment({
+      const appointmentData = {
         patient_id: parseInt(form.patientId, 10),
         datetime_scheduled: form.datetime_scheduled,
         reason: [form.type, form.notes].filter(Boolean).join(' – ') || null,
-        status: 'scheduled',
-      });
+        status: isEditing ? 'confirmed' : 'scheduled',
+      };
+
+      if (isEditing && appointmentId) {
+        // Update existing appointment
+        await updateAppointment(appointmentId, appointmentData);
+      } else {
+        // Create new appointment
+        await createAppointment(appointmentData);
+      }
+      
       setSubmitted(true);
       setTimeout(() => {
         setForm({ ...initialForm, datetime_scheduled: defaultDate || '' });
@@ -104,7 +128,7 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
         if (onClose) onClose();
       }, 1400);
     } catch {
-      setErrors({ submit: 'Erreur lors de la création du rendez-vous. Veuillez réessayer.' });
+      setErrors({ submit: `Erreur lors de la ${isEditing ? 'modification' : 'création'} du rendez-vous. Veuillez réessayer.` });
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +141,7 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
         <div className="af-success-icon"><FiCheck /></div>
         <h3>Rendez-vous créé !</h3>
         <p>
-          {selectedPatient?.name && <><strong>{selectedPatient.name}</strong> — </>}
+          {selectedPatient && <><strong>{selectedPatient.first_name} {selectedPatient.last_name}</strong> — </>}
           {form.datetime_scheduled && new Date(form.datetime_scheduled).toLocaleString('fr-FR')}
         </p>
       </div>
@@ -129,10 +153,10 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
       {/* Header */}
       <div className="af-header">
         <div className="af-header-left">
-          <div className="af-header-icon"><FiPlus /></div>
+          <div className="af-header-icon">{isEditing ? <FiClock /> : <FiPlus />}</div>
           <div>
-            <h2 className="af-title">Nouveau Rendez-vous</h2>
-            <p className="af-subtitle">Planifiez une consultation</p>
+            <h2 className="af-title">{isEditing ? 'Modifier Rendez-vous' : 'Nouveau Rendez-vous'}</h2>
+            <p className="af-subtitle">{isEditing ? 'Mettez à jour les détails' : 'Planifiez une consultation'}</p>
           </div>
         </div>
         {onClose && (
@@ -238,7 +262,7 @@ function AppointmentForm({ onSuccess, onClose, defaultDate }) {
                 <span className="af-banner-avatar">
                   {selectedPatient.gender?.toLowerCase() === 'femme' ? '👩' : '👨'}
                 </span>
-                <span className="af-banner-name">{selectedPatient.name}</span>
+                <span className="af-banner-name">{selectedPatient.first_name} {selectedPatient.last_name}</span>
               </div>
             )}
 
