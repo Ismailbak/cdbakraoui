@@ -8,7 +8,6 @@ function Chat({ patientId, currentUser }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [language, setLanguage] = useState('fr');
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const [chatSessions, setChatSessions] = useState([]);
   const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
@@ -165,7 +164,7 @@ function Chat({ patientId, currentUser }) {
         input,
         currentUser?.id,
         patientId,
-        language
+        'fr'  // Message is resolved by AI language detection
       );
 
       const aiMsg = {
@@ -248,17 +247,8 @@ function Chat({ patientId, currentUser }) {
         <h2>Assistant Médical IA</h2>
         
         <div className="doctor-context">
-          <span className="context-label">Médecin:</span>
-          <span className="doctor-name">{currentUser?.first_name || currentUser?.username || 'Dr. Assistant'}</span>
-        </div>
-        
-        <div className="language-selector">
-          <label>Langue:</label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option value="fr">Français</option>
-            <option value="en">English</option>
-            <option value="ar">العربية</option>
-          </select>
+          <span className="context-label">MÉDECIN:</span>
+          <span className="doctor-name">{currentUser?.last_name?.toUpperCase() || currentUser?.username?.toUpperCase() || 'DOCTEUR'}</span>
         </div>
       </div>
 
