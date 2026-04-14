@@ -162,12 +162,17 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | User Management        | Implemented    | -              | -     |
 | Web          | Analytics              | Implemented    | -              | -     |
 | Web          | Logs                   | Implemented    | -              | -     |
-| Web          | Patient Management     | Implemented    | April 14, 2026 | Schema corrected, age calculated from date_of_birth, consolidated datetime, dossier export enhanced |
+| Web          | Patient Management     | Implemented    | April 14, 2026 | ✅ Dynamic pagination (15/page), header search (API integrated), age calculated from date_of_birth |
+| Web          | Patient Search         | Implemented    | April 14, 2026 | ✅ Real-time search across patients, appointments, medical acts; age display in results |
+| Web          | Patient Pagination     | Implemented    | April 14, 2026 | ✅ 15 items/page, teal gradient active state, dynamic page buttons |
 | Web          | Patient Dossier Export | Implemented    | April 14, 2026 | ✅ Fixed appointment_date field bug, added allergies, emergency contact, lab results, comprehensive PDF |
-| Web          | Appointments           | Implemented    | April 10, 2026 | DateTime consolidated into datetime_scheduled field |
-| Web          | Medical Acts           | Implemented    | April 10, 2026 | Column corrected (act_date), amount as Decimal(10,2) |
+| Web          | Appointments           | Implemented    | April 14, 2026 | ✅ Fixed datetime_scheduled format (ISO), confirm/cancel/edit all working without 422 errors |
+| Web          | Appointment Edit       | Implemented    | April 14, 2026 | ✅ Pre-filled form modal, uses AppointmentForm component, patient name display corrected |
+| Web          | Medical Acts           | Implemented    | April 14, 2026 | ✅ Pink theme applied (all green → #fca5a5); header, buttons, step indicators, icons updated |
+| Web          | Medical Acts Form      | Implemented    | April 14, 2026 | ✅ Complete pink color scheme (header, icon, steps, inputs, buttons, chips, success state) |
 | Web          | Notifications          | Implemented    | April 10, 2026 | ✅ P2P & broadcast messaging with categories |
-| Web          | Chat                   | Implemented    | April 14, 2026 | ✅ Enhanced with history dropdown, new chat button, feedback system (like/dislike), improved message cards |
+| Web          | Chat                   | Implemented    | April 14, 2026 | ✅ Language selector removed; AI auto-detects; doctor last_name shown in header (uppercase) |
+| Web          | Chat History           | Implemented    | April 14, 2026 | ✅ History dropdown functional; recent conversations with date grouping and previews |
 | Web          | Chat Assistant UX      | Implemented    | April 14, 2026 | ✅ Doctor context in header, copy/regenerate/feedback buttons with proper hover visibility |
 | Web          | PDF Generation         | Implemented    | April 14, 2026 | Updated for consolidated datetime/date fields; comprehensive dossier with all patient info |
 | Web          | File Upload            | Not Impl.      | -              | -     |
