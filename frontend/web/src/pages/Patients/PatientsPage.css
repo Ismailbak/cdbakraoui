@@ -373,38 +373,59 @@
 .pagination-info {
   font-size: 13px;
   color: #6B7280;
+  font-weight: 500;
 }
 
 .pagination-buttons {
   display: flex;
-  gap: 8px;
+  gap: 15px;
+  align-items: center;
 }
 
 .pagination-btn {
-  padding: 8px 14px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
   border: 1px solid #E5E7EB;
   border-radius: 8px;
   background: #fff;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
-.pagination-btn:hover:not(:disabled) {
-  background: #F9FAFB;
+.pagination-btn:hover:not(:disabled):not(.active) {
+  background: #F3F4F6;
   border-color: #D1D5DB;
+  color: #111827;
 }
 
 .pagination-btn.active {
-  background: #1E2A4A;
+  background: linear-gradient(135deg, #0D9488 0%, #06B6D4 100%);
   color: white;
-  border-color: #1E2A4A;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
 }
 
 .pagination-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  color: #9CA3AF;
+}
+
+/* Add spacing around nav buttons (Précédent/Suivant) */
+.pagination-buttons button:first-child {
+  margin-right: 8px;
+}
+
+.pagination-buttons button:last-child {
+  margin-left: 8px;
 }
 
 /* Modal */
