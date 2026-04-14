@@ -108,7 +108,7 @@ def generate_medical_act_pdf(act_data: dict):
     buffer.seek(0)
     return buffer
 
-def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointments: list) -> BytesIO:
+def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointments: list, lab_results: list = None, allergies: list = None) -> BytesIO:
     """ Generates a comprehensive medical dossier for a patient. """
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
@@ -138,10 +138,12 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
         [Paragraph("Nom Complet:", label_style), Paragraph(f"{patient.first_name} {patient.last_name}" if patient.first_name and patient.last_name else "N/A", value_style)],
         [Paragraph("Âge:", label_style), Paragraph(f"{calculate_age(patient.date_of_birth)} ans" if patient.date_of_birth else "N/A", value_style)],
         [Paragraph("Genre:", label_style), Paragraph(patient.gender or "N/A", value_style)],
+        [Paragraph("Date de Naissance:", label_style), Paragraph(patient.date_of_birth.isoformat() if patient.date_of_birth else "N/A", value_style)],
         [Paragraph("Email:", label_style), Paragraph(patient.email or "N/A", value_style)],
         [Paragraph("Téléphone:", label_style), Paragraph(patient.phone or "N/A", value_style)],
-        [Paragraph("Adresse:", label_style), Paragraph(patient.address or "N/A", value_style)],
+        [Paragraph("Adresse:", label_style), Paragraph(f"{patient.address or '-'}{f', {patient.city}' if patient.city else ''}", value_style)],
         [Paragraph("Diagnostic Principal:", label_style), Paragraph(patient.primary_diagnosis or "Aucun", value_style)],
+        [Paragraph("Statut:", label_style), Paragraph(patient.status or "Actif", value_style)],
     ]
     t = Table(patient_data, colWidths=[120, 350])
     t.setStyle(TableStyle([
@@ -152,12 +154,84 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
     elements.append(t)
     elements.append(Spacer(1, 20))
 
+    # Personal Health Information
+    elements.append(Paragraph("Informations de Santé Personnelle", subtitle_style))
+    health_data = [
+        [Paragraph("Groupe Sanguin:", label_style), Paragraph(patient.blood_type or "-", value_style)],
+        [Paragraph("Assurance:", label_style), Paragraph(patient.insurance or "Sans assurance", value_style)],
+        [Paragraph("Numéro d'Assurance:", label_style), Paragraph(patient.insurance_number or "-", value_style)],
+    ]
+    ht = Table(health_data, colWidths=[120, 350])
+    ht.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+    ]))
+    elements.append(ht)
+    elements.append(Spacer(1, 20))
+
+    # Allergies
+    if allergies and len(allergies) > 0:
+        elements.append(Paragraph("Allergies", subtitle_style))
+        allergy_data = [[Paragraph("Allergène", label_style), Paragraph("Type de Réaction", label_style), Paragraph("Sévérité", label_style), Paragraph("Notes", label_style)]]
+        for allergy in allergies:
+            allergy_data.append([
+                Paragraph(allergy.allergen or "-", value_style),
+                Paragraph(allergy.reaction_type or "-", value_style),
+                Paragraph(allergy.severity or "-", value_style),
+                Paragraph(allergy.notes or "-", value_style)
+            ])
+        at = Table(allergy_data, colWidths=[80, 80, 80, 150])
+        at.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F3F4F6")),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,1), (-1,-1), 5),
+        ]))
+        elements.append(at)
+        elements.append(Spacer(1, 20))
+    else:
+        elements.append(Paragraph("Allergies: Aucune allergie connue", subtitle_style))
+        elements.append(Spacer(1, 20))
+
+    # Emergency Contact
+    elements.append(Paragraph("Contact d'Urgence", subtitle_style))
+    emergency_data = [
+        [Paragraph("Nom:", label_style), Paragraph(patient.emergency_contact_name or "-", value_style)],
+        [Paragraph("Relation:", label_style), Paragraph(patient.emergency_contact_relation or "-", value_style)],
+        [Paragraph("Téléphone:", label_style), Paragraph(patient.emergency_contact_phone or "-", value_style)],
+    ]
+    et = Table(emergency_data, colWidths=[120, 350])
+    et.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+    ]))
+    elements.append(et)
+    elements.append(Spacer(1, 20))
+
+    # Medical Notes
+    if patient.notes:
+        elements.append(Paragraph("Notes Médicales", subtitle_style))
+        elements.append(Paragraph(patient.notes.replace('\n', '<br/>'), styles['Normal']))
+        elements.append(Spacer(1, 20))
+
+    # Admin Notes
+    if patient.notes_admin:
+        elements.append(Paragraph("Notes Administratives", subtitle_style))
+        elements.append(Paragraph(patient.notes_admin.replace('\n', '<br/>'), styles['Normal']))
+        elements.append(Spacer(1, 20))
+
     # Recent Appointments
     if appointments:
         elements.append(Paragraph("Historique des Rendez-vous", subtitle_style))
         appt_header = ["Date", "Heure", "Motif", "Statut"]
         appt_data = [appt_header]
-        for appt in appointments[:20]: # Show more in full dossier
+        for appt in appointments[:20]:
             if appt.datetime_scheduled:
                 dt = appt.datetime_scheduled if isinstance(appt.datetime_scheduled, str) else appt.datetime_scheduled.isoformat()
                 date_str = dt.split('T')[0]
@@ -165,7 +239,7 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
             else:
                 date_str = '--'
                 time_str = '--:--'
-            appt_data.append([date_str, time_str, appt.reason or "", appt.status])
+            appt_data.append([date_str, time_str, appt.reason or "", appt.status or ""])
         
         at = Table(appt_data, colWidths=[80, 60, 250, 80])
         at.setStyle(TableStyle([
@@ -188,13 +262,44 @@ def generate_patient_dossier_pdf(patient: Patient, medical_acts: list, appointme
         for act in medical_acts:
             act_date_str = act.act_date.isoformat() if hasattr(act, 'act_date') and act.act_date else 'N/A'
             elements.append(KeepTogether([
-                Paragraph(f"Acte: {act.act_type} - {act_date_str}", styles['Heading3']),
+                Paragraph(f"<b>Acte:</b> {act.act_type} - {act_date_str}", styles['Heading3']),
                 Paragraph(f"<b>Description:</b> {act.description or 'Aucune'}", styles['Normal']),
+                Paragraph(f"<b>Rapport:</b> {act.report or 'Aucun'}", styles['Normal']),
                 Paragraph(f"<b>Observations:</b> {act.notes or 'Aucune'}", styles['Normal']),
                 Spacer(1, 10),
                 HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey),
                 Spacer(1, 10)
             ]))
+
+    # Lab Results
+    if lab_results and len(lab_results) > 0:
+        elements.append(Paragraph("Résultats de Laboratoire", subtitle_style))
+        lab_header = ["Date", "Analyse", "Résultat", "Unité", "Statut"]
+        lab_data = [lab_header]
+        for result in lab_results:
+            result_date_str = result.result_date.isoformat() if hasattr(result, 'result_date') and result.result_date else 'N/A'
+            status_text = "Anormal" if result.is_abnormal else "Normal"
+            lab_data.append([
+                result_date_str,
+                result.result_name or "-",
+                result.result_value or "-",
+                result.result_unit or "-",
+                status_text
+            ])
+        
+        lt = Table(lab_data, colWidths=[80, 120, 80, 60, 70])
+        lt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F3F4F6")),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,1), (-1,-1), 5),
+        ]))
+        elements.append(lt)
+        elements.append(Spacer(1, 20))
 
     doc.build(elements)
     buffer.seek(0)

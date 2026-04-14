@@ -13,6 +13,7 @@ from app.api.auth import get_current_user_orm, RoleChecker
 from app.models.user import User
 from app.models.medical_act import MedicalAct
 from app.models.appointment import Appointment
+from app.models.act_result import ActResult
 from app.services.audit_service import log_action
 from app.services import pdf_service
 
@@ -258,10 +259,16 @@ def get_patient_dossier(
     medical_acts = db.query(MedicalAct).filter(MedicalAct.patient_id == patient_id).order_by(MedicalAct.act_date.desc()).all()
     
     # 3. Get Appointments
-    appointments = db.query(Appointment).filter(Appointment.patient_id == patient_id).order_by(Appointment.appointment_date.desc()).all()
+    appointments = db.query(Appointment).filter(Appointment.patient_id == patient_id).order_by(Appointment.datetime_scheduled.desc()).all()
     
-    # 4. Generate PDF
-    pdf_buffer = pdf_service.generate_patient_dossier_pdf(patient, medical_acts, appointments)
+    # 4. Get Lab Results
+    lab_results = db.query(ActResult).filter(ActResult.patient_id == patient_id).order_by(ActResult.result_date.desc()).all()
+    
+    # 5. Get Allergies
+    allergies = db.query(PatientAllergyModel).filter(PatientAllergyModel.patient_id == patient_id).all()
+    
+    # 6. Generate PDF
+    pdf_buffer = pdf_service.generate_patient_dossier_pdf(patient, medical_acts, appointments, lab_results, allergies)
     
     filename = f"Dossier_{patient.first_name}_{patient.last_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
     
