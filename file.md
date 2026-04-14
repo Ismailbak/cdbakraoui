@@ -140,11 +140,11 @@ This document provides a detailed explanation of every file and directory in the
 
 | Area         | Feature                | Status         | Last Updated   | Notes |
 |--------------|------------------------|----------------|----------------|-------|
-| Backend      | CRUD (patients, etc.)  | Implemented    | April 10, 2026 | Schema corrected (act_date, datetime_scheduled, date_of_birth) |
+| Backend      | CRUD (patients, etc.)  | Implemented    | April 14, 2026 | Schema corrected (act_date, datetime_scheduled, date_of_birth); Patient dossier export enhanced |
 | Backend      | Analytics              | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
 | Backend      | AI Chat                | Implemented    | April 10, 2026 | ✅ Working (BioMistral & Gemma4B tested; RAG system in development) |
 | Backend      | Notifications          | Implemented    | April 10, 2026 | ✅ Peer-to-peer and broadcast messaging |
-| Backend      | PDF Generation         | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
+| Backend      | PDF Generation         | Implemented    | April 14, 2026 | Enhanced dossier export with allergies, emergency contact, lab results, medical notes |
 | Backend      | File Upload            | Partial        | -              | -     |
 | Mobile       | Login & Auth           | Implemented    | April 4, 2026  | ✅ Emoji → Feather icon |
 | Mobile       | Dashboard (KPIs)       | Implemented    | April 4, 2026  | ✅ Cleaned up, fixed white boxes |
@@ -162,12 +162,14 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | User Management        | Implemented    | -              | -     |
 | Web          | Analytics              | Implemented    | -              | -     |
 | Web          | Logs                   | Implemented    | -              | -     |
-| Web          | Patient Management     | Implemented    | April 10, 2026 | Schema corrected, age calculated from date_of_birth, consolidated datetime |
+| Web          | Patient Management     | Implemented    | April 14, 2026 | Schema corrected, age calculated from date_of_birth, consolidated datetime, dossier export enhanced |
+| Web          | Patient Dossier Export | Implemented    | April 14, 2026 | ✅ Fixed appointment_date field bug, added allergies, emergency contact, lab results, comprehensive PDF |
 | Web          | Appointments           | Implemented    | April 10, 2026 | DateTime consolidated into datetime_scheduled field |
 | Web          | Medical Acts           | Implemented    | April 10, 2026 | Column corrected (act_date), amount as Decimal(10,2) |
 | Web          | Notifications          | Implemented    | April 10, 2026 | ✅ P2P & broadcast messaging with categories |
-| Web          | Chat                   | Implemented    | April 8, 2026  | ✅ Chat history bug fixed (message pairing), response model updated, premium UI redesign |
-| Web          | PDF Generation         | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
+| Web          | Chat                   | Implemented    | April 14, 2026 | ✅ Enhanced with history dropdown, new chat button, feedback system (like/dislike), improved message cards |
+| Web          | Chat Assistant UX      | Implemented    | April 14, 2026 | ✅ Doctor context in header, copy/regenerate/feedback buttons with proper hover visibility |
+| Web          | PDF Generation         | Implemented    | April 14, 2026 | Updated for consolidated datetime/date fields; comprehensive dossier with all patient info |
 | Web          | File Upload            | Not Impl.      | -              | -     |
 
 ---

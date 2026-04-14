@@ -96,51 +96,6 @@
 
 ---
 
-## 📝 Recent Updates (April 10, 2026)
-
-### Lab Results Management (ActResults) - NEW ✨
-- **Backend API**: Complete CRUD REST endpoints for laboratory test results
-  - `POST /api/act-results/` - Create new lab result with validation
-  - `GET /api/act-results/patient/{id}` - Fetch all results for patient (sorted by date)
-  - `GET /api/act-results/act/{id}` - Fetch results for specific medical act
-  - `GET /api/act-results/{id}` - Fetch single result
-  - `PUT /api/act-results/{id}` - Update result fields
-  - `DELETE /api/act-results/{id}` - Delete result with audit logging
-- **Database Model**: ActResult table with 13 fields including result date, value, unit, abnormality flag, category, and audit timestamps
-- **Frontend Integration**:
-  - New LabResultForm modal component for adding results
-  - Lab Results tab in patient detail page with formatted table display
-  - Auto-refresh after result creation via fetchPatient()
-  - Status indicators: Normal (green) / Abnormal (red)
-- **Validation**: Foreign key constraints to medical_acts and patients; Pydantic schema validation on creation
-- **Audit Logging**: All lab result mutations logged via audit_service for compliance
-
-### Doctor Assignment Feature - COMPLETED ✅
-- **Medical Acts**: doctor_id now required field in form (Step 2 - Clinical Details)
-  - Dropdown selector populated from getDoctors() API
-  - Form validation ensures doctor is selected before submission
-- **Detail Modal**: Doctor names display correctly instead of numeric IDs
-  - getDoctorName() helper function maps ID to full name
-  - Loads doctors list on page init via Promise.all()
-
-### Database Schema & Data Integrity Fixes
-- **Consolidated Datetime Fields**: Unified appointment scheduling into single `datetime_scheduled` (DateTime) field for better data consistency.
-- **Removed Age Column**: Patient age now calculated dynamically from `date_of_birth` across all backend and frontend components (web + mobile).
-- **Medical Acts Corrections**: 
-  - Column renamed: `date` → `act_date` (Date type)
-  - Amount field: Changed to `Decimal(10,2)` for currency precision
-  - Doctor assignment: Added `medical_act_staff` junction table for proper many-to-many relationships
-- **Foreign Key Constraints**: Added FK constraints for `doctor_id` (medical_acts → users) ensuring referential integrity.
-- **Impact**: All backend services (analytics, PDF generation), API schemas, and frontend components (web + mobile) updated to use corrected field names and types.
-
-### Frontend UI Fixes
-- **AppointmentForm Success Screen**: Fixed malformed JSX displaying raw code; now properly formats and shows appointment datetime.
-- **All Components Synchronized**: Web (React) and mobile (React Native) components consistently use consolidated datetime fields and calculated age.
-
-### API Validation Updates
-- **Pydantic Type Validators**: Added field validators for `Decimal` amount field to ensure proper JSON serialization (Decimal → float conversion).
-- **Schema Field Mapping**: Corrected all API request/response schemas to match database column names (`act_date`, `datetime_scheduled`).
-
 ### AI & LLM Development
 - **AI Chat Fully Functional**: Chat assistant now working on both web and mobile interfaces.
 - **LLM Model Evaluation**: Active testing of BioMistral and Gemma4B to determine optimal model for clinical workflows.
@@ -263,27 +218,7 @@
 
 ---
 
-## 🎥 Demo
 
-### Web Chat Assistant (April 8, 2026 - Redesigned UI)
-- **Glass morphism panels** with backdrop blur
-- **Gradient animated empty state** (floating pulse effects)
-- **Message bubbles** with response metadata (tokens, model name, timestamp)
-- **Language selector** (FR/EN/AR) with state persistence
-- **Premium animations** on send/receive (cubic-bezier transitions)
-
-### Patient Management
-- **Patient list** with search, filter by appointment status
-- **Patient detail page** with breadcrumb navigation (Patients > [Patient Name])
-- **Medical acts timeline** with attached documents and multi-staff assignments
-- **PDF export** for dossier/reports (triggers native download on mobile)
-
-### Analytics Dashboard
-- **KPI cards** showing patient demographics, consultation rates, revenue
-- **Weekly activity graph** (Recharts line chart)
-- **Demographic breakdown** (age, gender, insurance distribution)
-
----
 
 ## 🚀 Getting Started
 
