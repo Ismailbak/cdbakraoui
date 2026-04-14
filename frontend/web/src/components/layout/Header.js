@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiSearch, FiMenu, FiFileText, FiShield, FiX, FiMessageSquare, FiUser, FiCalendar, FiActivity } from 'react-icons/fi';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { getPatients, getAppointments, getMedicalActs } from '../../api/api';
 import './Header.css';
 
 const navTabs = [
@@ -9,29 +10,6 @@ const navTabs = [
   { path: '/appointments', label: 'Rendez-vous' },
   { path: '/medical-acts', label: 'Actes Médicaux' },
 ];
-
-// Sample searchable data
-const searchableData = {
-  patients: [
-    { id: 1, name: 'Mohamed Alami', diagnosis: 'Polyarthrite rhumatoïde', avatar: '👨' },
-    { id: 2, name: 'Fatima Benali', diagnosis: 'Lupus érythémateux', avatar: '👩' },
-    { id: 3, name: 'Ahmed Tazi', diagnosis: 'Arthrose', avatar: '👨' },
-    { id: 4, name: 'Khadija Mansouri', diagnosis: 'Fibromyalgie', avatar: '👩' },
-    { id: 5, name: 'Youssef El Idrissi', diagnosis: 'Spondylarthrite', avatar: '👨' },
-    { id: 6, name: 'Salma Berrada', diagnosis: 'Sclérodermie', avatar: '👩' },
-  ],
-  appointments: [
-    { id: 1, patient: 'Mohamed Alami', time: '09:00', date: '2026-02-05', type: 'Consultation' },
-    { id: 2, patient: 'Fatima Benali', time: '10:30', date: '2026-02-05', type: 'Suivi' },
-    { id: 3, patient: 'Ahmed Tazi', time: '14:00', date: '2026-02-06', type: 'Contrôle' },
-    { id: 4, patient: 'Nadia Chraibi', time: '15:30', date: '2026-02-07', type: 'Consultation' },
-  ],
-  acts: [
-    { id: 1, name: 'Infiltration épaule', patient: 'Mohamed Alami' },
-    { id: 2, name: 'Ponction articulaire', patient: 'Fatima Benali' },
-    { id: 3, name: 'Échographie articulaire', patient: 'Ahmed Tazi' },
-  ]
-};
 
 function Header() {
   const location = useLocation();
@@ -43,6 +21,30 @@ function Header() {
   const [showResults, setShowResults] = useState(false);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
+  const [allData, setAllData] = useState({ patients: [], appointments: [], acts: [] });
+
+  // Load data on component mount
+  useEffect(() => {
+    const loadSearchData = async () => {
+      try {
+        const [patientsRes, appointmentsRes, actsRes] = await Promise.all([
+          getPatients().catch(() => ({ data: [] })),
+          getAppointments().catch(() => ({ data: [] })),
+          getMedicalActs().catch(() => ({ data: [] }))
+        ]);
+        
+        setAllData({ 
+          patients: Array.isArray(patientsRes?.data) ? patientsRes.data : [],
+          appointments: Array.isArray(appointmentsRes?.data) ? appointmentsRes.data : [],
+          acts: Array.isArray(actsRes?.data) ? actsRes.data : []
+        });
+      } catch (error) {
+        console.error('Error loading search data:', error);
+        setAllData({ patients: [], appointments: [], acts: [] });
+      }
+    };
+    loadSearchData();
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -69,20 +71,55 @@ function Header() {
 
     const lowerQuery = query.toLowerCase();
     
-    const patients = searchableData.patients.filter(p => 
-      p.name.toLowerCase().includes(lowerQuery) || 
-      p.diagnosis.toLowerCase().includes(lowerQuery)
-    ).slice(0, 3);
+    const calculateAge = (dateOfBirth) => {
+      if (!dateOfBirth) return null;
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    };
+    
+    const patients = (Array.isArray(allData.patients) ? allData.patients : [])
+      .filter(p => 
+        (p.first_name?.toLowerCase().includes(lowerQuery) || 
+         p.last_name?.toLowerCase().includes(lowerQuery) ||
+         p.primary_diagnosis?.toLowerCase().includes(lowerQuery))
+      ).slice(0, 3).map(p => {
+        const age = calculateAge(p.date_of_birth);
+        return {
+          id: p.id,
+          name: `${p.first_name} ${p.last_name}`,
+          detail: `${age ? age + ' ans' : ''} • ${p.primary_diagnosis || 'N/A'}`,
+          avatar: (p.gender?.toLowerCase() === 'femme') ? '👩' : '👨'
+        };
+      });
 
-    const appointments = searchableData.appointments.filter(a => 
-      a.patient.toLowerCase().includes(lowerQuery) || 
-      a.type.toLowerCase().includes(lowerQuery)
-    ).slice(0, 3);
+    const appointments = (Array.isArray(allData.appointments) ? allData.appointments : [])
+      .filter(a => 
+        (a.patient?.first_name?.toLowerCase().includes(lowerQuery) || 
+         a.patient?.last_name?.toLowerCase().includes(lowerQuery) ||
+         a.type?.toLowerCase().includes(lowerQuery))
+      ).slice(0, 3).map(a => ({
+        id: a.id,
+        patient: `${a.patient?.first_name} ${a.patient?.last_name}`,
+        time: a.datetime_scheduled ? new Date(a.datetime_scheduled).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-',
+        type: a.type || '-'
+      }));
 
-    const acts = searchableData.acts.filter(a => 
-      a.name.toLowerCase().includes(lowerQuery) || 
-      a.patient.toLowerCase().includes(lowerQuery)
-    ).slice(0, 2);
+    const acts = (Array.isArray(allData.acts) ? allData.acts : [])
+      .filter(a => 
+        (a.name?.toLowerCase().includes(lowerQuery) || 
+         a.patient?.first_name?.toLowerCase().includes(lowerQuery) ||
+         a.patient?.last_name?.toLowerCase().includes(lowerQuery))
+      ).slice(0, 2).map(a => ({
+        id: a.id,
+        name: a.name,
+        patient: `${a.patient?.first_name} ${a.patient?.last_name}`
+      }));
 
     setSearchResults({ patients, appointments, acts });
     setShowResults(true);
@@ -149,7 +186,7 @@ function Header() {
                             <span className="result-avatar">{patient.avatar}</span>
                             <div className="result-info">
                               <span className="result-name">{patient.name}</span>
-                              <span className="result-detail">{patient.diagnosis}</span>
+                              <span className="result-detail">{patient.detail}</span>
                             </div>
                           </div>
                         ))}
