@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendChatMessage, getChatHistory } from '../../api/api';
-import { FiSend, FiLoader, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiSend, FiLoader, FiAlertCircle, FiCheckCircle, FiEdit3, FiTrash2, FiChevronDown } from 'react-icons/fi';
 import './Chat.css';
 
 function Chat({ patientId, currentUser }) {
@@ -9,6 +9,10 @@ function Chat({ patientId, currentUser }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [language, setLanguage] = useState('fr');
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const [chatSessions, setChatSessions] = useState([]);
+  const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(null);
   const messageEndRef = useRef(null);
 
   // Load chat history on component mount
@@ -29,7 +33,8 @@ function Chat({ patientId, currentUser }) {
           id: `${msg.id}-user`,
           role: 'user',
           content: msg.message,
-          timestamp: new Date(msg.created_at)
+          timestamp: new Date(msg.created_at),
+          feedback: null
         },
         {
           id: `${msg.id}-assistant`,
@@ -37,11 +42,28 @@ function Chat({ patientId, currentUser }) {
           content: msg.response,
           tokens: msg.tokens_used,
           model: msg.model,
-          timestamp: new Date(msg.created_at)
+          timestamp: new Date(msg.created_at),
+          feedback: null
         }
       ]).sort((a, b) => a.timestamp - b.timestamp);
       
       setMessages(history);
+      
+      // Extract unique sessions (group by date)
+      const sessions = [];
+      const dateGroups = {};
+      res.data.forEach(msg => {
+        const date = new Date(msg.created_at).toLocaleDateString('fr-FR');
+        if (!dateGroups[date]) {
+          dateGroups[date] = msg;
+          sessions.push({
+            date,
+            timestamp: new Date(msg.created_at),
+            preview: msg.message.substring(0, 50) + (msg.message.length > 50 ? '...' : '')
+          });
+        }
+      });
+      setChatSessions(sessions.reverse().slice(0, 10));
       setError('');
     } catch (err) {
       console.error('Failed to load chat history:', err);
@@ -90,12 +112,36 @@ function Chat({ patientId, currentUser }) {
 
   const handleCopyMessage = (content) => {
     navigator.clipboard.writeText(content);
-    // Could add a toast notification here
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 2000);
   };
 
   const handleRegenerateMessage = (messageId) => {
-    // Find the last user message and regenerate response
     console.log('Regenerate:', messageId);
+    // Implementation: Find last user message and resend
+  };
+
+  const handleFeedback = (messageId, feedbackType) => {
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId ? { ...msg, feedback: feedbackType } : msg
+      )
+    );
+    // Could send feedback to backend
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setInput('');
+    setError('');
+    setShowNewChatConfirm(false);
+  };
+
+  const handleLoadChat = (session) => {
+    setShowHistoryDropdown(false);
+    // In production, fetch specific session from backend using session date
+    // For now, reload all history (already displayed)
+    console.log('Loaded chat session:', session.date);
   };
 
   const handleSend = async () => {
@@ -156,7 +202,56 @@ function Chat({ patientId, currentUser }) {
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <h2>Assistat Médical IA</h2>
+        <div className="header-left">
+          <div className="history-dropdown-wrapper">
+            <button 
+              className="history-btn"
+              onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+              title="Chat History"
+            >
+              <FiChevronDown size={18} /> Historique
+            </button>
+            {showHistoryDropdown && (
+              <div className="history-dropdown">
+                <div className="history-header">
+                  <h4>Conversations Récentes</h4>
+                </div>
+                <div className="history-list">
+                  {chatSessions.length > 0 ? (
+                    chatSessions.map((session, idx) => (
+                      <button 
+                        key={idx}
+                        className="history-item"
+                        onClick={() => handleLoadChat(session)}
+                        title={session.preview}
+                      >
+                        <span className="history-date">{session.date}</span>
+                        <span className="history-preview">{session.preview}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="history-empty">Aucune conversation</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <button 
+            className="new-chat-btn"
+            onClick={() => setShowNewChatConfirm(true)}
+            title="Nouvelle conversation"
+          >
+            <FiEdit3 size={16} /> Nouveau Chat
+          </button>
+        </div>
+        
+        <h2>Assistant Médical IA</h2>
+        
+        <div className="doctor-context">
+          <span className="context-label">Médecin:</span>
+          <span className="doctor-name">{currentUser?.first_name || currentUser?.username || 'Dr. Assistant'}</span>
+        </div>
+        
         <div className="language-selector">
           <label>Langue:</label>
           <select value={language} onChange={(e) => setLanguage(e.target.value)}>
@@ -204,12 +299,36 @@ function Chat({ patientId, currentUser }) {
               )}
               {msg.role === 'assistant' && (
                 <div className="message-actions">
-                  <button className="message-action-btn" title="Copy" onClick={() => handleCopyMessage(msg.content)}>
-                    📋
+                  <button 
+                    className="message-action-btn copy-btn" 
+                    title="Copy" 
+                    onClick={() => handleCopyMessage(msg.content)}
+                  >
+                    {copyFeedback ? '✓' : '📋'}
                   </button>
-                  <button className="message-action-btn" title="Regenerate" onClick={() => handleRegenerateMessage(msg.id)}>
+                  <button 
+                    className="message-action-btn regenerate-btn" 
+                    title="Regenerate" 
+                    onClick={() => handleRegenerateMessage(msg.id)}
+                  >
                     🔄
                   </button>
+                  <div className="message-feedback">
+                    <button 
+                      className={`feedback-btn ${msg.feedback === 'like' ? 'active' : ''}`}
+                      onClick={() => handleFeedback(msg.id, 'like')}
+                      title="Utile"
+                    >
+                      👍
+                    </button>
+                    <button 
+                      className={`feedback-btn ${msg.feedback === 'dislike' ? 'active' : ''}`}
+                      onClick={() => handleFeedback(msg.id, 'dislike')}
+                      title="Non utile"
+                    >
+                      👎
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -262,6 +381,23 @@ function Chat({ patientId, currentUser }) {
       <div className="chat-footer">
         <p>⚕️ Assisté par BioMistral · Cette IA fournie des suggestions, pas des diagnostics définitifs</p>
       </div>
+
+      {showNewChatConfirm && (
+        <div className="modal-backdrop" onClick={() => setShowNewChatConfirm(false)}>
+          <div className="modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <h3>Démarrer une nouvelle conversation?</h3>
+            <p>Les messages actuels seront effacés.</p>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setShowNewChatConfirm(false)}>
+                Annuler
+              </button>
+              <button className="btn-confirm" onClick={handleNewChat}>
+                Nouveau Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
