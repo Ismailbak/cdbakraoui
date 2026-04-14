@@ -51,6 +51,7 @@ function PatientsPage() {
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Tous');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -147,6 +148,21 @@ function PatientsPage() {
     const matchesFilter = selectedFilter === 'Tous' || patient.status === selectedFilter;
     return matchesSearch && matchesFilter;
   });
+
+  // Pagination logic
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  
+  // Reset to page 1 if current page exceeds total pages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [filteredPatients, currentPage, totalPages]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -386,7 +402,7 @@ function PatientsPage() {
                     <SkeletonTableRow columns={9} />
                   </>
                 ) : (
-                  filteredPatients.map(patient => (
+                  paginatedPatients.map(patient => (
                     <tr key={patient.id} className="patient-row" onClick={() => navigate(`/patients/${patient.id}`)}>
                       <td><span className="ipp-badge">{patient.ipp || '-'}</span></td>
                       <td>
@@ -442,16 +458,40 @@ function PatientsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="table-pagination">
-            <span className="pagination-info">Affichage 1-{filteredPatients.length} sur {patients.length}</span>
-            <div className="pagination-buttons">
-              <button className="pagination-btn" disabled>← Précédent</button>
-              <button className="pagination-btn active">1</button>
-              <button className="pagination-btn">2</button>
-              <button className="pagination-btn">3</button>
-              <button className="pagination-btn">Suivant →</button>
+          {totalPages > 1 && (
+            <div className="table-pagination">
+              <span className="pagination-info">Affichage {startIndex + 1}-{Math.min(endIndex, filteredPatients.length)} sur {filteredPatients.length}</span>
+              <div className="pagination-buttons">
+                <button 
+                  className="pagination-btn" 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  title="Page précédente"
+                >
+                  ←
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                <button 
+                  className="pagination-btn" 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  title="Page suivante"
+                >
+                  →
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Add Patient Modal */}
