@@ -62,12 +62,18 @@ function AppointmentsPage() {
   // State for selected day insights modal
   const [insightsModal, setInsightsModal] = useState({ open: false, date: null, appointments: [] });
 
-  // Helper to open insights modal for a day
-  const openDayInsights = (dayObj) => {
+  // Helper to open add appointment form for a clicked day
+  const openDayForAppointment = (dayObj) => {
     if (!dayObj.currentMonth) return;
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
     const dayAppointments = appointments.filter(apt => apt.date === dateStr);
-    setInsightsModal({ open: true, date: dateStr, appointments: dayAppointments });
+    // Open the insights modal which now allows creating appointments
+    setInsightsModal({ open: true, date: dateStr, appointments: dayAppointments, showForm: false });
+  };
+
+  // Helper to toggle form in modal
+  const toggleFormInModal = () => {
+    setInsightsModal(prev => ({ ...prev, showForm: !prev.showForm }));
   };
 
   // Helper to format date for modal
@@ -492,7 +498,7 @@ function AppointmentsPage() {
                   <div
                     key={index}
                     className={`calendar-day full clickable ${!dayObj.currentMonth ? 'other-month' : ''} ${isToday(dayObj.day, dayObj.currentMonth) ? 'today' : ''}`}
-                    onClick={() => openDayInsights(dayObj)}
+                    onClick={() => openDayForAppointment(dayObj)}
                     tabIndex={dayObj.currentMonth ? 0 : -1}
                     style={{ cursor: dayObj.currentMonth ? 'pointer' : 'default', outline: 'none' }}
                   >
@@ -516,38 +522,67 @@ function AppointmentsPage() {
                 );
               })}
             </div>
-            {/* Insights Modal */}
+            {/* Insights Modal with Add Appointment Form */}
             {insightsModal.open && (
-              <div className="modal-overlay" onClick={() => setInsightsModal({ open: false, date: null, appointments: [] })}>
+              <div className="modal-overlay" onClick={() => setInsightsModal({ open: false, date: null, appointments: [], showForm: false })}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
                   <div className="modal-header">
-                    <h2>Rendez-vous du {formatDateForModal(insightsModal.date)}</h2>
-                    <button className="modal-close" onClick={() => setInsightsModal({ open: false, date: null, appointments: [] })}>×</button>
+                    <h2>{insightsModal.showForm ? 'Créer un rendez-vous' : 'Rendez-vous du ' + formatDateForModal(insightsModal.date)}</h2>
+                    <button className="modal-close" onClick={() => setInsightsModal({ open: false, date: null, appointments: [], showForm: false })}>×</button>
                   </div>
-                  <div className="insights-list">
-                    {insightsModal.appointments.length === 0 ? (
-                      <div className="no-appointments">
-                        <FiCalendar className="no-apt-icon" />
-                        <p>Aucun rendez-vous pour cette date</p>
+                  
+                  {/* Show Form if toggled */}
+                  {insightsModal.showForm ? (
+                    <div className="modal-form-wrapper">
+                      <AppointmentForm
+                        defaultDate={insightsModal.date}
+                        onSuccess={() => { 
+                          loadAppointments(); 
+                          toast.success('Rendez-vous créé avec succès'); 
+                          setInsightsModal({ open: false, date: null, appointments: [], showForm: false });
+                        }}
+                        onClose={() => { 
+                          setInsightsModal(prev => ({ ...prev, showForm: false }));
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Show Existing Appointments */}
+                      <div className="insights-list">
+                        {insightsModal.appointments.length === 0 ? (
+                          <div className="no-appointments">
+                            <FiCalendar className="no-apt-icon" />
+                            <p>Aucun rendez-vous pour cette date</p>
+                          </div>
+                        ) : (
+                          insightsModal.appointments.map(apt => (
+                            <div key={apt.id} className="insight-apt-item">
+                              <div className={`apt-chip ${getStatusColor(apt.status)}`}
+                                style={{ marginBottom: 6 }}>
+                                <span className="apt-time">{apt.time}</span>
+                                <span className="apt-patient">{apt.patientName}</span>
+                              </div>
+                              <div className="apt-details">
+                                <span className="apt-type">{apt.type}</span>
+                                <span className={`apt-status ${getStatusColor(apt.status)}`}>{getStatusLabel(apt.status)}</span>
+                                {apt.notes && <p className="apt-notes">{apt.notes}</p>}
+                                {apt.patientPhone && <span className="apt-phone"><FiPhone /> {apt.patientPhone}</span>}
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
-                    ) : (
-                      insightsModal.appointments.map(apt => (
-                        <div key={apt.id} className="insight-apt-item">
-                          <div className={`apt-chip ${getStatusColor(apt.status)}`}
-                            style={{ marginBottom: 6 }}>
-                            <span className="apt-time">{apt.time}</span>
-                            <span className="apt-patient">{apt.patientName}</span>
-                          </div>
-                          <div className="apt-details">
-                            <span className="apt-type">{apt.type}</span>
-                            <span className={`apt-status ${getStatusColor(apt.status)}`}>{getStatusLabel(apt.status)}</span>
-                            {apt.notes && <p className="apt-notes">{apt.notes}</p>}
-                            {apt.patientPhone && <span className="apt-phone"><FiPhone /> {apt.patientPhone}</span>}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                      
+                      {/* Add Appointment Button */}
+                      <button 
+                        className="modal-add-appointment-btn" 
+                        onClick={toggleFormInModal}
+                      >
+                        <FiPlus /> Ajouter un rendez-vous
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
