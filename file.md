@@ -166,8 +166,10 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | Patient Search         | Implemented    | April 14, 2026 | ✅ Real-time search across patients, appointments, medical acts; age display in results |
 | Web          | Patient Pagination     | Implemented    | April 14, 2026 | ✅ 15 items/page, teal gradient active state, dynamic page buttons |
 | Web          | Patient Dossier Export | Implemented    | April 14, 2026 | ✅ Fixed appointment_date field bug, added allergies, emergency contact, lab results, comprehensive PDF |
-| Web          | Appointments           | Implemented    | April 14, 2026 | ✅ Fixed datetime_scheduled format (ISO), confirm/cancel/edit all working without 422 errors |
-| Web          | Appointment Edit       | Implemented    | April 14, 2026 | ✅ Pre-filled form modal, uses AppointmentForm component, patient name display corrected |
+| Web          | Appointments           | Implemented    | April 15, 2026 | ✅ Fixed datetime_scheduled format (ISO), confirm/cancel/edit all working without 422 errors |
+| Web          | Appointment Edit       | Implemented    | April 15, 2026 | ✅ Pre-filled form modal, uses AppointmentForm component, patient name display corrected |
+| Web          | Calendar Day Click     | Implemented    | April 15, 2026 | ✅ Click any day in calendar grid to create appointment with pre-filled date; view existing appointments in modal |
+| Web          | Calendar Appointment Creation | Implemented | April 15, 2026 | ✅ Modal integration with AppointmentForm; toggle between view/form modes; "Ajouter un rendez-vous" button |
 | Web          | Medical Acts           | Implemented    | April 14, 2026 | ✅ Pink theme applied (all green → #fca5a5); header, buttons, step indicators, icons updated |
 | Web          | Medical Acts Form      | Implemented    | April 14, 2026 | ✅ Complete pink color scheme (header, icon, steps, inputs, buttons, chips, success state) |
 | Web          | Notifications          | Implemented    | April 10, 2026 | ✅ P2P & broadcast messaging with categories |
