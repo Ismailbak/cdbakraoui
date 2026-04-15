@@ -248,16 +248,18 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
     try {
       const { getMedicalActPdf } = await import('../../api/api');
       const response = await getMedicalActPdf(act.id);
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const printWindow = window.open(url);
       if (printWindow) {
         printWindow.onload = () => {
           printWindow.focus();
           printWindow.print();
+          window.URL.revokeObjectURL(url);
         };
       }
     } catch (err) {
-      console.error(err);
+      console.error('Print error:', err);
       alert('Erreur lors de la génération de l\'impression.');
     }
   };
@@ -267,15 +269,17 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
     try {
       const { getMedicalActPdf } = await import('../../api/api');
       const response = await getMedicalActPdf(act.id);
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `acte_medical_${act.id}.pdf`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error(err);
+      console.error('Download error:', err);
       alert('Erreur lors du téléchargement du PDF.');
     }
   };
