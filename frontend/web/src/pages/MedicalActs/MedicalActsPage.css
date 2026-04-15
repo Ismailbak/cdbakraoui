@@ -288,6 +288,10 @@
   background: #f8fafc;
   padding: 10px;
   border-radius: 12px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .act-card-footer {
