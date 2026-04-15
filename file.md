@@ -172,11 +172,13 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | Calendar Appointment Creation | Implemented | April 15, 2026 | ✅ Modal integration with AppointmentForm; toggle between view/form modes; "Ajouter un rendez-vous" button |
 | Web          | Medical Acts           | Implemented    | April 14, 2026 | ✅ Pink theme applied (all green → #fca5a5); header, buttons, step indicators, icons updated |
 | Web          | Medical Acts Form      | Implemented    | April 14, 2026 | ✅ Complete pink color scheme (header, icon, steps, inputs, buttons, chips, success state) |
+| Web          | Medical Acts PDF       | Implemented    | April 15, 2026 | ✅ Complete rewrite with lab results section, black text, comprehensive None handling; includes diagnostics, treatments, lab results with table (date, analysis, value, unit, status), and notes |
+| Web          | Medical Acts Diagnostics Spacing | Implemented | April 15, 2026 | ✅ Flex layout with 24px gap for better readability of diagnostics and treatment information |
 | Web          | Notifications          | Implemented    | April 10, 2026 | ✅ P2P & broadcast messaging with categories |
 | Web          | Chat                   | Implemented    | April 14, 2026 | ✅ Language selector removed; AI auto-detects; doctor last_name shown in header (uppercase) |
 | Web          | Chat History           | Implemented    | April 14, 2026 | ✅ History dropdown functional; recent conversations with date grouping and previews |
 | Web          | Chat Assistant UX      | Implemented    | April 14, 2026 | ✅ Doctor context in header, copy/regenerate/feedback buttons with proper hover visibility |
-| Web          | PDF Generation         | Implemented    | April 14, 2026 | Updated for consolidated datetime/date fields; comprehensive dossier with all patient info |
+| Web          | PDF Generation         | Implemented    | April 15, 2026 | ✅ Enhanced medical acts PDF service: lab results table integration, professional black text, robust None value handling |
 | Web          | File Upload            | Not Impl.      | -              | -     |
 
 ---
