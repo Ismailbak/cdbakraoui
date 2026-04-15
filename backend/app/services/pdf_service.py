@@ -24,85 +24,176 @@ def calculate_age(date_of_birth):
 
 def generate_medical_act_pdf(act_data: dict):
     """
-    Generates a professional PDF for a medical act.
-    act_data should contain: patient_name, act_type, date, diagnosis, report, treatment, amount, etc.
+    Generates a comprehensive professional PDF for a medical act with ALL information.
+    act_data contains: id, patient_id, patient_name, patient_age, act_type, act_date, 
+    category, status, report, notes, description, amount, doctor_id, diagnoses, treatments
     """
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
     
     styles = getSampleStyleSheet()
-    title_style = styles['Heading1']
-    subtitle_style = styles['Heading2']
-    normal_style = styles['Normal']
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, spaceAfter=20, alignment=1, textColor=colors.black)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading2'], fontSize=14, spaceBefore=15, spaceAfter=10, textColor=colors.black, fontName='Helvetica-Bold')
+    normal_style = ParagraphStyle('Normal', parent=styles['Normal'], textColor=colors.black)
+    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=11, fontName='Helvetica-Bold', textColor=colors.black)
     
-    # Custom styles
-    header_style = ParagraphStyle(
-        'HeaderStyle',
-        parent=styles['Normal'],
-        fontSize=10,
-        textColor=colors.grey,
-        spaceAfter=12
-    )
-    
-    label_style = ParagraphStyle(
-        'LabelStyle',
-        parent=styles['Normal'],
-        fontSize=11,
-        fontName='Helvetica-Bold',
-        spaceAfter=4
-    )
-
     elements = []
 
-    # 1. Header / Clinic Info
+    # Header
     elements.append(Paragraph("<b>CLINIQUE MÉDICALE RHUMATO-AI</b>", title_style))
-    elements.append(Paragraph("Casablanca, Maroc | Tel: +212 522 000 000", header_style))
+    elements.append(Paragraph("Casablanca, Maroc | Tel: +212 522 000 000", ParagraphStyle('Header', parent=styles['Normal'], fontSize=9, textColor=colors.black, alignment=1)))
+    elements.append(Spacer(1, 12))
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.black, spaceBefore=10, spaceAfter=20))
+    
+    # Document Title
+    elements.append(Paragraph(f"RAPPORT D'ACTE MÉDICAL", subtitle_style))
     elements.append(Spacer(1, 12))
     
-    # 2. Document Title
-    elements.append(Paragraph(f"RAPPORT D'ACTE MÉDICAL: {act_data.get('act_type', 'Consultation').upper()}", subtitle_style))
-    elements.append(Spacer(1, 20))
-    
-    # 3. Patient Info Table
-    date_str = act_data.get('date', datetime.now().strftime('%Y-%m-%d'))
-    patient_info = [
-        [Paragraph("<b>Patient:</b>", normal_style), Paragraph(act_data.get('patient_name', 'N/A'), normal_style)],
-        [Paragraph("<b>Date:</b>", normal_style), Paragraph(date_str, normal_style)],
-        [Paragraph("<b>ID Patient:</b>", normal_style), Paragraph(str(act_data.get('patient_id', 'N/A')), normal_style)]
+    # 1. Act Header Info - Type, Category, Status
+    header_info = [
+        [Paragraph("<b>Type d'Acte:</b>", label_style), Paragraph(str(act_data.get('act_type') or 'N/A'), normal_style)],
+        [Paragraph("<b>Catégorie:</b>", label_style), Paragraph(str(act_data.get('category') or 'N/A'), normal_style)],
+        [Paragraph("<b>Statut:</b>", label_style), Paragraph(str(act_data.get('status') or 'N/A'), normal_style)],
+        [Paragraph("<b>Date:</b>", label_style), Paragraph(str(act_data.get('act_date') or 'N/A'), normal_style)],
+        [Paragraph("<b>Montant:</b>", label_style), Paragraph(f"{act_data.get('amount') or 'N/A'} DH" if act_data.get('amount') else "N/A", normal_style)],
     ]
     
-    t = Table(patient_info, colWidths=[100, 350])
-    t.setStyle(TableStyle([
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('PADDING', (0, 0), (-1, -1), 6),
-        ('BACKGROUND', (0, 0), (0, -1), colors.whitesmoke),
+    t1 = Table(header_info, colWidths=[120, 330])
+    t1.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+        ('PADDING', (0, 0), (-1, -1), 8),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
     ]))
-    elements.append(t)
+    elements.append(t1)
     elements.append(Spacer(1, 20))
     
-    # 4. Clinical Details
-    sections = [
-        ("Diagnostic", act_data.get('diagnosis')),
-        ("Rapport d'examen", act_data.get('report')),
-        ("Traitement / Prescription", act_data.get('treatment')),
-        ("Notes complémentaires", act_data.get('notes'))
+    # 2. Patient Information
+    elements.append(Paragraph("INFORMATIONS PATIENT", subtitle_style))
+    patient_info = [
+        [Paragraph("<b>Nom:</b>", label_style), Paragraph(str(act_data.get('patient_name') or 'N/A'), normal_style)],
+        [Paragraph("<b>ID Patient:</b>", label_style), Paragraph(str(act_data.get('patient_id') or 'N/A'), normal_style)],
     ]
     
-    for title, content in sections:
-        if content:
-            elements.append(Paragraph(f"<b>{title}</b>", normal_style))
-            elements.append(Spacer(1, 6))
-            elements.append(Paragraph(content.replace('\n', '<br/>'), normal_style))
-            elements.append(Spacer(1, 12))
-            
-    # 5. Billing info if exists
-    if act_data.get('amount'):
-        elements.append(Spacer(1, 10))
-        elements.append(Paragraph(f"<b>Montant de l'acte:</b> {act_data.get('amount')} DH", normal_style))
+    if act_data.get('patient_age'):
+        age = calculate_age(act_data.get('patient_age'))
+        patient_info.append([Paragraph("<b>Âge:</b>", label_style), Paragraph(f"{age} ans" if age else "N/A", normal_style)])
+    
+    t2 = Table(patient_info, colWidths=[120, 330])
+    t2.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+        ('PADDING', (0, 0), (-1, -1), 8),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+    ]))
+    elements.append(t2)
+    elements.append(Spacer(1, 20))
+    
+    # 3. Diagnoses
+    if act_data.get('diagnoses') and len(act_data['diagnoses']) > 0:
+        elements.append(Paragraph("DIAGNOSTICS", subtitle_style))
+        diagnoses_data = []
+        for i, diag in enumerate(act_data['diagnoses'], 1):
+            diag_text = f"<b>{diag.get('label') or 'N/A'}</b><br/>Type: {diag.get('type') or 'N/A'}<br/>{diag.get('notes') or ''}"
+            diagnoses_data.append([
+                Paragraph(f"<b>{i}.</b>", label_style),
+                Paragraph(diag_text, normal_style)
+            ])
         
-    # 6. Footer / Signature placeholder
-    elements.append(Spacer(1, 50))
-    elements.append(Paragraph("Cachet et signature du médecin", ParagraphStyle('Sign', parent=styles['Normal'], alignment=1)))
+        t3 = Table(diagnoses_data, colWidths=[30, 420])
+        t3.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f5f5f5")),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ]))
+        elements.append(t3)
+        elements.append(Spacer(1, 20))
+    
+    # 4. Description / Report
+    if act_data.get('description'):
+        elements.append(Paragraph("DESCRIPTION", subtitle_style))
+        elements.append(Paragraph(str(act_data.get('description') or '').replace('\n', '<br/>'), normal_style))
+        elements.append(Spacer(1, 12))
+    
+    if act_data.get('report'):
+        elements.append(Paragraph("RAPPORT D'EXAMEN", subtitle_style))
+        elements.append(Paragraph(str(act_data.get('report') or '').replace('\n', '<br/>'), normal_style))
+        elements.append(Spacer(1, 12))
+    
+    # 5. Treatments
+    if act_data.get('treatments') and len(act_data['treatments']) > 0:
+        elements.append(Paragraph("TRAITEMENTS / PRESCRIPTIONS", subtitle_style))
+        treatments_data = []
+        for i, treatment in enumerate(act_data['treatments'], 1):
+            treatment_text = f"<b>{treatment.get('drug_name') or 'N/A'}</b>"
+            if treatment.get('dosage'):
+                treatment_text += f"<br/>Dosage: {treatment['dosage']}"
+            if treatment.get('frequency'):
+                treatment_text += f"<br/>Fréquence: {treatment['frequency']}"
+            if treatment.get('duration'):
+                treatment_text += f"<br/>Durée: {treatment['duration']}"
+            if treatment.get('notes'):
+                treatment_text += f"<br/>Notes: {treatment['notes']}"
+            
+            treatments_data.append([
+                Paragraph(f"<b>{i}.</b>", label_style),
+                Paragraph(treatment_text, normal_style)
+            ])
+        
+        t5 = Table(treatments_data, colWidths=[30, 420])
+        t5.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f5f5f5")),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ]))
+        elements.append(t5)
+        elements.append(Spacer(1, 20))
+    
+    # 6. Lab Results
+    if act_data.get('lab_results') and len(act_data['lab_results']) > 0:
+        elements.append(Paragraph("RÉSULTATS DE LABORATOIRE", subtitle_style))
+        lab_data = [
+            [
+                Paragraph("<b>Date</b>", label_style),
+                Paragraph("<b>Analyse</b>", label_style),
+                Paragraph("<b>Résultat</b>", label_style),
+                Paragraph("<b>Unité</b>", label_style),
+                Paragraph("<b>Statut</b>", label_style),
+            ]
+        ]
+        for lab in act_data['lab_results']:
+            status_text = "Anormal" if lab.get('is_abnormal') else "Normal"
+            lab_data.append([
+                Paragraph(str(lab.get('result_date') or 'N/A'), normal_style),
+                Paragraph(str(lab.get('result_name') or 'N/A'), normal_style),
+                Paragraph(str(lab.get('result_value') or 'N/A'), normal_style),
+                Paragraph(str(lab.get('result_unit') or '-'), normal_style),
+                Paragraph(status_text or 'N/A', normal_style),
+            ])
+        
+        t_lab = Table(lab_data, colWidths=[80, 100, 80, 80, 100])
+        t_lab.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f5f5f5")),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
+        ]))
+        elements.append(t_lab)
+        elements.append(Spacer(1, 20))
+    
+    # 7. Additional Notes
+    if act_data.get('notes'):
+        elements.append(Paragraph("NOTES COMPLÉMENTAIRES", subtitle_style))
+        elements.append(Paragraph(str(act_data.get('notes') or '').replace('\n', '<br/>'), normal_style))
+        elements.append(Spacer(1, 20))
+    
+    # Footer
+    elements.append(Spacer(1, 30))
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.black, spaceBefore=10, spaceAfter=10))
+    elements.append(Paragraph(f"Document généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.black, alignment=1)))
     
     doc.build(elements)
     buffer.seek(0)
