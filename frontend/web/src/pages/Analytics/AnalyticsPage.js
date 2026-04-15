@@ -7,6 +7,7 @@ import {
   FiTrendingUp, FiDownload, FiCalendar, FiUsers, FiDollarSign, 
   FiActivity, FiPieChart, FiBarChart2, FiFileText, FiFilter 
 } from 'react-icons/fi';
+import jsPDF from 'jspdf';
 import Layout from '../../components/layout/Layout';
 import { SkeletonCard, SkeletonChart } from '../../components/common';
 import { getAnalyticsSummary } from '../../api/api';
@@ -24,7 +25,7 @@ function AnalyticsPage() {
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    getAnalyticsSummary()
+    getAnalyticsSummary(dateRange)
       .then((analyticsRes) => {
         if (!cancelled) {
           setSummary(analyticsRes.data);
@@ -38,7 +39,7 @@ function AnalyticsPage() {
         }
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [dateRange]);
 
   const totalPatients = summary?.total_patients ?? 0;
   const avgAge = summary?.avg_age ?? 0;
@@ -50,6 +51,231 @@ function AnalyticsPage() {
   const activityTrendData = summary?.activity_trends ?? [];
   const monthlyRevenueData = summary?.revenue_trends ?? [];
   const topTreatmentsData = summary?.treatments ?? [];
+
+  const handleExportPDF = () => {
+    if (!summary) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 15;
+    const margin = 15;
+
+    // Helper function to add a table
+    const addTable = (columns, data, startY, headerColor) => {
+      const colWidth = (pageWidth - 2 * margin) / columns.length;
+      let y = startY;
+
+      // Header
+      doc.setFillColor(...headerColor);
+      doc.setTextColor(255);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(10);
+
+      columns.forEach((col, i) => {
+        doc.rect(margin + i * colWidth, y, colWidth, 8, 'F');
+        doc.text(col, margin + i * colWidth + 2, y + 6, { maxWidth: colWidth - 4 });
+      });
+
+      y += 8;
+
+      // Body
+      doc.setTextColor(0);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+
+      data.forEach((row, rowIndex) => {
+        if (y > pageHeight - 20) {
+          doc.addPage();
+          y = 15;
+        }
+
+        const rowHeight = 7;
+        if (rowIndex % 2 === 0) {
+          doc.setFillColor(245, 245, 245);
+          doc.rect(margin, y, pageWidth - 2 * margin, rowHeight, 'F');
+        }
+
+        row.forEach((cell, i) => {
+          doc.text(String(cell), margin + i * colWidth + 2, y + 5.5, { maxWidth: colWidth - 4 });
+        });
+
+        y += rowHeight;
+      });
+
+      return y + 5;
+    };
+
+    // ===== PAGE 1: COVER PAGE & SUMMARY =====
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('Rapports & Analytiques', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(100);
+    doc.text(`Analyses détaillées de votre activité médicale`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
+
+    doc.setTextColor(150);
+    doc.setFontSize(10);
+    doc.text(`Période: ${dateRange}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 3;
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Summary Stats Box
+    doc.setDrawColor(52, 182, 244);
+    doc.setFillColor(219, 239, 255);
+    doc.rect(margin, yPosition, pageWidth - 2 * margin, 45, 'FD');
+
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Statistiques Principales', margin + 5, yPosition + 7);
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    yPosition += 13;
+    doc.text(`• Patients traités: ${totalPatients}`, margin + 10, yPosition);
+    yPosition += 6;
+    doc.text(`• Âge moyen: ${avgAge.toFixed(1)} ans`, margin + 10, yPosition);
+    yPosition += 6;
+    doc.text(`• Diagnostics courants: ${commonDiagnoses.length}`, margin + 10, yPosition);
+    yPosition += 15;
+
+    // ===== SECTION 1: DIAGNOSTICS =====
+    yPosition += 5;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(52, 182, 244);
+    doc.text('1. RÉPARTITION DES DIAGNOSTICS', margin, yPosition);
+    yPosition += 8;
+
+    if (commonDiagnoses.length > 0) {
+      const diagnosisData = commonDiagnoses.map((name, index) => [String(index + 1), name]);
+      yPosition = addTable(['#', 'Diagnostic'], diagnosisData, yPosition, [52, 182, 244]);
+    }
+
+    // ===== SECTION 2: TREATMENTS =====
+    yPosition += 3;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(16, 185, 129);
+    doc.text('2. TRAITEMENTS LES PLUS PRESCRITS', margin, yPosition);
+    yPosition += 8;
+
+    if (topTreatmentsData.length > 0) {
+      const treatmentData = topTreatmentsData.slice(0, 10).map((treatment, index) => [
+        String(index + 1),
+        treatment.name,
+        String(treatment.count || 0),
+        `${treatment.percentage || 0}%`
+      ]);
+      yPosition = addTable(['Rang', 'Traitement', 'Nombre', '%'], treatmentData, yPosition, [16, 185, 129]);
+    }
+
+    // ===== PAGE 2: ACTIVITY & REVENUE =====
+    if (activityTrendData.length > 0 || monthlyRevenueData.length > 0) {
+      doc.addPage();
+      yPosition = 15;
+
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(139, 92, 246);
+      doc.text('3. TENDANCE D\'ACTIVITÉ (Derniers 12 mois)', margin, yPosition);
+      yPosition += 8;
+
+      if (activityTrendData.length > 0) {
+        const activityData = activityTrendData.slice(0, 12).map(item => [
+          item.month || 'N/A',
+          String(item.actes || 0),
+          String(item.rdv || 0)
+        ]);
+        yPosition = addTable(['Mois', 'Actes', 'RDV'], activityData, yPosition, [139, 92, 246]);
+      }
+
+      // Revenue Section
+      yPosition += 3;
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(59, 130, 246);
+      doc.text('4. ÉVOLUTION DES REVENUS', margin, yPosition);
+      yPosition += 8;
+
+      if (monthlyRevenueData.length > 0) {
+        const revenueData = monthlyRevenueData.slice(0, 12).map(item => [
+          item.month || 'N/A',
+          (item.revenue || 0).toLocaleString('fr-FR'),
+          String(item.patients || 0)
+        ]);
+        yPosition = addTable(['Mois', 'Revenus (DH)', 'Patients'], revenueData, yPosition, [59, 130, 246]);
+      }
+    }
+
+    // ===== PAGE 3: DEMOGRAPHICS =====
+    if (ageDistributionData.length > 0 || weeklyAppointmentsData.length > 0) {
+      doc.addPage();
+      yPosition = 15;
+
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(236, 72, 153);
+      doc.text('5. DÉMOGRAPHIE DES PATIENTS', margin, yPosition);
+      yPosition += 8;
+
+      if (ageDistributionData.length > 0) {
+        const demoData = ageDistributionData.map(item => [
+          item.age || 'N/A',
+          String(item.male || 0),
+          String(item.female || 0)
+        ]);
+        yPosition = addTable(['Groupe d\'âge', 'Hommes', 'Femmes'], demoData, yPosition, [236, 72, 153]);
+      }
+
+      // Weekly Appointments
+      yPosition += 3;
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(75, 85, 99);
+      doc.text('6. RENDEZ-VOUS PAR JOUR (Cette semaine)', margin, yPosition);
+      yPosition += 8;
+
+      if (weeklyAppointmentsData.length > 0) {
+        const weeklyData = weeklyAppointmentsData.map(item => [
+          item.day || 'N/A',
+          String(item.consultations || 0),
+          String(item.suivis || 0),
+          String(item.urgences || 0)
+        ]);
+        yPosition = addTable(['Jour', 'Consultations', 'Suivis', 'Urgences'], weeklyData, yPosition, [75, 85, 99]);
+      }
+    }
+
+    // ===== FOOTER ON ALL PAGES =====
+    const pageCount = doc.internal.pages.length - 1;
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      
+      // Page number
+      doc.text(`Page ${i} sur ${pageCount}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+      
+      // Footer line
+      doc.setDrawColor(200);
+      doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+      
+      // Footer text
+      doc.setFontSize(7);
+      doc.text('Médical AI - Rapport Généré Automatiquement', margin, pageHeight - 5);
+      doc.text(`© ${new Date().getFullYear()} - Tous droits réservés`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+    }
+
+    // Save PDF
+    doc.save(`Rapport_Analytiques_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <Layout>
@@ -71,7 +297,7 @@ function AnalyticsPage() {
                 <option value="1year">Cette année</option>
               </select>
             </div>
-            <button className="export-btn">
+            <button className="export-btn" onClick={handleExportPDF}>
               <FiDownload />
               <span>Exporter PDF</span>
             </button>

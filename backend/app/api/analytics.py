@@ -87,8 +87,9 @@ class AnalyticsSummary(BaseModel):
 def get_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker(["admin", "doctor", "department_head"])),
+    date_range: str = "6months"
 ):
-    stats = analytics_service.get_summary_stats(db)
+    stats = analytics_service.get_summary_stats(db, date_range=date_range)
     return stats
 
 

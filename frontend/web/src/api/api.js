@@ -91,7 +91,7 @@ export const getChatHistory = (patientId = null, limit = 50) => {
 };
 
 // Analytics & Notifications
-export const getAnalyticsSummary = () => api.get('/analytics/summary');
+export const getAnalyticsSummary = (dateRange = '6months') => api.get('/analytics/summary', { params: { date_range: dateRange } });
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
 export const getNotifications = () => api.get('/notifications/');
 export const createNotification = (data) => api.post('/notifications/', data);
