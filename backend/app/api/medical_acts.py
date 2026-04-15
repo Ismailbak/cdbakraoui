@@ -604,23 +604,66 @@ def get_act_pdf(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
 ):
-    """Generates and returns a professional PDF for the medical act."""
+    """Generates and returns a professional PDF for the medical act with ALL information."""
     row = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Medical act not found")
         
     patient = db.query(PatientModel).filter(PatientModel.id == row.patient_id).first()
     
-    # Prepare data for the PDF service
+    # Fetch diagnoses
+    diagnoses = db.query(ActDiagnosisModel).filter(ActDiagnosisModel.act_id == act_id).all()
+    diagnoses_list = [
+        {
+            "label": d.diagnosis_label,
+            "notes": d.diagnosis_notes,
+            "type": d.diagnosis_type
+        } for d in diagnoses
+    ]
+    
+    # Fetch treatments
+    treatments = db.query(ActTreatmentModel).filter(ActTreatmentModel.act_id == act_id).all()
+    treatments_list = [
+        {
+            "drug_name": t.drug_name,
+            "dosage": t.dosage,
+            "frequency": t.frequency,
+            "duration": t.duration,
+            "notes": t.notes
+        } for t in treatments
+    ]
+    
+    # Fetch lab results for the patient
+    from app.models.act_result import ActResult as ActResultModel
+    lab_results = db.query(ActResultModel).filter(ActResultModel.patient_id == row.patient_id).all()
+    lab_results_list = [
+        {
+            "result_name": lr.result_name,
+            "result_value": lr.result_value,
+            "result_unit": lr.result_unit,
+            "result_date": lr.result_date,
+            "is_abnormal": lr.is_abnormal
+        } for lr in lab_results
+    ]
+    
+    # Prepare complete data for the PDF service
     act_data = {
         "id": row.id,
         "patient_id": row.patient_id,
         "patient_name": f"{patient.first_name} {patient.last_name}" if patient else "Inconnu",
+        "patient_age": patient.date_of_birth if patient else None,
         "act_type": row.act_type,
         "act_date": row.act_date,
+        "category": row.category or "Non spécifié",
+        "status": row.status or "En cours",
         "report": row.report,
         "notes": row.notes,
-        "amount": row.amount
+        "description": row.description,
+        "amount": row.amount,
+        "doctor_id": row.doctor_id,
+        "diagnoses": diagnoses_list,
+        "treatments": treatments_list,
+        "lab_results": lab_results_list,
     }
     
     from app.services.pdf_service import generate_medical_act_pdf
