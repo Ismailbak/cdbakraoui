@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts, act_results
 from app.database import engine, Base
 from app.models import user, patient, appointment, medical_act, act_result, notification, audit  # noqa: F401 - register models
 from app.models.chat_message import ChatMessage  # noqa: F401 - register model
 from app.models.llm import llm
 from app.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
+from pathlib import Path
 
 app = FastAPI(
     title="Medical AI Assistant",
@@ -32,6 +34,11 @@ app.include_router(act_results.router, prefix="/api/act-results", tags=["act-res
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+
+# Serve static files (uploads)
+uploads_dir = Path("data/uploads")
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 
 @app.on_event("startup")

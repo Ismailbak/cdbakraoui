@@ -93,6 +93,19 @@ export const getChatHistory = (patientId = null, limit = 50) => {
 // Analytics & Notifications
 export const getAnalyticsSummary = (dateRange = '6months') => api.get('/analytics/summary', { params: { date_range: dateRange } });
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
+
+// User Profile & Security
+export const changePassword = (currentPassword, newPassword) => api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword });
+export const getUserActivity = () => api.get('/auth/activity');
+export const uploadProfilePicture = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/auth/upload-profile-picture', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
 export const getNotifications = () => api.get('/notifications/');
 export const createNotification = (data) => api.post('/notifications/', data);
 export const markNotificationRead = (id) => api.post(`/notifications/read/${id}`);

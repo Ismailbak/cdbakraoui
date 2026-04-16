@@ -17,3 +17,4 @@ class User(Base):
     specialty = Column(String(100), nullable=True)
     phone = Column(String(30), nullable=True)
     department = Column(String(100), nullable=True)
+    profile_picture = Column(String(255), nullable=True)

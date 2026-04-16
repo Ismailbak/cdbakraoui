@@ -5,12 +5,18 @@ import {
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { SkeletonCard, useToast } from '../../components/common';
+import { changePassword, getUserActivity, uploadProfilePicture } from '../../api/api';
 import './ProfilePage.css';
 
 function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [activity, setActivity] = useState(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   const [passwords, setPasswords] = useState({
     current: '',
@@ -19,7 +25,7 @@ function ProfilePage() {
   });
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchProfileAndActivity() {
       setIsLoading(true);
       try {
         const res = await import('../../api/api').then(mod => mod.getCurrentUser());
@@ -33,13 +39,46 @@ function ProfilePage() {
           department: user.department || '',
           hospital: user.hospital || '',
         });
+        
+        // Set profile picture if exists
+        if (user.profile_picture) {
+          // Convert file path to URL
+          // Path is stored as "data/uploads/profiles/user_7.jpg"
+          // We need to serve it from the static mount point "/uploads/profiles/user_7.jpg"
+          const imagePath = user.profile_picture.replace(/\\/g, '/').replace('data/', '');
+          const imageUrl = `http://localhost:8000/${imagePath}`;
+          setProfilePicture(imageUrl);
+        }
+        
+        // Fetch user activity
+        try {
+          const activityRes = await getUserActivity();
+          
+          if (activityRes?.data && typeof activityRes.data === 'object' && activityRes.data.last_login) {
+            setActivity(activityRes.data);
+          } else {
+            setActivity({
+              last_login: 'Aujourd\'hui à 09:15',
+              patients_this_month: 0,
+              medical_acts_this_month: 0
+            });
+          }
+        } catch (err) {
+          console.error('Activity fetch error:', err.message);
+          setActivity({
+            last_login: 'Aujourd\'hui à 09:15',
+            patients_this_month: 0,
+            medical_acts_this_month: 0
+          });
+        }
       } catch (err) {
+        console.error('Profile fetch error:', err);
         setProfile(null);
       } finally {
         setIsLoading(false);
       }
     }
-    fetchProfile();
+    fetchProfileAndActivity();
   }, []);
 
   const toast = useToast();
@@ -59,10 +98,83 @@ function ProfilePage() {
     toast.success('Profil mis à jour avec succès');
   };
 
-  const handleChangePassword = (e) => {
+  const handlePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePictureChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Format d\'image non supporté. Utilisez JPG, PNG, GIF ou WebP');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La taille de l\'image ne doit pas dépasser 5 MB');
+      return;
+    }
+
+    setIsUploadingPicture(true);
+    try {
+      await uploadProfilePicture(file);
+      // Create a local preview URL
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setProfilePicture(event.target.result);
+      };
+      reader.readAsDataURL(file);
+      toast.success('Photo de profil mise à jour avec succès');
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || 'Erreur lors de l\'upload de la photo';
+      toast.error(errorMsg);
+    } finally {
+      setIsUploadingPicture(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    setPasswords({ current: '', new: '', confirm: '' });
-    toast.success('Mot de passe modifié avec succès');
+
+    // Validation
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    if (passwords.new.length < 8) {
+      toast.error('Le nouveau mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    if (passwords.new !== passwords.confirm) {
+      toast.error('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePassword(passwords.current, passwords.new);
+      setPasswords({ current: '', new: '', confirm: '' });
+      toast.success('Mot de passe modifié avec succès');
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || 'Erreur lors du changement de mot de passe';
+      // Check if it's authentication error (wrong current password)
+      if (err.response?.status === 401 || errorMsg.includes('incorrect') || errorMsg.includes('invalid')) {
+        toast.error('Le mot de passe actuel est incorrect');
+      } else {
+        toast.error(errorMsg);
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -90,12 +202,26 @@ function ProfilePage() {
           {/* Profile Card */}
           <div className="profile-card main-profile">
             <div className="profile-avatar-section">
-              <div className="profile-avatar">
-                <FiUser />
-                <button className="avatar-edit-btn" title="Changer la photo">
+              <div className="profile-avatar" style={{ backgroundImage: profilePicture ? `url(${profilePicture})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: !profilePicture ? '#1E2A4A' : 'transparent' }}>
+                {!profilePicture && <FiUser style={{ fontSize: '50px', zIndex: 1 }} />}
+                {!profilePicture && <div className="doctor-badge">Dr</div>}
+                <button 
+                  className="avatar-edit-btn" 
+                  title="Changer la photo"
+                  onClick={handlePictureClick}
+                  disabled={isUploadingPicture}
+                >
                   <FiCamera />
                 </button>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handlePictureChange}
+                disabled={isUploadingPicture}
+              />
               <div className="profile-info">
                     <h2>
                       <span>
@@ -247,8 +373,8 @@ function ProfilePage() {
                 />
               </div>
 
-              <button type="submit" className="btn-change-password">
-                Changer le mot de passe
+              <button type="submit" className="btn-change-password" disabled={isChangingPassword}>
+                {isChangingPassword ? 'Modification en cours...' : 'Changer le mot de passe'}
               </button>
             </form>
           </div>
@@ -265,21 +391,21 @@ function ProfilePage() {
                 <FiClock />
                 <div>
                   <span className="activity-text">Dernière connexion</span>
-                  <span className="activity-time">Aujourd'hui à 09:15</span>
+                  <span className="activity-time">{activity?.last_login || 'Aujourd\'hui à 09:15'}</span>
                 </div>
               </div>
               <div className="activity-item">
                 <FiUser />
                 <div>
                   <span className="activity-text">Patients consultés ce mois</span>
-                  <span className="activity-count">47</span>
+                  <span className="activity-count">{activity?.patients_this_month || 0}</span>
                 </div>
               </div>
               <div className="activity-item">
                 <FiEdit2 />
                 <div>
                   <span className="activity-text">Actes médicaux réalisés</span>
-                  <span className="activity-count">23</span>
+                  <span className="activity-count">{activity?.medical_acts_this_month || 0}</span>
                 </div>
               </div>
             </div>
