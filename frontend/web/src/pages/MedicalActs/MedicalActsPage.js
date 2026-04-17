@@ -10,7 +10,7 @@ import {
   FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiClock, FiTarget
 } from 'react-icons/fi';
 
-import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults } from '../../api/api';
+import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults, getActForms, getFormCsRd } from '../../api/api';
 import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
 import { SkeletonCard } from '../../components/common/Skeleton';
@@ -217,10 +217,13 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [labResults, setLabResults] = useState([]);
   const [labResultsLoading, setLabResultsLoading] = useState(false);
+  const [formData, setFormData] = useState(null);
+  const [formDataLoading, setFormDataLoading] = useState(false);
 
-  // Fetch lab results when modal opens or act changes
+  // Fetch lab results and form data when modal opens or act changes
   useEffect(() => {
-    if (!act?.patientId) return;
+    if (!act?.id) return;
+    
     const fetchLabResults = async () => {
       try {
         setLabResultsLoading(true);
@@ -233,8 +236,40 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
         setLabResultsLoading(false);
       }
     };
+
+    const fetchFormData = async () => {
+      try {
+        setFormDataLoading(true);
+        const actFormsResponse = await getActForms(act.id);
+        const actForms = actFormsResponse.data || [];
+        
+        // Get the first form linked to this act
+        if (actForms.length > 0) {
+          const actForm = actForms[0];
+          console.log('Found act_form:', actForm);
+          try {
+            const formResponse = await getFormCsRd(actForm.form_table_id);
+            console.log('Fetched form data:', formResponse.data);
+            setFormData(formResponse.data);
+          } catch (formErr) {
+            console.error('Error fetching form data:', formErr);
+            setFormData(null);
+          }
+        } else {
+          console.log('No forms linked to this act');
+          setFormData(null);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement du formulaire:', err);
+        setFormData(null);
+      } finally {
+        setFormDataLoading(false);
+      }
+    };
+
     fetchLabResults();
-  }, [act?.patientId]);
+    fetchFormData();
+  }, [act?.id, act?.patientId]);
 
   // Helper function to get doctor name from ID
   const getDoctorName = (doctorId) => {
@@ -402,6 +437,62 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {formData && (
+            <div className="detail-section form-data-section">
+              <h4><FiFileText /> Données du formulaire clinique</h4>
+              <div className="form-data-grid">
+                {formData.form_date && (
+                  <div className="form-data-item">
+                    <label>Date du formulaire</label>
+                    <p>{formatDate(formData.form_date)}</p>
+                  </div>
+                )}
+                {formData.current_treatment_none !== undefined && (
+                  <div className="form-data-item">
+                    <label>Aucun traitement actuel</label>
+                    <p>{formData.current_treatment_none ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
+                {formData.arthralgie_present !== undefined && (
+                  <div className="form-data-item">
+                    <label>Arthralgie présente</label>
+                    <p>{formData.arthralgie_present ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
+                {formData.joint_swelling_present !== undefined && (
+                  <div className="form-data-item">
+                    <label>Gonflement articulaire</label>
+                    <p>{formData.joint_swelling_present ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
+                {formData.rachialgie_present !== undefined && (
+                  <div className="form-data-item">
+                    <label>Rachialgie présente</label>
+                    <p>{formData.rachialgie_present ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
+                {formData.fessialgie_present !== undefined && (
+                  <div className="form-data-item">
+                    <label>Fessialgie présente</label>
+                    <p>{formData.fessialgie_present ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
+                {formData.enthesalgie_present !== undefined && (
+                  <div className="form-data-item">
+                    <label>Enthésalgie présente</label>
+                    <p>{formData.enthesalgie_present ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
+                {formData.myalgie_present !== undefined && (
+                  <div className="form-data-item">
+                    <label>Myalgie présente</label>
+                    <p>{formData.myalgie_present ? 'Oui' : 'Non'}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
