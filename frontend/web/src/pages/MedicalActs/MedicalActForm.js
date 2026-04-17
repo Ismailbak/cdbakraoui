@@ -4,7 +4,11 @@ import {
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
   FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
 } from 'react-icons/fi';
-import { getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult } from '../../api/api';
+import {
+  getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
+  getCareTypes, getActTypes, getFormTypes, createFormCsRd, linkFormToAct
+} from '../../api/api';
+import FormCsRd from './FormCsRd';
 import './MedicalActForm.css';
 
 const CATEGORY_OPTIONS = [
@@ -24,9 +28,11 @@ const ACT_TYPES = [
 
 const STEPS = [
   { id: 1, label: 'Patient', icon: FiUser },
-  { id: 2, label: 'Clinique', icon: FiActivity },
-  { id: 3, label: 'Labo', icon: FiTarget },
-  { id: 4, label: 'Facturation', icon: FiDollarSign },
+  { id: 2, label: 'Form', icon: FiActivity },
+  { id: 3, label: 'Données', icon: FiTarget },
+  { id: 4, label: 'Clinique', icon: FiActivity },
+  { id: 5, label: 'Labo', icon: FiTarget },
+  { id: 6, label: 'Facturation', icon: FiDollarSign },
 ];
 
 const EMPTY_FORM = {
@@ -34,6 +40,9 @@ const EMPTY_FORM = {
   patientName: '',
   doctorId: '',
   date: new Date().toISOString().split('T')[0],
+  careTypeId: '',
+  formTypeId: '',
+  formCsRdId: '',
   actType: 'Consultation',
   category: 'rheumatology',
   diagnosis: '',
@@ -56,6 +65,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [userIntentToSubmit, setUserIntentToSubmit] = useState(false);
+  
+  // Form System State
+  const [careTypes, setCareTypes] = useState([]);
+  const [actTypes, setActTypes] = useState([]);
+  const [formTypes, setFormTypes] = useState([]);
+  const [isLoadingFormSystem, setIsLoadingFormSystem] = useState(false);
 
   // Initialize or update form when initialData changes
   useEffect(() => {
@@ -124,10 +139,15 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     if (step === 1) {
       loadPatients();
     }
-  }, [step]);
+    // Auto-create FormCsRd when entering Step 3 with form_cs_rd available
+    if (step === 3 && form.careTypeId && formTypes.some(ft => ft.form_name === 'form_cs_rd') && !form.formCsRdId) {
+      initializeFormCsRd();
+    }
+  }, [step, form.careTypeId, formTypes]);
 
   useEffect(() => {
     loadDoctors();
+    loadCareTypes();
   }, []);
 
   const loadPatients = async () => {
@@ -148,6 +168,84 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       setDoctors(res.data || []);
     } catch (err) {
       console.error("Error loading doctors:", err);
+    }
+  };
+
+  const loadCareTypes = async () => {
+    try {
+      const res = await getCareTypes();
+      setCareTypes(res.data || []);
+    } catch (err) {
+      console.error("Error loading care types:", err);
+    }
+  };
+
+  const loadActTypes = async (careTypeId) => {
+    try {
+      const res = await getActTypes(careTypeId);
+      setActTypes(res.data || []);
+      return res.data || [];
+    } catch (err) {
+      console.error("Error loading act types:", err);
+      setActTypes([]);
+      return [];
+    }
+  };
+
+  const loadFormTypes = async (actTypeId) => {
+    try {
+      const res = await getFormTypes(actTypeId);
+      setFormTypes(res.data || []);
+      return res.data || [];
+    } catch (err) {
+      console.error("Error loading form types:", err);
+      setFormTypes([]);
+      return [];
+    }
+  };
+
+  const handleCareTypeSelect = async (careTypeId) => {
+    console.log('Care type selected:', careTypeId);
+    setForm(prev => ({ ...prev, careTypeId, formTypeId: '', formCsRdId: '' }));
+    if (careTypeId) {
+      try {
+        const actTypesData = await loadActTypes(careTypeId);
+        console.log('Act types loaded:', actTypesData);
+        // Auto-select first act type if available
+        if (actTypesData && actTypesData.length > 0) {
+          console.log('Loading form types for act type:', actTypesData[0].id);
+          const formTypesData = await loadFormTypes(actTypesData[0].id);
+          console.log('Form types loaded:', formTypesData);
+        }
+      } catch (err) {
+        console.error('Error in handleCareTypeSelect:', err);
+      }
+    }
+  };
+
+  const handleActTypeSelect = async (actTypeId) => {
+    if (actTypeId) {
+      await loadFormTypes(actTypeId);
+    } else {
+      setFormTypes([]);
+      setForm(prev => ({ ...prev, formTypeId: '', formCsRdId: '' }));
+    }
+  };
+
+  const initializeFormCsRd = async () => {
+    try {
+      // Create an empty FormCsRd record
+      const csRdData = {
+        form_date: form.date,
+        // All other fields will use backend defaults
+      };
+      const res = await createFormCsRd(csRdData);
+      if (res.data?.id) {
+        setForm(prev => ({ ...prev, formCsRdId: res.data.id }));
+      }
+    } catch (err) {
+      console.error('Error initializing FormCsRd:', err);
+      // Continue without form - user can still use classic entry
     }
   };
 
@@ -185,26 +283,27 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       if (!form.date) newErrors.date = 'La date est requise';
     }
     if (s === 2) {
-      // Ensure diagnosis is a string and validate
+      // Care type step - at least one must be selected
+      if (!form.careTypeId) newErrors.careTypeId = 'Veuillez sélectionner un type de soin';
+    }
+    if (s === 3) {
+      // Form type step - optional (user can skip)
+    }
+    if (s === 4) {
+      // Clinical details - diagnosis still required
       const diagnosisValue = form.diagnosis ? String(form.diagnosis).trim() : '';
       if (!diagnosisValue) {
         newErrors.diagnosis = 'Le diagnostic est requis';
       }
-      // actType defaults to 'Consultation' so it should never be empty
-      if (!form.actType) {
-        newErrors.actType = "Le type d'acte est requis";
-      }
-      // Doctor is required
       if (!form.doctorId) {
         newErrors.doctorId = 'Veuillez sélectionner un médecin';
       }
     }
-    if (s === 3) {
+    if (s === 5) {
       // Lab results step is optional
-      // Just return success here
     }
-    if (s === 4) {
-      // Require amount only when actually submitting
+    if (s === 6) {
+      // Billing - require amount only when actually submitting
       const amountValue = String(form.amount || '').trim();
       if (!amountValue) {
         newErrors.amount = 'Le montant est requis';
@@ -232,12 +331,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Only allow submit if we're actually on step 4 AND user clicked submit button
-    if (step !== 4 || !userIntentToSubmit) {
+    // Only allow submit if we're actually on step 6 AND user clicked submit button
+    if (step !== 6 || !userIntentToSubmit) {
       return;
     }
     
-    if (!validateStep(4)) {
+    if (!validateStep(6)) {
       return;
     }
 
@@ -263,6 +362,26 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       } else {
         const res = await createMedicalAct(payload);
         actId = res.data?.id;
+      }
+
+      // Link FormCsRd if one was created and care type was selected
+      if (form.careTypeId && form.formCsRdId && actId) {
+        // Find the form type to get ref_form_type_id
+        const selectedFormType = formTypes.find(ft => ft.form_name === 'form_cs_rd');
+        if (selectedFormType) {
+          try {
+            console.log(`Linking form ${form.formCsRdId} to act ${actId} with form type ${selectedFormType.id}`);
+            await linkFormToAct(actId, selectedFormType.id, form.formCsRdId);
+            console.log('Form linked successfully');
+          } catch (linkErr) {
+            console.error('Error linking form to act:', linkErr);
+            alert('Avertissement: Le formulaire n\'a pas pu être lié à l\'acte. Les données ont été sauvegardées.');
+          }
+        } else {
+          console.warn('form_cs_rd form type not found in:', formTypes);
+        }
+      } else {
+        console.warn('Cannot link form - missing:', { careTypeId: form.careTypeId, formCsRdId: form.formCsRdId, actId });
       }
       
       // Create lab results if any were added
@@ -429,8 +548,88 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           </div>
         )}
 
-        {/* Step 2 — Clinical Details */}
+        {/* Step 2 — Form Type Selection */}
         {step === 2 && (
+          <div className="maf-section">
+            <div className="maf-section-title">
+              <FiActivity className="maf-section-icon" />
+              <span>Type de forme clinique</span>
+            </div>
+
+            <div className="maf-field">
+              <label className="maf-label">
+                Type de soin <span className="maf-required">*</span>
+              </label>
+              <select
+                value={form.careTypeId}
+                onChange={(e) => handleCareTypeSelect(e.target.value)}
+                className={`maf-input ${errors.careTypeId ? 'maf-input-error' : ''}`}
+              >
+                <option value="">-- Sélectionner --</option>
+                {careTypes.map(ct => (
+                  <option key={ct.id} value={ct.id}>
+                    {ct.label} ({ct.description || ct.code})
+                  </option>
+                ))}
+              </select>
+              {errors.careTypeId && <span className="maf-error-msg"><FiAlertCircle />{errors.careTypeId}</span>}
+            </div>
+
+            {form.careTypeId && actTypes.length > 0 && (
+              <div className="maf-field">
+                <label className="maf-label">Type d'acte associé</label>
+                <p className="maf-hint">{actTypes.length} type(s) d'acte(s) disponible(s)</p>
+                {actTypes.map(at => (
+                  <div key={at.id} className="maf-form-selector">
+                    <span className="maf-form-label">{at.label}</span>
+                    <span className="maf-form-desc">{at.description || 'N/A'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 3 — Form Data Entry (FormCsRd or placeholder) */}
+        {step === 3 && (
+          <div className="maf-section">
+            <div className="maf-section-title">
+              <FiTarget className="maf-section-icon" />
+              <span>Données de forme clinique</span>
+            </div>
+            
+            {form.careTypeId && formTypes.length > 0 && formTypes.some(ft => ft.form_name === 'form_cs_rd') ? (
+              // Care type with form_cs_rd available - Show FormCsRd component
+              <FormCsRd
+                formId={form.formCsRdId || null}
+                onSave={(formData) => {
+                  console.log('Form saved:', formData);
+                  if (formData.id && !form.formCsRdId) {
+                    setForm(prev => ({ ...prev, formCsRdId: formData.id }));
+                  }
+                }}
+                onClose={() => {
+                  // Keep form open, just for reference
+                }}
+              />
+            ) : form.careTypeId && formTypes.length === 0 ? (
+              <div className="maf-form-note">
+                <p>⚠️ Chargement des formes disponibles...</p>
+              </div>
+            ) : form.careTypeId ? (
+              <div className="maf-form-note">
+                <p>⚠️ Forme structurée non disponible pour ce type de soin. Continuez avec la saisie clinique classique à l'étape suivante.</p>
+              </div>
+            ) : (
+              <div className="maf-form-note">
+                <p>ℹ️ Veuillez d'abord sélectionner un type de soin à l'étape précédente.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4 — Clinical Details (Previous Step 2) */}
+        {step === 4 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiActivity className="maf-section-icon" />
@@ -531,8 +730,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           </div>
         )}
 
-        {/* Step 3 — Lab Results */}
-        {step === 3 && (
+        {/* Step 5 — Lab Results */}
+        {step === 5 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiTarget className="maf-section-icon" />
@@ -673,8 +872,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
           </div>
         )}
 
-        {/* Step 4 — Billing */}
-        {step === 4 && (
+        {/* Step 6 — Billing */}
+        {step === 6 && (
           <div className="maf-section">
             <div className="maf-section-title">
               <FiDollarSign className="maf-section-icon" />
@@ -779,7 +978,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
             <button type="button" className="maf-btn-cancel" onClick={onClose}>
               Annuler
             </button>
-            {step < 4 ? (
+            {step < 6 ? (
               <button type="button" className="maf-btn-next" onClick={handleNext}>
                 Suivant <FiChevronRight />
               </button>
