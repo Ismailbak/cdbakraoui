@@ -1,0 +1,380 @@
+"""
+FastAPI router for dynamic form system.
+Handles reference data (care types, act types, form templates)
+and CRUD for form data tables.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+from datetime import date, datetime
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models.form_system import (
+    RefCareType, RefActType, RefFormType, ActForm, FormCsRd
+)
+from app.models.medical_act import MedicalAct as MedicalActModel
+from app.api.auth import get_current_user_orm
+from app.models.user import User
+from app.services.audit_service import log_action
+
+router = APIRouter()
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Pydantic Schemas
+# ───────────────────────────────────────────────────────────────────────
+
+class RefCareTypeOut(BaseModel):
+    id: int
+    code: str
+    label: str
+    description: Optional[str] = None
+    is_active: int
+    display_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class RefActTypeOut(BaseModel):
+    id: int
+    ref_care_type_id: int
+    code: str
+    label: str
+    description: Optional[str] = None
+    is_active: int
+    display_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class RefFormTypeOut(BaseModel):
+    id: int
+    ref_act_type_id: int
+    form_name: str
+    form_label: str
+    form_order: int
+    is_active: int
+
+    class Config:
+        from_attributes = True
+
+
+class FormCsRdCreate(BaseModel):
+    """Schema for creating/updating form_cs_rd"""
+    form_date: Optional[date] = None
+    
+    # Section 1: Current Treatment
+    current_treatment_none: Optional[int] = 0
+    current_treatment_json: Optional[List[Any]] = None
+    
+    # Section 2: Functional Signs
+    arthralgie_present: Optional[int] = 0
+    arthralgie_horaire: Optional[str] = None
+    arthralgie_duration: Optional[str] = None
+    arthralgie_locations: Optional[List[str]] = None
+    
+    joint_swelling_present: Optional[int] = 0
+    joint_swelling_locations: Optional[List[str]] = None
+    
+    rachialgie_present: Optional[int] = 0
+    rachialgie_horaire: Optional[str] = None
+    rachialgie_duration: Optional[str] = None
+    rachialgie_locations: Optional[List[str]] = None
+    
+    fessialgie_present: Optional[int] = 0
+    fessialgie_horaire: Optional[str] = None
+    fessialgie_duration: Optional[str] = None
+    fessialgie_locations: Optional[List[str]] = None
+    
+    enthesalgie_present: Optional[int] = 0
+    enthesalgie_locations: Optional[List[str]] = None
+    
+    myalgie_present: Optional[int] = 0
+    myalgie_horaire: Optional[str] = None
+    myalgie_duration: Optional[str] = None
+    
+    other_signs_text: Optional[str] = None
+    
+    # Section 3: Physical Examination
+    articular_index: Optional[int] = None
+    synovial_index: Optional[int] = None
+    clinical_examination_notes: Optional[str] = None
+    
+    # Section 4: Lab Results
+    lab_inflammatory_json: Optional[Dict[str, Any]] = None
+    lab_renal_json: Optional[Dict[str, Any]] = None
+    lab_hepatic_json: Optional[Dict[str, Any]] = None
+    lab_metabolic_json: Optional[Dict[str, Any]] = None
+    lab_electrolytes_json: Optional[Dict[str, Any]] = None
+    lab_immunology_json: Optional[Dict[str, Any]] = None
+    lab_infection_json: Optional[Dict[str, Any]] = None
+    
+    # Section 5: Imaging
+    imaging_xray: Optional[int] = 0
+    imaging_xray_findings: Optional[str] = None
+    imaging_ultrasound: Optional[int] = 0
+    imaging_ultrasound_findings: Optional[str] = None
+    imaging_ct: Optional[int] = 0
+    imaging_ct_findings: Optional[str] = None
+    imaging_mri: Optional[int] = 0
+    imaging_mri_findings: Optional[str] = None
+    imaging_other: Optional[int] = 0
+    imaging_other_findings: Optional[str] = None
+    
+    # Section 6: Diagnosis
+    diagnosis_osteoarthritis_json: Optional[List[Dict[str, Any]]] = None
+    diagnosis_spine_json: Optional[Dict[str, Any]] = None
+    diagnosis_tendinopathy_json: Optional[List[Dict[str, Any]]] = None
+    diagnosis_other_text: Optional[str] = None
+    
+    # Section 7: Treatment Plan
+    treatment_decision: Optional[str] = None
+    treatment_starting_json: Optional[Dict[str, Any]] = None
+    treatment_maintain_reason: Optional[str] = None
+    treatment_maintain_remarks: Optional[str] = None
+    treatment_stop_reason: Optional[str] = None
+    treatment_stop_remarks: Optional[str] = None
+    other_therapeutic_decisions: Optional[str] = None
+    prescription: Optional[str] = None
+    additional_notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        # Allow type coercion for common cases
+        validate_assignment = True
+
+
+class FormCsRdOut(FormCsRdCreate):
+    """Schema for returning form_cs_rd"""
+    id: int
+    created_by: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ActFormOut(BaseModel):
+    """Schema for act_forms bridge"""
+    id: int
+    act_id: int
+    ref_form_type_id: int
+    form_table_id: int
+    created_by: Optional[int] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Reference Data Endpoints (Catalog)
+# ───────────────────────────────────────────────────────────────────────
+
+@router.get("/ref/care-types", response_model=List[RefCareTypeOut])
+def get_care_types(
+    active_only: bool = Query(True),
+    db: Session = Depends(get_db)
+):
+    """Get all care type categories (RIC, RD, OS, etc.)"""
+    query = db.query(RefCareType)
+    if active_only:
+        query = query.filter(RefCareType.is_active == 1)
+    return query.order_by(RefCareType.display_order).all()
+
+
+@router.get("/ref/act-types", response_model=List[RefActTypeOut])
+def get_act_types(
+    care_type_id: int = Query(..., description="Filter by care type ID"),
+    active_only: bool = Query(True),
+    db: Session = Depends(get_db)
+):
+    """Get act types for a specific care type"""
+    query = db.query(RefActType).filter(RefActType.ref_care_type_id == care_type_id)
+    if active_only:
+        query = query.filter(RefActType.is_active == 1)
+    return query.order_by(RefActType.display_order).all()
+
+
+@router.get("/ref/form-types", response_model=List[RefFormTypeOut])
+def get_form_types(
+    act_type_id: int = Query(..., description="Filter by act type ID"),
+    active_only: bool = Query(True),
+    db: Session = Depends(get_db)
+):
+    """Get form templates for a specific act type"""
+    query = db.query(RefFormType).filter(RefFormType.ref_act_type_id == act_type_id)
+    if active_only:
+        query = query.filter(RefFormType.is_active == 1)
+    return query.order_by(RefFormType.form_order).all()
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Form Data CRUD Endpoints
+# ───────────────────────────────────────────────────────────────────────
+
+@router.post("/cs_rd", response_model=FormCsRdOut)
+def create_form_cs_rd(
+    data: FormCsRdCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Create a new form_cs_rd record"""
+    form = FormCsRd(**data.dict(), created_by=current_user.id)
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_rd #{form.id}")
+    
+    return form
+
+
+@router.get("/cs_rd/{form_id}", response_model=FormCsRdOut)
+def get_form_cs_rd(
+    form_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get a specific form_cs_rd record"""
+    form = db.query(FormCsRd).filter(FormCsRd.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+
+@router.put("/cs_rd/{form_id}", response_model=FormCsRdOut)
+def update_form_cs_rd(
+    form_id: int,
+    data: FormCsRdCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Update a form_cs_rd record"""
+    form = db.query(FormCsRd).filter(FormCsRd.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    try:
+        print(f"DEBUG: Received data for update: {data.dict(exclude_none=True)}")
+        # Use exclude_unset to only update fields that were explicitly provided
+        update_data = data.dict(exclude_unset=True, exclude_none=False)
+        print(f"DEBUG: Update data after dict: {update_data}")
+        for key, value in update_data.items():
+            setattr(form, key, value)
+        
+        db.commit()
+        db.refresh(form)
+        
+        log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_rd #{form.id}")
+        
+        return form
+    except Exception as e:
+        db.rollback()
+        import traceback
+        print(f"Error updating form: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error updating form: {str(e)}")
+
+
+@router.delete("/cs_rd/{form_id}")
+def delete_form_cs_rd(
+    form_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Delete a form_cs_rd record"""
+    form = db.query(FormCsRd).filter(FormCsRd.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    db.delete(form)
+    db.commit()
+    
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_rd #{form_id}")
+    
+    return {"message": "Form deleted"}
+
+
+@router.post("/acts/{act_id}/forms", response_model=ActFormOut)
+def create_act_form(
+    act_id: int,
+    ref_form_type_id: int = Query(...),
+    form_table_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Link a form to a medical act (bridge table)"""
+    act = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()
+    if not act:
+        raise HTTPException(status_code=404, detail="Medical act not found")
+    
+    # Check if form already linked
+    existing = db.query(ActForm).filter(
+        ActForm.act_id == act_id,
+        ActForm.ref_form_type_id == ref_form_type_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Form already linked to this act")
+    
+    act_form = ActForm(
+        act_id=act_id,
+        ref_form_type_id=ref_form_type_id,
+        form_table_id=form_table_id,
+        created_by=current_user.id
+    )
+    db.add(act_form)
+    db.commit()
+    db.refresh(act_form)
+    
+    return act_form
+
+
+@router.get("/acts/{act_id}/forms", response_model=List[ActFormOut])
+def get_act_forms(
+    act_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all forms linked to a medical act"""
+    return db.query(ActForm).filter(ActForm.act_id == act_id).all()
+
+
+@router.get("/acts/{act_id}/forms/{ref_form_type_id}", response_model=ActFormOut)
+def get_act_form(
+    act_id: int,
+    ref_form_type_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get specific form linked to a medical act"""
+    act_form = db.query(ActForm).filter(
+        ActForm.act_id == act_id,
+        ActForm.ref_form_type_id == ref_form_type_id
+    ).first()
+    if not act_form:
+        raise HTTPException(status_code=404, detail="Form link not found")
+    return act_form
+
+
+@router.delete("/acts/{act_id}/forms/{ref_form_type_id}")
+def delete_act_form(
+    act_id: int,
+    ref_form_type_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Unlink a form from a medical act"""
+    act_form = db.query(ActForm).filter(
+        ActForm.act_id == act_id,
+        ActForm.ref_form_type_id == ref_form_type_id
+    ).first()
+    if not act_form:
+        raise HTTPException(status_code=404, detail="Form link not found")
+    
+    db.delete(act_form)
+    db.commit()
+    
+    return {"message": "Form unlinked"}
