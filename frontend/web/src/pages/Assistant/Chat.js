@@ -25,6 +25,60 @@ const generateId = () => {
     : Math.random().toString(36).substring(2, 15);
 };
 
+// Robust timestamp validation
+const isValidDate = (dateString) => {
+  if (!dateString) return false;
+  const d = new Date(dateString);
+  return d && !isNaN(d.getTime());
+};
+
+const parseTimestamp = (dateString) => {
+  return isValidDate(dateString) ? new Date(dateString) : new Date();
+};
+
+// Granular error message parsing
+const parseErrorMessage = (error) => {
+  // Network or timeout errors
+  if (!error.response) {
+    if (error.name === 'AbortError') {
+      return 'Requête annulée. Veuillez réessayer.';
+    }
+    return 'Erreur réseau. Vérifiez votre connexion et réessayez.';
+  }
+
+  // 4xx client errors
+  if (error.response.status >= 400 && error.response.status < 500) {
+    if (error.response.status === 401) return 'Session expirée. Reconnectez-vous.';
+    if (error.response.status === 403) return 'Accès refusé.';
+    if (error.response.status === 404) return 'Ressource non trouvée.';
+    if (error.response.status === 422) return 'Données invalides. Vérifiez votre saisie.';
+    return error.response.data?.detail || 'Erreur client. Réessayez.';
+  }
+
+  // 5xx server errors
+  if (error.response.status >= 500) {
+    return 'Serveur temporairement indisponible. Réessayez dans quelques instants.';
+  }
+
+  return error.response.data?.detail || 'Erreur lors de la communication avec l\'IA.';
+};
+
+// Exponential backoff retry strategy
+const getRetryDelay = (attempt) => {
+  return Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10s delay
+};
+
+const shouldRetry = (error, attempt, maxRetries = 3) => {
+  if (attempt >= maxRetries) return false;
+  
+  // Retry on network errors (no response) or server errors (5xx)
+  if (!error.response) return true;
+  if (error.response.status >= 500) return true;
+  
+  // Don't retry client errors (4xx)
+  return false;
+};
+
 function Chat({ patientId, currentUser }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -33,25 +87,35 @@ function Chat({ patientId, currentUser }) {
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const [chatSessions, setChatSessions] = useState([]);
   const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
-  const [copyFeedback, setCopyFeedback] = useState(null);
+  const [copiedMessageId, setCopiedMessageId] = useState(null); // Per-message copy feedback
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(null);
   
   const messageEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const abortControllerRef = useRef(null);
   const copyTimeoutRef = useRef(null);
 
-  const loadChatHistory = useCallback(async () => {
+  const loadChatHistory = useCallback(async (filterByDate = null) => {
     try {
       const res = await getChatHistory(patientId);
       if (!res?.data) return;
 
-      const history = res.data.flatMap(msg => [
+      let filteredData = res.data;
+      if (filterByDate) {
+        filteredData = res.data.filter(msg => {
+          if (!isValidDate(msg.created_at)) return false;
+          const msgDate = new Date(msg.created_at).toLocaleDateString('fr-FR');
+          return msgDate === filterByDate;
+        });
+      }
+
+      const history = filteredData.flatMap(msg => [
         {
           id: msg.id ? `${msg.id}-user` : generateId(),
           role: 'user',
           content: msg.message || '',
-          timestamp: msg.created_at ? new Date(msg.created_at) : new Date(),
+          timestamp: parseTimestamp(msg.created_at),
           feedback: null
         },
         {
@@ -60,7 +124,7 @@ function Chat({ patientId, currentUser }) {
           content: msg.response || 'No response available.',
           tokens: msg.tokens_used || 0,
           model: msg.model || 'Unknown',
-          timestamp: msg.created_at ? new Date(msg.created_at) : new Date(),
+          timestamp: parseTimestamp(msg.created_at),
           feedback: null
         }
       ]).sort((a, b) => a.timestamp - b.timestamp);
@@ -71,13 +135,13 @@ function Chat({ patientId, currentUser }) {
       const sessions = [];
       const dateGroups = {};
       res.data.forEach(msg => {
-        if (!msg.created_at) return;
+        if (!isValidDate(msg.created_at)) return;
         const date = new Date(msg.created_at).toLocaleDateString('fr-FR');
         if (!dateGroups[date]) {
           dateGroups[date] = msg;
           sessions.push({
             date,
-            timestamp: new Date(msg.created_at),
+            timestamp: parseTimestamp(msg.created_at),
             preview: msg.message ? msg.message.substring(0, 50) + (msg.message.length > 50 ? '...' : '') : 'Empty message'
           });
         }
@@ -115,13 +179,14 @@ function Chat({ patientId, currentUser }) {
     }
   }, [messages]);
 
-  const handleCopyMessage = async (content) => {
+  const handleCopyMessage = async (messageId, content) => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(content);
-        setCopyFeedback(true);
+        // Clear any previous timeout and set copied state for this specific message
         if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-        copyTimeoutRef.current = setTimeout(() => setCopyFeedback(false), 2000);
+        setCopiedMessageId(messageId);
+        copyTimeoutRef.current = setTimeout(() => setCopiedMessageId(null), 2000);
       } else {
         throw new Error("Clipboard API not available");
       }
@@ -131,7 +196,7 @@ function Chat({ patientId, currentUser }) {
     }
   };
 
-  const internalHandleSend = async (textToSend, retryCount = 0) => {
+  const internalHandleSend = async (textToSend, retryCount = 0, maxRetries = 3) => {
     if (!textToSend.trim() || loading) return;
 
     // Cancel previous request if any
@@ -179,17 +244,19 @@ function Chat({ patientId, currentUser }) {
         return; 
       }
 
-      const errorMsg = err.response?.data?.detail || 'Erreur lors de la communication avec l\'IA.';
-      
-      // Basic 1-time retry mechanism on network failure
-      if (retryCount < 1 && (!err.response || err.response.status >= 500)) {
-         console.warn(`Retrying request... (${retryCount + 1})`);
+      // Check if we should retry with exponential backoff
+      if (shouldRetry(err, retryCount, maxRetries)) {
+         const delay = getRetryDelay(retryCount);
+         console.warn(`Retrying request in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
          // Remove the optimistic user message to re-insert it cleanly
          setMessages(prev => prev.filter(m => m.id !== currentMsgId));
          setLoading(false);
-         return internalHandleSend(textToSend, retryCount + 1);
+         // Wait before retrying
+         await new Promise(resolve => setTimeout(resolve, delay));
+         return internalHandleSend(textToSend, retryCount + 1, maxRetries);
       }
 
+      const errorMsg = parseErrorMessage(err);
       setError(errorMsg);
       // Provide an actionable button in the message to retry it instead of just pure error
       const errorChatMsg = {
@@ -241,7 +308,8 @@ function Chat({ patientId, currentUser }) {
         msg.id === messageId ? { ...msg, feedback: feedbackType } : msg
       )
     );
-    // Optionally: send this feedback directly to your backend here
+    // TODO: Wire to backend when feedback endpoint is ready
+    // await submitFeedback(messageId, feedbackType);
   };
 
   const handleNewChat = () => {
@@ -256,10 +324,14 @@ function Chat({ patientId, currentUser }) {
   const handleLoadChat = (session) => {
     setShowHistoryDropdown(false);
     setSidebarOpen(false); // Close sidebar after selection
-    // In production, fetch specific session from backend using session date
-    // For now, this is a placeholder acknowledging the user switch
-    console.log('Loaded chat session:', session.date);
-    // Ideally we filter `messages` by `session.date` or call `loadChatHistory({ session_date })`
+    setLoadingSession(session.date);
+    // Filter and load messages for the selected session date
+    loadChatHistory(session.date).then(() => {
+      setLoadingSession(null);
+    }).catch(err => {
+      console.error('Failed to load chat session:', err);
+      setLoadingSession(null);
+    });
   };
 
   const handleKeyDown = (e) => {
@@ -345,7 +417,7 @@ function Chat({ patientId, currentUser }) {
           
           <div className="doctor-context">
             <span className="context-label">MÉDECIN:</span>
-            <span className="doctor-name">{currentUser?.last_name?.toUpperCase() || currentUser?.username?.toUpperCase() || 'DOCTEUR'}</span>
+            <span className="doctor-name">{((currentUser?.last_name || currentUser?.username) || 'DOCTEUR').toUpperCase()}</span>
           </div>
         </div>
 
@@ -382,11 +454,17 @@ function Chat({ patientId, currentUser }) {
                 </button>
               )}
 
-              {msg.role === 'assistant' && msg.tokens > 0 && (
+              {msg.role === 'assistant' && (
                 <div className="message-meta">
                   <div>
-                    <span className="tokens">🔹 {msg.tokens} tokens</span>
-                    <span className="model" style={{marginLeft: '0.5rem'}}>{msg.model}</span>
+                    {msg.tokens ? (
+                      <>
+                        <span className="tokens">🔹 {msg.tokens} tokens</span>
+                        <span className="model" style={{marginLeft: '0.5rem'}}>{msg.model}</span>
+                      </>
+                    ) : (
+                      <span className="tokens">Métadonnées indisponibles</span>
+                    )}
                   </div>
                   <span className="message-time">
                     {msg.timestamp && !isNaN(msg.timestamp.getTime()) ? `${msg.timestamp.getHours().toString().padStart(2, '0')}:${msg.timestamp.getMinutes().toString().padStart(2, '0')}` : ''}
@@ -403,12 +481,12 @@ function Chat({ patientId, currentUser }) {
               {msg.role === 'assistant' && (
                 <div className="message-actions">
                   <button 
-                    className={`message-action-btn copy-btn ${copyFeedback ? 'copied' : ''}`}
+                    className={`message-action-btn copy-btn ${copiedMessageId === msg.id ? 'copied' : ''}`}
                     title="Copier le message" 
                     aria-label="Copier le message"
-                    onClick={() => handleCopyMessage(msg.content)}
+                    onClick={() => handleCopyMessage(msg.id, msg.content)}
                   >
-                    {copyFeedback ? <FiCheckCircle /> : <FiCopy />}
+                    {copiedMessageId === msg.id ? <FiCheckCircle /> : <FiCopy />}
                   </button>
                   <button 
                     className="message-action-btn regenerate-btn" 
