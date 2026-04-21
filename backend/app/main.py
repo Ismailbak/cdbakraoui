@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts, act_results
+from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts, act_results, forms
 from app.database import engine, Base
 from app.models import user, patient, appointment, medical_act, act_result, notification, audit  # noqa: F401 - register models
 from app.models.chat_message import ChatMessage  # noqa: F401 - register model
+from app.models.chat_session import ChatSession  # noqa: F401 - register model
+from app.models.form_system import RefCareType, RefActType, RefFormType, ActForm, FormCsRd  # noqa: F401 - register form models
 from app.models.llm import llm
 from app.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
 from pathlib import Path
@@ -31,6 +33,7 @@ app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
 app.include_router(appointments.router, prefix="/api/appointments", tags=["appointments"])
 app.include_router(medical_acts.router, prefix="/api/medical-acts", tags=["medical-acts"])
 app.include_router(act_results.router, prefix="/api/act-results", tags=["act-results"])
+app.include_router(forms.router, prefix="/api/forms", tags=["forms"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])

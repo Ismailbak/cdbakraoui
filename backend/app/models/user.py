@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -18,3 +19,6 @@ class User(Base):
     phone = Column(String(30), nullable=True)
     department = Column(String(100), nullable=True)
     profile_picture = Column(String(255), nullable=True)
+    
+    # Relationships
+    chat_sessions = relationship("ChatSession", back_populates="user")

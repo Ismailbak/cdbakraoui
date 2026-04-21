@@ -90,6 +90,28 @@ export const getChatHistory = (patientId = null, limit = 50) => {
   return api.get(`/chat/history?${params.toString()}`);
 };
 
+// Chat Sessions
+export const createChatSession = (patientId, title = null) =>
+  api.post('/chat/sessions', { patient_id: patientId, title });
+
+export const getChatSession = (sessionId) =>
+  api.get(`/chat/sessions/${sessionId}`);
+
+export const listPatientChatSessions = (patientId, limit = 50, offset = 0) =>
+  api.get(`/chat/patients/${patientId}/sessions`, { params: { limit, offset } });
+
+export const updateChatSession = (sessionId, title) =>
+  api.patch(`/chat/sessions/${sessionId}`, { title });
+
+export const deleteChatSession = (sessionId) =>
+  api.delete(`/chat/sessions/${sessionId}`);
+
+export const addMessageToSession = (sessionId, role, content) =>
+  api.post(`/chat/sessions/${sessionId}/messages`, { session_id: sessionId, role, content });
+
+export const getSessionMessages = (sessionId, limit = 100, offset = 0) =>
+  api.get(`/chat/sessions/${sessionId}/messages`, { params: { limit, offset } });
+
 // Analytics & Notifications
 export const getAnalyticsSummary = (dateRange = '6months') => api.get('/analytics/summary', { params: { date_range: dateRange } });
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
@@ -147,6 +169,30 @@ export const getUserDetail = (userId) => api.get(`/auth/users/${userId}`);
 // Settings
 export const getSettings = () => api.get('/analytics/settings');
 export const saveSettings = (data) => api.put('/analytics/settings', data);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FORMS SYSTEM - Reference Data & Form CRUD
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Reference Data (Catalog)
+export const getCareTypes = () => api.get('/forms/ref/care-types');
+export const getActTypes = (careTypeId) => api.get(`/forms/ref/act-types?care_type_id=${careTypeId}`);
+export const getFormTypes = (actTypeId) => api.get(`/forms/ref/form-types?act_type_id=${actTypeId}`);
+
+// Form Data CRUD - form_cs_rd
+export const createFormCsRd = (data) => api.post('/forms/cs_rd', data);
+export const getFormCsRd = (formId) => api.get(`/forms/cs_rd/${formId}`);
+export const updateFormCsRd = (formId, data) => api.put(`/forms/cs_rd/${formId}`, data);
+export const deleteFormCsRd = (formId) => api.delete(`/forms/cs_rd/${formId}`);
+
+// Bridge Table - Link act to form
+export const linkFormToAct = (actId, refFormTypeId, formTableId) =>
+  api.post(`/forms/acts/${actId}/forms?ref_form_type_id=${refFormTypeId}&form_table_id=${formTableId}`);
+export const getActForms = (actId) => api.get(`/forms/acts/${actId}/forms`);
+export const getActForm = (actId, refFormTypeId) =>
+  api.get(`/forms/acts/${actId}/forms/${refFormTypeId}`);
+export const unlinkFormFromAct = (actId, refFormTypeId) =>
+  api.delete(`/forms/acts/${actId}/forms/${refFormTypeId}`);
 
 // System health
 export const getSystemHealth = () => api.get('/analytics/system-health');

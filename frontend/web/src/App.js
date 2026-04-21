@@ -15,6 +15,7 @@ import PatientDetailPage from './pages/Patients/PatientDetailPage';
 import AppointmentsPage from './pages/Appointments';
 import MedicalActsPage from './pages/MedicalActs';
 import AssistantPage from './pages/Assistant';
+import ChatPage from './pages/Chat/ChatPage';
 import AnalyticsPage from './pages/Analytics';
 import NotificationsPage from './pages/Notifications';
 import ProfilePage from './pages/Profile';
@@ -74,6 +75,7 @@ function App() {
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/patients" element={<PatientPage />} />
         <Route path="/patients/:id" element={<PatientDetailPage />} />
+        <Route path="/patients/:patientId/chat" element={<ChatPage />} />
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/medical-acts" element={<MedicalActsPage />} />
         <Route path="/assistant" element={<AssistantPage />} />

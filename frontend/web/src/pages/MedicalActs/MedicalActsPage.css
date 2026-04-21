@@ -896,3 +896,50 @@
   background: #FECACA;
   color: #DC2626;
 }
+
+/* Form Data Section */
+.form-data-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.form-data-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #7C3AED;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.form-data-item {
+  background: #F9FAFB;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+}
+
+.form-data-item label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+
+.form-data-item p {
+  font-size: 13px;
+  color: #1E2A4A;
+  margin: 0;
+  font-weight: 500;
+}

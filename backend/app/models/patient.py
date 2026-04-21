@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Date
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -31,3 +32,6 @@ class Patient(Base):
     status = Column(String(20), default="Actif")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
+    
+    # Relationships
+    chat_sessions = relationship("ChatSession", back_populates="patient")
