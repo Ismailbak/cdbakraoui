@@ -8,9 +8,8 @@ import {
   getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
   getCareTypes, getActTypes, getFormTypes, linkFormToAct
 } from '../../api/api';
-import FormCsRd from './FormCsRd';
 import {
-  FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
+  FormCsRd, FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
 } from '../../components/MedicalForms/AllForms';
 import './MedicalActForm.css';
 

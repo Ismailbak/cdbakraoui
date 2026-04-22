@@ -1,6 +1,564 @@
 import React, { useState } from 'react';
-import { FiAlertCircle, FiCheckCircle, FiChevronDown } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle, FiChevronDown, FiPlus, FiTrash2, FiCheck } from 'react-icons/fi';
 import './AllForms.css';
+
+/**
+ * RD Form: Consultation Rhumatisme Dégénératif (Degenerative Rheumatism)
+ */
+export const FormCsRd = ({ onSubmit, initialData = {} }) => {
+  const [formData, setFormData] = useState({
+    form_date: initialData.form_date || new Date().toISOString().split('T')[0],
+    current_treatment_none: initialData.current_treatment_none || 0,
+    current_treatment_json: initialData.current_treatment_json || [],
+    arthralgie_present: initialData.arthralgie_present || 0,
+    arthralgie_horaire: initialData.arthralgie_horaire || '',
+    arthralgie_duration: initialData.arthralgie_duration || '',
+    arthralgie_locations: initialData.arthralgie_locations || [],
+    joint_swelling_present: initialData.joint_swelling_present || 0,
+    joint_swelling_locations: initialData.joint_swelling_locations || [],
+    rachialgie_present: initialData.rachialgie_present || 0,
+    rachialgie_horaire: initialData.rachialgie_horaire || '',
+    rachialgie_duration: initialData.rachialgie_duration || '',
+    rachialgie_locations: initialData.rachialgie_locations || [],
+    other_signs_text: initialData.other_signs_text || '',
+    articular_index: initialData.articular_index || '',
+    synovial_index: initialData.synovial_index || '',
+    clinical_examination_notes: initialData.clinical_examination_notes || '',
+    imaging_xray: initialData.imaging_xray || 0,
+    imaging_xray_findings: initialData.imaging_xray_findings || '',
+    imaging_ultrasound: initialData.imaging_ultrasound || 0,
+    imaging_ultrasound_findings: initialData.imaging_ultrasound_findings || '',
+    imaging_mri: initialData.imaging_mri || 0,
+    imaging_mri_findings: initialData.imaging_mri_findings || '',
+    diagnosis_osteoarthritis_json: initialData.diagnosis_osteoarthritis_json || [],
+    diagnosis_other_text: initialData.diagnosis_other_text || '',
+    treatment_decision: initialData.treatment_decision || '',
+    prescription: initialData.prescription || '',
+    additional_notes: initialData.additional_notes || '',
+  });
+
+  const [expandedSections, setExpandedSections] = useState({
+    treatment: true,
+    signs: true,
+    exam: false,
+    labs: false,
+    imaging: false,
+    diagnosis: false,
+    plan: false
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCheckboxChange = (field, checked) => {
+    setFormData(prev => ({ ...prev, [field]: checked ? 1 : 0 }));
+  };
+
+  const handleArrayChange = (field, index, value) => {
+    setFormData(prev => {
+      const updated = [...(prev[field] || [])];
+      updated[index] = value;
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const handleAddArrayItem = (field, defaultValue = '') => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: [...(prev[field] || []), defaultValue]
+    }));
+  };
+
+  const handleRemoveArrayItem = (field, index) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: (prev[field] || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="medical-form">
+      <div className="form-header">
+        <h2>🦴 Consultation Rhumatisme Dégénératif</h2>
+        <div className="form-row" style={{ marginTop: '1rem', marginBottom: 0 }}>
+          <div className="form-group">
+            <label>Date de la consultation</label>
+            <input
+              type="date"
+              name="form_date"
+              value={formData.form_date}
+              onChange={(e) => handleInputChange('form_date', e.target.value)}
+              className="form-input"
+              style={{ maxWidth: '200px' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 1: CURRENT TREATMENT */}
+      <div className="form-section">
+        <button type="button" className="section-header" onClick={() => toggleSection('treatment')}>
+          <FiChevronDown style={{ transform: expandedSections.treatment ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+          <span>Traitement en cours</span>
+        </button>
+        {expandedSections.treatment && (
+          <div className="section-content">
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.current_treatment_none === 1}
+                  onChange={(e) => handleCheckboxChange('current_treatment_none', e.target.checked)}
+                />
+                <span>Aucun traitement en cours</span>
+              </label>
+            </div>
+            
+            {formData.current_treatment_none === 0 && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#6b7280', marginBottom: '0.75rem', display: 'block' }}>
+                  Médicaments actuels
+                </label>
+                {(formData.current_treatment_json || []).map((med, idx) => (
+                  <div key={idx} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem', gap: '1rem' }}>
+                    <div className="form-group" style={{ flex: 2 }}>
+                      <input
+                        type="text"
+                        placeholder="Nom du médicament"
+                        value={med.type || ''}
+                        onChange={(e) => handleArrayChange('current_treatment_json', idx, { ...med, type: e.target.value })}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <input
+                        type="date"
+                        value={med.start_date || ''}
+                        onChange={(e) => handleArrayChange('current_treatment_json', idx, { ...med, start_date: e.target.value })}
+                        className="form-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="maf-lab-result-remove"
+                      onClick={() => handleRemoveArrayItem('current_treatment_json', idx)}
+                      style={{ marginBottom: '5px', background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                      <FiTrash2 />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="btn-add"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dbeafe', color: '#1e40af', border: 'none', padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                  onClick={() => handleAddArrayItem('current_treatment_json', { type: '', start_date: '' })}
+                >
+                  <FiPlus /> Ajouter un médicament
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 2: FUNCTIONAL SIGNS */}
+      <div className="form-section">
+        <button type="button" className="section-header" onClick={() => toggleSection('signs')}>
+          <FiChevronDown style={{ transform: expandedSections.signs ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+          <span>Signes fonctionnels</span>
+        </button>
+        {expandedSections.signs && (
+          <div className="section-content">
+            {/* Arthralgie */}
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.arthralgie_present === 1}
+                  onChange={(e) => handleCheckboxChange('arthralgie_present', e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>Arthralgie (Douleur articulaire)</span>
+              </label>
+              {formData.arthralgie_present === 1 && (
+                <div className="info-box" style={{ flexDirection: 'column', gap: '1rem', background: '#f8fafc' }}>
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <div className="form-group">
+                      <label>Horaire</label>
+                      <select
+                        value={formData.arthralgie_horaire}
+                        onChange={(e) => handleInputChange('arthralgie_horaire', e.target.value)}
+                        className="form-input"
+                      >
+                        <option value="">Sélectionner</option>
+                        <option value="Mecanique">Mécanique</option>
+                        <option value="Inflammatoire">Inflammatoire</option>
+                        <option value="Mixte">Mixte</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Durée</label>
+                      <input
+                        type="text"
+                        placeholder="ex: 3 mois"
+                        value={formData.arthralgie_duration}
+                        onChange={(e) => handleInputChange('arthralgie_duration', e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Siège(s) (séparés par des virgules)</label>
+                    <input
+                      type="text"
+                      placeholder="ex: Genoux, Hanches"
+                      value={(formData.arthralgie_locations || []).join(', ')}
+                      onChange={(e) => handleInputChange('arthralgie_locations', e.target.value.split(',').map(s => s.trim()))}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Joint Swelling */}
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.joint_swelling_present === 1}
+                  onChange={(e) => handleCheckboxChange('joint_swelling_present', e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>Gonflement articulaire</span>
+              </label>
+              {formData.joint_swelling_present === 1 && (
+                <div className="info-box" style={{ background: '#f8fafc' }}>
+                  <div className="form-group">
+                    <label>Siège(s)</label>
+                    <input
+                      type="text"
+                      placeholder="Localisation du gonflement..."
+                      value={(formData.joint_swelling_locations || []).join(', ')}
+                      onChange={(e) => handleInputChange('joint_swelling_locations', e.target.value.split(',').map(s => s.trim()))}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rachialgie */}
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.rachialgie_present === 1}
+                  onChange={(e) => handleCheckboxChange('rachialgie_present', e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>Rachialgie (Douleur du rachis)</span>
+              </label>
+              {formData.rachialgie_present === 1 && (
+                <div className="info-box" style={{ flexDirection: 'column', gap: '1rem', background: '#f8fafc' }}>
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <div className="form-group">
+                      <label>Horaire</label>
+                      <select
+                        value={formData.rachialgie_horaire}
+                        onChange={(e) => handleInputChange('rachialgie_horaire', e.target.value)}
+                        className="form-input"
+                      >
+                        <option value="">Sélectionner</option>
+                        <option value="Mecanique">Mécanique</option>
+                        <option value="Inflammatoire">Inflammatoire</option>
+                        <option value="Mixte">Mixte</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Siège</label>
+                      <input
+                        type="text"
+                        placeholder="Cervical, Dorsal, Lombaire"
+                        value={(formData.rachialgie_locations || []).join(', ')}
+                        onChange={(e) => handleInputChange('rachialgie_locations', e.target.value.split(',').map(s => s.trim()))}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="form-group" style={{ marginTop: '1.5rem' }}>
+              <label>Autres signes et observations</label>
+              <textarea
+                placeholder="Notes additionnelles sur les symptômes..."
+                value={formData.other_signs_text}
+                onChange={(e) => handleInputChange('other_signs_text', e.target.value)}
+                className="form-textarea"
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 3: PHYSICAL EXAMINATION */}
+      <div className="form-section">
+        <button type="button" className="section-header" onClick={() => toggleSection('exam')}>
+          <FiChevronDown style={{ transform: expandedSections.exam ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+          <span>Examen clinique</span>
+        </button>
+        {expandedSections.exam && (
+          <div className="section-content">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Indice articulaire</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.articular_index}
+                  onChange={(e) => handleInputChange('articular_index', e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Indice synovial</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.synovial_index}
+                  onChange={(e) => handleInputChange('synovial_index', e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Observations de l'examen physique</label>
+              <textarea
+                placeholder="Détails de l'examen clinique..."
+                value={formData.clinical_examination_notes}
+                onChange={(e) => handleInputChange('clinical_examination_notes', e.target.value)}
+                className="form-textarea"
+                rows={4}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 4: IMAGING */}
+      <div className="form-section">
+        <button type="button" className="section-header" onClick={() => toggleSection('imaging')}>
+          <FiChevronDown style={{ transform: expandedSections.imaging ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+          <span>Imagerie</span>
+        </button>
+        {expandedSections.imaging && (
+          <div className="section-content">
+            {/* Radiologie */}
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.imaging_xray === 1}
+                  onChange={(e) => handleCheckboxChange('imaging_xray', e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>Radiologie standard</span>
+              </label>
+              {formData.imaging_xray === 1 && (
+                <textarea
+                  placeholder="Résultats radiologiques..."
+                  value={formData.imaging_xray_findings}
+                  onChange={(e) => handleInputChange('imaging_xray_findings', e.target.value)}
+                  className="form-textarea"
+                  style={{ marginTop: '0.5rem' }}
+                  rows={2}
+                />
+              )}
+            </div>
+
+            {/* Ultrasound */}
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.imaging_ultrasound === 1}
+                  onChange={(e) => handleCheckboxChange('imaging_ultrasound', e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>Échographie</span>
+              </label>
+              {formData.imaging_ultrasound === 1 && (
+                <textarea
+                  placeholder="Résultats échographiques..."
+                  value={formData.imaging_ultrasound_findings}
+                  onChange={(e) => handleInputChange('imaging_ultrasound_findings', e.target.value)}
+                  className="form-textarea"
+                  style={{ marginTop: '0.5rem' }}
+                  rows={2}
+                />
+              )}
+            </div>
+
+            {/* MRI */}
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.imaging_mri === 1}
+                  onChange={(e) => handleCheckboxChange('imaging_mri', e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>IRM / Scanner</span>
+              </label>
+              {formData.imaging_mri === 1 && (
+                <textarea
+                  placeholder="Résultats IRM ou Scanner..."
+                  value={formData.imaging_mri_findings}
+                  onChange={(e) => handleInputChange('imaging_mri_findings', e.target.value)}
+                  className="form-textarea"
+                  style={{ marginTop: '0.5rem' }}
+                  rows={2}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 5: DIAGNOSIS */}
+      <div className="form-section">
+        <button type="button" className="section-header" onClick={() => toggleSection('diagnosis')}>
+          <FiChevronDown style={{ transform: expandedSections.diagnosis ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+          <span>Diagnostic</span>
+        </button>
+        {expandedSections.diagnosis && (
+          <div className="section-content">
+            <div className="form-group">
+              <label>Arthrose - Détails et Localisations</label>
+              {(formData.diagnosis_osteoarthritis_json || []).map((dx, idx) => (
+                <div key={idx} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem', gap: '1rem' }}>
+                  <div className="form-group" style={{ flex: 2 }}>
+                    <input
+                      type="text"
+                      placeholder="Articulation (ex: Genou droit)"
+                      value={dx.joint || ''}
+                      onChange={(e) => handleArrayChange('diagnosis_osteoarthritis_json', idx, { ...dx, joint: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <select 
+                      value={dx.grade || ''} 
+                      onChange={(e) => handleArrayChange('diagnosis_osteoarthritis_json', idx, { ...dx, grade: e.target.value })}
+                      className="form-input"
+                    >
+                      <option value="">Grade K&L</option>
+                      <option value="1">I</option>
+                      <option value="2">II</option>
+                      <option value="3">III</option>
+                      <option value="4">IV</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="maf-lab-result-remove"
+                    onClick={() => handleRemoveArrayItem('diagnosis_osteoarthritis_json', idx)}
+                    style={{ marginBottom: '5px', background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    <FiTrash2 />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="btn-add"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dbeafe', color: '#1e40af', border: 'none', padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                onClick={() => handleAddArrayItem('diagnosis_osteoarthritis_json', { joint: '', grade: '' })}
+              >
+                <FiPlus /> Ajouter un diagnostic d'arthrose
+              </button>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '2rem' }}>
+              <label>Autres diagnostics et impressions</label>
+              <textarea
+                placeholder="Autres diagnostics..."
+                value={formData.diagnosis_other_text}
+                onChange={(e) => handleInputChange('diagnosis_other_text', e.target.value)}
+                className="form-textarea"
+                rows={4}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 6: TREATMENT PLAN */}
+      <div className="form-section">
+        <button type="button" className="section-header" onClick={() => toggleSection('plan')}>
+          <FiChevronDown style={{ transform: expandedSections.plan ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+          <span>Conduite à tenir</span>
+        </button>
+        {expandedSections.plan && (
+          <div className="section-content">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Décision thérapeutique</label>
+                <select
+                  value={formData.treatment_decision}
+                  onChange={(e) => handleInputChange('treatment_decision', e.target.value)}
+                  className="form-input"
+                >
+                  <option value="">-- Sélectionner --</option>
+                  <option value="starting">Démarrage d'un traitement</option>
+                  <option value="maintain">Maintien du traitement</option>
+                  <option value="stop">Arrêt du traitement</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>Prescription</label>
+              <textarea
+                placeholder="Détails de la prescription (médicaments, doses, durée)..."
+                value={formData.prescription}
+                onChange={(e) => handleInputChange('prescription', e.target.value)}
+                className="form-textarea"
+                rows={4}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>Conseils et suivi</label>
+              <textarea
+                placeholder="Notes additionnelles et conseils donnés au patient..."
+                value={formData.additional_notes}
+                onChange={(e) => handleInputChange('additional_notes', e.target.value)}
+                className="form-textarea"
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SUBMIT */}
+      <div className="form-actions">
+        <button type="submit" className="btn-submit">
+          <FiCheckCircle /> Enregistrer le formulaire
+        </button>
+      </div>
+    </form>
+  );
+};
 
 /**
  * RIC Form: Rhumatismes Inflammatoires Chroniques (Inflammatory Arthritis)
