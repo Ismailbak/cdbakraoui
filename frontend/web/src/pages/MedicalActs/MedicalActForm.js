@@ -6,7 +6,15 @@ import {
 } from 'react-icons/fi';
 import {
   getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
-  getCareTypes, getActTypes, getFormTypes, linkFormToAct
+  getCareTypes, getActTypes, getFormTypes, linkFormToAct,
+  createFormCsRd, updateFormCsRd,
+  createFormCsRic, updateFormCsRic,
+  createFormCsOs, updateFormCsOs,
+  createFormCsEcho, updateFormCsEcho,
+  createFormCsGeste, updateFormCsGeste,
+  createFormCsSeances, updateFormCsSeances,
+  createFormCsDxa, updateFormCsDxa,
+  createFormCsDouleur, updateFormCsDouleur
 } from '../../api/api';
 import {
   FormCsRd, FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
@@ -59,6 +67,18 @@ const FORM_API_MAP = {
   'form_cs_seances': 'cs-seances',
   'form_cs_dxa': 'cs-dxa',
   'form_cs_douleur': 'cs-douleur',
+};
+
+// CRUD function mapping
+const FORM_CRUD_MAP = {
+  'form_cs_rd': { create: createFormCsRd, update: updateFormCsRd },
+  'form_cs_ric': { create: createFormCsRic, update: updateFormCsRic },
+  'form_cs_os': { create: createFormCsOs, update: updateFormCsOs },
+  'form_cs_echo': { create: createFormCsEcho, update: updateFormCsEcho },
+  'form_cs_geste': { create: createFormCsGeste, update: updateFormCsGeste },
+  'form_cs_seances': { create: createFormCsSeances, update: updateFormCsSeances },
+  'form_cs_dxa': { create: createFormCsDxa, update: updateFormCsDxa },
+  'form_cs_douleur': { create: createFormCsDouleur, update: updateFormCsDouleur },
 };
 
 const EMPTY_FORM = {
@@ -131,6 +151,10 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         || initialData.type
         || 'Consultation';
 
+      const firstForm = initialData.forms && Array.isArray(initialData.forms) && initialData.forms.length > 0 
+        ? initialData.forms[0] 
+        : null;
+
       setForm({
         id: initialData.id,
         patientId: initialData.patient_id || initialData.patientId,
@@ -145,6 +169,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         status: initialData.status || 'pending',
         treatment: treatmentValue,
         notes: initialData.notes || '',
+        formId: firstForm ? firstForm.form_table_id : '',
+        formName: firstForm ? firstForm.form_name : '',
         labResults: [],
       });
       
@@ -387,23 +413,25 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       }
 
       // Link FormCsRd if one was created and care type was selected
-      if (form.careTypeId && form.formCsRdId && actId) {
+      // Link clinical form if one was created
+      const finalFormId = form.formId || form.formCsRdId;
+      if (form.formName && finalFormId && actId) {
         // Find the form type to get ref_form_type_id
-        const selectedFormType = formTypes.find(ft => ft.form_name === 'form_cs_rd');
+        const selectedFormType = formTypes.find(ft => ft.form_name === form.formName);
         if (selectedFormType) {
           try {
-            console.log(`Linking form ${form.formCsRdId} to act ${actId} with form type ${selectedFormType.id}`);
-            await linkFormToAct(actId, selectedFormType.id, form.formCsRdId);
+            console.log(`Linking form ${finalFormId} to act ${actId} with form type ${selectedFormType.id}`);
+            await linkFormToAct(actId, selectedFormType.id, finalFormId);
             console.log('Form linked successfully');
           } catch (linkErr) {
             console.error('Error linking form to act:', linkErr);
-            alert('Avertissement: Le formulaire n\'a pas pu être lié à l\'acte. Les données ont été sauvegardées.');
+            // Non-fatal error for the user, but log it
           }
         } else {
-          console.warn('form_cs_rd form type not found in:', formTypes);
+          console.warn(`Form type ${form.formName} not found in catalog, cannot link.`);
         }
       } else {
-        console.warn('Cannot link form - missing:', { careTypeId: form.careTypeId, formCsRdId: form.formCsRdId, actId });
+        console.log('No clinical form to link:', { formName: form.formName, formId: finalFormId });
       }
       
       // Create lab results if any were added
@@ -622,47 +650,57 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
             {form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName] ? (
               // Form automatically selected and rendered - no dropdown needed
               <div style={{ marginTop: '1rem' }}>
-                <div className="info-box" style={{ marginBottom: '1.5rem' }}>
-                  <FiCheckCircle style={{ color: '#10b981' }} />
-                  <span>Formulaire: <strong>{formTypes.find(ft => ft.form_name === form.formName)?.form_label || form.formName}</strong></span>
+                <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FiCheckCircle style={{ color: '#10b981' }} />
+                    <span>Formulaire: <strong>{(formTypes.find(ft => ft.form_name === form.formName)?.form_label || form.formName).replace('Unit??', 'Unité')}</strong></span>
+                  </div>
+                  {form.formId && (
+                    <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <FiCheck /> Enregistré
+                    </span>
+                  )}
                 </div>
                 
                 {React.createElement(FORM_COMPONENT_MAP[form.formName], {
                   onSubmit: async (formData) => {
                     try {
-                      const apiEndpoint = FORM_API_MAP[form.formName];
+                      const crud = FORM_CRUD_MAP[form.formName];
+                      if (!crud) throw new Error('Configuration API introuvable pour ce formulaire');
+                      
                       let response;
                       
                       if (form.formId) {
                         // Update existing form
-                        response = await fetch(`/api/forms/${apiEndpoint}/${form.formId}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(formData),
-                        });
+                        response = await crud.update(form.formId, formData);
                       } else {
                         // Create new form
-                        response = await fetch(`/api/forms/${apiEndpoint}`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(formData),
-                        });
+                        response = await crud.create(formData);
                       }
                       
-                      if (!response.ok) {
-                        throw new Error(`API error: ${response.statusText}`);
-                      }
-                      
-                      const result = await response.json();
-                      if (result.id && !form.formId) {
+                      const result = response.data;
+                      if (result && result.id && !form.formId) {
                         setForm(prev => ({ ...prev, formId: result.id }));
                         console.log('Form created successfully with ID:', result.id);
                       } else {
                         console.log('Form updated successfully');
                       }
+                      
+                      // Success feedback
+                      alert('Données cliniques enregistrées avec succès. Vous pouvez continuer les étapes suivantes.');
                     } catch (err) {
                       console.error('Error saving form:', err);
-                      alert('Erreur lors de l\'enregistrement du formulaire. Veuillez réessayer.');
+                      let errorMsg = 'Erreur lors de l\'enregistrement du formulaire.';
+                      
+                      if (err.response?.data?.detail) {
+                        const detail = err.response.data.detail;
+                        if (Array.isArray(detail)) {
+                          errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join('\n');
+                        } else {
+                          errorMsg = detail;
+                        }
+                      }
+                      alert(errorMsg);
                     }
                   },
                   initialData: {},
