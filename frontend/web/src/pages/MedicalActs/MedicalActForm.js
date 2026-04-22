@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   FiUser, FiCalendar, FiActivity, FiCheck, FiX,
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
-  FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3
+  FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3, FiCheckCircle
 } from 'react-icons/fi';
 import {
   getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
-  getCareTypes, getActTypes, getFormTypes, createFormCsRd, linkFormToAct
+  getCareTypes, getActTypes, getFormTypes, linkFormToAct
 } from '../../api/api';
 import FormCsRd from './FormCsRd';
+import {
+  FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
+} from '../../components/MedicalForms/AllForms';
 import './MedicalActForm.css';
 
 const CATEGORY_OPTIONS = [
@@ -35,6 +38,30 @@ const STEPS = [
   { id: 6, label: 'Facturation', icon: FiDollarSign },
 ];
 
+// Form component mapping
+const FORM_COMPONENT_MAP = {
+  'form_cs_rd': FormCsRd,
+  'form_cs_ric': FormCsRic,
+  'form_cs_os': FormCsOs,
+  'form_cs_echo': FormCsEcho,
+  'form_cs_geste': FormCsGeste,
+  'form_cs_seances': FormCsSeances,
+  'form_cs_dxa': FormCsDxa,
+  'form_cs_douleur': FormCsDouleur,
+};
+
+// API endpoint mapping
+const FORM_API_MAP = {
+  'form_cs_rd': 'cs_rd',
+  'form_cs_ric': 'cs-ric',
+  'form_cs_os': 'cs-os',
+  'form_cs_echo': 'cs-echo',
+  'form_cs_geste': 'cs-geste',
+  'form_cs_seances': 'cs-seances',
+  'form_cs_dxa': 'cs-dxa',
+  'form_cs_douleur': 'cs-douleur',
+};
+
 const EMPTY_FORM = {
   patientId: '',
   patientName: '',
@@ -42,7 +69,9 @@ const EMPTY_FORM = {
   date: new Date().toISOString().split('T')[0],
   careTypeId: '',
   formTypeId: '',
-  formCsRdId: '',
+  formName: '',  // Name of the form (e.g., 'form_cs_ric')
+  formId: '',     // ID of the form data record
+  formCsRdId: '', // Legacy support
   actType: 'Consultation',
   category: 'rheumatology',
   diagnosis: '',
@@ -139,11 +168,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     if (step === 1) {
       loadPatients();
     }
-    // Auto-create FormCsRd when entering Step 3 with form_cs_rd available
-    if (step === 3 && form.careTypeId && formTypes.some(ft => ft.form_name === 'form_cs_rd') && !form.formCsRdId) {
-      initializeFormCsRd();
-    }
-  }, [step, form.careTypeId, formTypes]);
+  }, [step]);
 
   useEffect(() => {
     loadDoctors();
@@ -195,8 +220,23 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const loadFormTypes = async (actTypeId) => {
     try {
       const res = await getFormTypes(actTypeId);
-      setFormTypes(res.data || []);
-      return res.data || [];
+      const formTypesData = res.data || [];
+      setFormTypes(formTypesData);
+      
+      // Auto-select first form type if available
+      if (formTypesData && formTypesData.length > 0) {
+        const selectedFormType = formTypesData[0];
+        if (selectedFormType && selectedFormType.form_name) {
+          console.log('Auto-selecting form from loadFormTypes:', selectedFormType.form_name);
+          setForm(prev => ({
+            ...prev,
+            formName: selectedFormType.form_name,
+            formTypeId: selectedFormType.id,
+          }));
+        }
+      }
+      
+      return formTypesData;
     } catch (err) {
       console.error("Error loading form types:", err);
       setFormTypes([]);
@@ -206,7 +246,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
 
   const handleCareTypeSelect = async (careTypeId) => {
     console.log('Care type selected:', careTypeId);
-    setForm(prev => ({ ...prev, careTypeId, formTypeId: '', formCsRdId: '' }));
+    setForm(prev => ({ ...prev, careTypeId, formTypeId: '', formName: '', formId: '' }));
     if (careTypeId) {
       try {
         const actTypesData = await loadActTypes(careTypeId);
@@ -214,8 +254,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         // Auto-select first act type if available
         if (actTypesData && actTypesData.length > 0) {
           console.log('Loading form types for act type:', actTypesData[0].id);
-          const formTypesData = await loadFormTypes(actTypesData[0].id);
-          console.log('Form types loaded:', formTypesData);
+          // loadFormTypes will auto-select the first form
+          await loadFormTypes(actTypesData[0].id);
         }
       } catch (err) {
         console.error('Error in handleCareTypeSelect:', err);
@@ -229,23 +269,6 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     } else {
       setFormTypes([]);
       setForm(prev => ({ ...prev, formTypeId: '', formCsRdId: '' }));
-    }
-  };
-
-  const initializeFormCsRd = async () => {
-    try {
-      // Create an empty FormCsRd record
-      const csRdData = {
-        form_date: form.date,
-        // All other fields will use backend defaults
-      };
-      const res = await createFormCsRd(csRdData);
-      if (res.data?.id) {
-        setForm(prev => ({ ...prev, formCsRdId: res.data.id }));
-      }
-    } catch (err) {
-      console.error('Error initializing FormCsRd:', err);
-      // Continue without form - user can still use classic entry
     }
   };
 
@@ -598,27 +621,62 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               <span>Données de forme clinique</span>
             </div>
             
-            {form.careTypeId && formTypes.length > 0 && formTypes.some(ft => ft.form_name === 'form_cs_rd') ? (
-              // Care type with form_cs_rd available - Show FormCsRd component
-              <FormCsRd
-                formId={form.formCsRdId || null}
-                onSave={(formData) => {
-                  console.log('Form saved:', formData);
-                  if (formData.id && !form.formCsRdId) {
-                    setForm(prev => ({ ...prev, formCsRdId: formData.id }));
-                  }
-                }}
-                onClose={() => {
-                  // Keep form open, just for reference
-                }}
-              />
+            {form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName] ? (
+              // Form automatically selected and rendered - no dropdown needed
+              <div style={{ marginTop: '1rem' }}>
+                <div className="info-box" style={{ marginBottom: '1.5rem' }}>
+                  <FiCheckCircle style={{ color: '#10b981' }} />
+                  <span>Formulaire: <strong>{formTypes.find(ft => ft.form_name === form.formName)?.form_label || form.formName}</strong></span>
+                </div>
+                
+                {React.createElement(FORM_COMPONENT_MAP[form.formName], {
+                  onSubmit: async (formData) => {
+                    try {
+                      const apiEndpoint = FORM_API_MAP[form.formName];
+                      let response;
+                      
+                      if (form.formId) {
+                        // Update existing form
+                        response = await fetch(`/api/forms/${apiEndpoint}/${form.formId}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(formData),
+                        });
+                      } else {
+                        // Create new form
+                        response = await fetch(`/api/forms/${apiEndpoint}`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(formData),
+                        });
+                      }
+                      
+                      if (!response.ok) {
+                        throw new Error(`API error: ${response.statusText}`);
+                      }
+                      
+                      const result = await response.json();
+                      if (result.id && !form.formId) {
+                        setForm(prev => ({ ...prev, formId: result.id }));
+                        console.log('Form created successfully with ID:', result.id);
+                      } else {
+                        console.log('Form updated successfully');
+                      }
+                    } catch (err) {
+                      console.error('Error saving form:', err);
+                      alert('Erreur lors de l\'enregistrement du formulaire. Veuillez réessayer.');
+                    }
+                  },
+                  initialData: {},
+                })}
+              </div>
             ) : form.careTypeId && formTypes.length === 0 ? (
               <div className="maf-form-note">
-                <p>⚠️ Chargement des formes disponibles...</p>
+                <p>⚠️ Chargement du formulaire...</p>
               </div>
-            ) : form.careTypeId ? (
+            ) : form.careTypeId && formTypes.length > 0 ? (
               <div className="maf-form-note">
-                <p>⚠️ Forme structurée non disponible pour ce type de soin. Continuez avec la saisie clinique classique à l'étape suivante.</p>
+                <p>⚠️ Formulaire en cours de sélection...</p>
               </div>
             ) : (
               <div className="maf-form-note">

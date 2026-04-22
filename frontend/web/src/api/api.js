@@ -185,6 +185,48 @@ export const getFormCsRd = (formId) => api.get(`/forms/cs_rd/${formId}`);
 export const updateFormCsRd = (formId, data) => api.put(`/forms/cs_rd/${formId}`, data);
 export const deleteFormCsRd = (formId) => api.delete(`/forms/cs_rd/${formId}`);
 
+// Form Data CRUD - form_cs_ric (Rhumatismes Inflammatoires Chroniques)
+export const createFormCsRic = (data) => api.post('/forms/cs-ric', data);
+export const getFormCsRic = (formId) => api.get(`/forms/cs-ric/${formId}`);
+export const updateFormCsRic = (formId, data) => api.patch(`/forms/cs-ric/${formId}`, data);
+export const deleteFormCsRic = (formId) => api.delete(`/forms/cs-ric/${formId}`);
+
+// Form Data CRUD - form_cs_os (Ostéopathies Fragilisantes)
+export const createFormCsOs = (data) => api.post('/forms/cs-os', data);
+export const getFormCsOs = (formId) => api.get(`/forms/cs-os/${formId}`);
+export const updateFormCsOs = (formId, data) => api.patch(`/forms/cs-os/${formId}`, data);
+export const deleteFormCsOs = (formId) => api.delete(`/forms/cs-os/${formId}`);
+
+// Form Data CRUD - form_cs_echo (Échographie)
+export const createFormCsEcho = (data) => api.post('/forms/cs-echo', data);
+export const getFormCsEcho = (formId) => api.get(`/forms/cs-echo/${formId}`);
+export const updateFormCsEcho = (formId, data) => api.patch(`/forms/cs-echo/${formId}`, data);
+export const deleteFormCsEcho = (formId) => api.delete(`/forms/cs-echo/${formId}`);
+
+// Form Data CRUD - form_cs_geste (Gestes Techniques)
+export const createFormCsGeste = (data) => api.post('/forms/cs-geste', data);
+export const getFormCsGeste = (formId) => api.get(`/forms/cs-geste/${formId}`);
+export const updateFormCsGeste = (formId, data) => api.patch(`/forms/cs-geste/${formId}`, data);
+export const deleteFormCsGeste = (formId) => api.delete(`/forms/cs-geste/${formId}`);
+
+// Form Data CRUD - form_cs_seances (Séances Thérapeutiques)
+export const createFormCsSeances = (data) => api.post('/forms/cs-seances', data);
+export const getFormCsSeances = (formId) => api.get(`/forms/cs-seances/${formId}`);
+export const updateFormCsSeances = (formId, data) => api.patch(`/forms/cs-seances/${formId}`, data);
+export const deleteFormCsSeances = (formId) => api.delete(`/forms/cs-seances/${formId}`);
+
+// Form Data CRUD - form_cs_dxa (Ostéodensitométrie)
+export const createFormCsDxa = (data) => api.post('/forms/cs-dxa', data);
+export const getFormCsDxa = (formId) => api.get(`/forms/cs-dxa/${formId}`);
+export const updateFormCsDxa = (formId, data) => api.patch(`/forms/cs-dxa/${formId}`, data);
+export const deleteFormCsDxa = (formId) => api.delete(`/forms/cs-dxa/${formId}`);
+
+// FormCsDouleur (Pain Management)
+export const createFormCsDouleur = (data) => api.post(`/forms/cs-douleur`, data);
+export const getFormCsDouleur = (formId) => api.get(`/forms/cs-douleur/${formId}`);
+export const updateFormCsDouleur = (formId, data) => api.patch(`/forms/cs-douleur/${formId}`, data);
+export const deleteFormCsDouleur = (formId) => api.delete(`/forms/cs-douleur/${formId}`);
+
 // Bridge Table - Link act to form
 export const linkFormToAct = (actId, refFormTypeId, formTableId) =>
   api.post(`/forms/acts/${actId}/forms?ref_form_type_id=${refFormTypeId}&form_table_id=${formTableId}`);

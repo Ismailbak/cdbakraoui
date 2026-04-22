@@ -7,6 +7,7 @@ from app.models import user, patient, appointment, medical_act, act_result, noti
 from app.models.chat_message import ChatMessage  # noqa: F401 - register model
 from app.models.chat_session import ChatSession  # noqa: F401 - register model
 from app.models.form_system import RefCareType, RefActType, RefFormType, ActForm, FormCsRd  # noqa: F401 - register form models
+from app.models.additional_forms import FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur  # noqa: F401 - register additional forms
 from app.models.llm import llm
 from app.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
 from pathlib import Path

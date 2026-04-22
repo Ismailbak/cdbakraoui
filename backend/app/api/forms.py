@@ -14,6 +14,9 @@ from app.database import get_db
 from app.models.form_system import (
     RefCareType, RefActType, RefFormType, ActForm, FormCsRd
 )
+from app.models.additional_forms import (
+    FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
+)
 from app.models.medical_act import MedicalAct as MedicalActModel
 from app.api.auth import get_current_user_orm
 from app.models.user import User
@@ -159,6 +162,211 @@ class FormCsRdOut(FormCsRdCreate):
         from_attributes = True
 
 
+# ───────────────────────────────────────────────────────────────────────
+# Pydantic Schemas for Additional Forms (RIC, OS, ECHO, GESTE, SEANCES, DXA)
+# ───────────────────────────────────────────────────────────────────────
+
+class FormCsRicCreate(BaseModel):
+    """Schema for form_cs_ric - Inflammatory Arthritis"""
+    crp_value: Optional[float] = None
+    crp_date: Optional[date] = None
+    esr_value: Optional[float] = None
+    esr_date: Optional[date] = None
+    das28_score: Optional[float] = None
+    tender_joint_count: Optional[int] = None
+    swollen_joint_count: Optional[int] = None
+    morning_stiffness_duration: Optional[int] = None
+    affected_joints: Optional[List[str]] = None
+    fever_present: Optional[int] = 0
+    fatigue_level: Optional[int] = None
+    dmards_json: Optional[List[Dict[str, Any]]] = None
+    biologics_json: Optional[List[Dict[str, Any]]] = None
+    treatment_response: Optional[str] = None
+    clinical_notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsRicOut(FormCsRicCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class FormCsOsCreate(BaseModel):
+    """Schema for form_cs_os - Fragility Bone Disease"""
+    dxa_date: Optional[date] = None
+    spine_tscore: Optional[float] = None
+    hip_tscore: Optional[float] = None
+    femoral_neck_tscore: Optional[float] = None
+    fracture_history_present: Optional[int] = 0
+    vertebral_fracture_present: Optional[int] = 0
+    frax_major_osteoporotic: Optional[float] = None
+    frax_hip_fracture: Optional[float] = None
+    fall_risk: Optional[str] = None
+    vitamin_d_level: Optional[float] = None
+    physical_activity: Optional[str] = None
+    back_pain_present: Optional[int] = 0
+    back_pain_severity: Optional[int] = None
+    clinical_notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsOsOut(FormCsOsCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class FormCsEchoCreate(BaseModel):
+    """Schema for form_cs_echo - Ultrasound"""
+    echo_date: date
+    anatomical_region: str
+    indication: Optional[str] = None
+    side_examined: Optional[str] = None
+    synovitis_present: Optional[int] = 0
+    synovitis_grade: Optional[str] = None
+    effusion_present: Optional[int] = 0
+    effusion_volume: Optional[str] = None
+    bone_erosions_present: Optional[int] = 0
+    doppler_performed: Optional[int] = 0
+    doppler_hyperemia_present: Optional[int] = 0
+    impression: str
+    recommendations: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsEchoOut(FormCsEchoCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class FormCsGesteCreate(BaseModel):
+    """Schema for form_cs_geste - Procedures"""
+    procedure_date: datetime
+    procedure_type: str
+    anatomical_site: str
+    side: Optional[str] = None
+    clinical_indication: str
+    guidance_method: Optional[str] = None
+    anesthesia_used: Optional[int] = 0
+    product_injected: Optional[str] = None
+    fluid_aspirated_volume: Optional[float] = None
+    patient_tolerance: Optional[str] = None
+    pain_during_procedure: Optional[int] = None
+    complications_present: Optional[int] = 0
+    follow_up_recommended: Optional[int] = 0
+    clinical_notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsGesteOut(FormCsGesteCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class FormCsSeancesCreate(BaseModel):
+    """Schema for form_cs_seances - Therapeutic Sessions"""
+    session_date: date
+    session_duration: Optional[int] = None
+    therapist_name: Optional[str] = None
+    session_type: str
+    anatomical_regions: Optional[str] = None
+    pain_before_session: Optional[int] = None
+    pain_after_session: Optional[int] = None
+    functional_improvement: Optional[str] = None
+    patient_comfort_level: Optional[str] = None
+    patient_compliance: Optional[str] = None
+    session_number_in_series: Optional[int] = None
+    progress_notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsSeancesOut(FormCsSeancesCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class FormCsDxaCreate(BaseModel):
+    """Schema for form_cs_dxa - DXA/DEXA Scan"""
+    scan_date: date
+    scan_quality: Optional[str] = None
+    spine_tscore: Optional[float] = None
+    hip_tscore: Optional[float] = None
+    femoral_neck_tscore: Optional[float] = None
+    who_diagnosis_spine: Optional[str] = None
+    frax_major_fracture_probability: Optional[float] = None
+    frax_hip_fracture_probability: Optional[float] = None
+    vfa_performed: Optional[int] = 0
+    vertebral_deformities_present: Optional[int] = 0
+    impression: str
+    recommendations: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsDxaOut(FormCsDxaCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class FormCsDouleurCreate(BaseModel):
+    """Schema for creating form_cs_douleur"""
+    pain_locations: Optional[list] = None
+    pain_intensity_vas: Optional[int] = None
+    pain_duration: Optional[str] = None
+    pain_character: Optional[list] = None
+    onset_type: Optional[str] = None
+    initial_pain_date: Optional[date] = None
+    previous_treatments_json: Optional[dict] = None
+    pain_progression: Optional[str] = None
+    aggravating_factors: Optional[list] = None
+    relieving_factors: Optional[list] = None
+    time_of_day_pattern: Optional[str] = None
+    functional_limitation_score: Optional[int] = None
+    sleep_disturbance_present: Optional[int] = 0
+    sleep_quality: Optional[str] = None
+    work_impact: Optional[str] = None
+    daily_activity_limitations: Optional[str] = None
+    analgesics_json: Optional[list] = None
+    nsaids_json: Optional[list] = None
+    other_medications_json: Optional[list] = None
+    tender_points_locations: Optional[list] = None
+    range_of_motion_findings: Optional[str] = None
+    neurological_exam_findings: Optional[str] = None
+    anxiety_level: Optional[int] = None
+    depression_screening: Optional[str] = None
+    catastrophizing_score: Optional[int] = None
+    coping_mechanisms: Optional[list] = None
+    recommended_interventions: Optional[list] = None
+    referrals_needed: Optional[list] = None
+    follow_up_plan: Optional[str] = None
+    clinical_notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FormCsDouleurOut(FormCsDouleurCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
 class ActFormOut(BaseModel):
     """Schema for act_forms bridge"""
     id: int
@@ -297,6 +505,312 @@ def delete_form_cs_rd(
     
     log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_rd #{form_id}")
     
+    return {"message": "Form deleted"}
+
+
+# ───────────────────────────────────────────────────────────────────────
+# CRUD Endpoints for Additional Forms (RIC, OS, ECHO, GESTE, SEANCES, DXA)
+# ───────────────────────────────────────────────────────────────────────
+
+# ─── FormCsRic ───
+@router.post("/cs-ric", response_model=FormCsRicOut)
+def create_form_cs_ric(data: FormCsRicCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_ric record"""
+    form = FormCsRic(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_ric #{form.id}")
+    return form
+
+@router.get("/cs-ric/{form_id}", response_model=FormCsRicOut)
+def get_form_cs_ric(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_ric record"""
+    form = db.query(FormCsRic).filter(FormCsRic.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-ric/{form_id}", response_model=FormCsRicOut)
+def update_form_cs_ric(form_id: int, data: FormCsRicCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update a form_cs_ric record"""
+    form = db.query(FormCsRic).filter(FormCsRic.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_ric #{form.id}")
+    return form
+
+@router.delete("/cs-ric/{form_id}")
+def delete_form_cs_ric(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_ric record"""
+    form = db.query(FormCsRic).filter(FormCsRic.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_ric #{form_id}")
+    return {"message": "Form deleted"}
+
+# ─── FormCsOs ───
+@router.post("/cs-os", response_model=FormCsOsOut)
+def create_form_cs_os(data: FormCsOsCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_os record"""
+    form = FormCsOs(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_os #{form.id}")
+    return form
+
+@router.get("/cs-os/{form_id}", response_model=FormCsOsOut)
+def get_form_cs_os(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_os record"""
+    form = db.query(FormCsOs).filter(FormCsOs.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-os/{form_id}", response_model=FormCsOsOut)
+def update_form_cs_os(form_id: int, data: FormCsOsCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update a form_cs_os record"""
+    form = db.query(FormCsOs).filter(FormCsOs.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_os #{form.id}")
+    return form
+
+@router.delete("/cs-os/{form_id}")
+def delete_form_cs_os(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_os record"""
+    form = db.query(FormCsOs).filter(FormCsOs.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_os #{form_id}")
+    return {"message": "Form deleted"}
+
+# ─── FormCsEcho ───
+@router.post("/cs-echo", response_model=FormCsEchoOut)
+def create_form_cs_echo(data: FormCsEchoCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_echo record"""
+    form = FormCsEcho(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_echo #{form.id}")
+    return form
+
+@router.get("/cs-echo/{form_id}", response_model=FormCsEchoOut)
+def get_form_cs_echo(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_echo record"""
+    form = db.query(FormCsEcho).filter(FormCsEcho.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-echo/{form_id}", response_model=FormCsEchoOut)
+def update_form_cs_echo(form_id: int, data: FormCsEchoCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update a form_cs_echo record"""
+    form = db.query(FormCsEcho).filter(FormCsEcho.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_echo #{form.id}")
+    return form
+
+@router.delete("/cs-echo/{form_id}")
+def delete_form_cs_echo(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_echo record"""
+    form = db.query(FormCsEcho).filter(FormCsEcho.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_echo #{form_id}")
+    return {"message": "Form deleted"}
+
+# ─── FormCsGeste ───
+@router.post("/cs-geste", response_model=FormCsGesteOut)
+def create_form_cs_geste(data: FormCsGesteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_geste record"""
+    form = FormCsGeste(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_geste #{form.id}")
+    return form
+
+@router.get("/cs-geste/{form_id}", response_model=FormCsGesteOut)
+def get_form_cs_geste(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_geste record"""
+    form = db.query(FormCsGeste).filter(FormCsGeste.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-geste/{form_id}", response_model=FormCsGesteOut)
+def update_form_cs_geste(form_id: int, data: FormCsGesteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update a form_cs_geste record"""
+    form = db.query(FormCsGeste).filter(FormCsGeste.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_geste #{form.id}")
+    return form
+
+@router.delete("/cs-geste/{form_id}")
+def delete_form_cs_geste(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_geste record"""
+    form = db.query(FormCsGeste).filter(FormCsGeste.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_geste #{form_id}")
+    return {"message": "Form deleted"}
+
+# ─── FormCsSeances ───
+@router.post("/cs-seances", response_model=FormCsSeancesOut)
+def create_form_cs_seances(data: FormCsSeancesCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_seances record"""
+    form = FormCsSeances(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_seances #{form.id}")
+    return form
+
+@router.get("/cs-seances/{form_id}", response_model=FormCsSeancesOut)
+def get_form_cs_seances(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_seances record"""
+    form = db.query(FormCsSeances).filter(FormCsSeances.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-seances/{form_id}", response_model=FormCsSeancesOut)
+def update_form_cs_seances(form_id: int, data: FormCsSeancesCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update a form_cs_seances record"""
+    form = db.query(FormCsSeances).filter(FormCsSeances.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_seances #{form.id}")
+    return form
+
+@router.delete("/cs-seances/{form_id}")
+def delete_form_cs_seances(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_seances record"""
+    form = db.query(FormCsSeances).filter(FormCsSeances.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_seances #{form_id}")
+    return {"message": "Form deleted"}
+
+# ─── FormCsDxa ───
+@router.post("/cs-dxa", response_model=FormCsDxaOut)
+def create_form_cs_dxa(data: FormCsDxaCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_dxa record"""
+    form = FormCsDxa(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_dxa #{form.id}")
+    return form
+
+@router.get("/cs-dxa/{form_id}", response_model=FormCsDxaOut)
+def get_form_cs_dxa(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_dxa record"""
+    form = db.query(FormCsDxa).filter(FormCsDxa.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-dxa/{form_id}", response_model=FormCsDxaOut)
+def update_form_cs_dxa(form_id: int, data: FormCsDxaCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update a form_cs_dxa record"""
+    form = db.query(FormCsDxa).filter(FormCsDxa.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_dxa #{form.id}")
+    return form
+
+@router.delete("/cs-dxa/{form_id}")
+def delete_form_cs_dxa(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_dxa record"""
+    form = db.query(FormCsDxa).filter(FormCsDxa.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_dxa #{form_id}")
+    return {"message": "Form deleted"}
+
+# ─── FormCsDouleur ───
+@router.post("/cs-douleur", response_model=FormCsDouleurOut)
+def create_form_cs_douleur(data: FormCsDouleurCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Create a new form_cs_douleur record"""
+    form = FormCsDouleur(**data.dict())
+    db.add(form)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_created", user_id=current_user.id, details=f"Created form_cs_douleur #{form.id}")
+    return form
+
+@router.get("/cs-douleur/{form_id}", response_model=FormCsDouleurOut)
+def get_form_cs_douleur(form_id: int, db: Session = Depends(get_db)):
+    """Get a specific form_cs_douleur record"""
+    form = db.query(FormCsDouleur).filter(FormCsDouleur.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@router.patch("/cs-douleur/{form_id}", response_model=FormCsDouleurOut)
+def update_form_cs_douleur(form_id: int, data: FormCsDouleurCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Update an existing form_cs_douleur record"""
+    form = db.query(FormCsDouleur).filter(FormCsDouleur.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(form, key, value)
+    db.commit()
+    db.refresh(form)
+    log_action(db, action="form_updated", user_id=current_user.id, details=f"Updated form_cs_douleur #{form.id}")
+    return form
+
+@router.delete("/cs-douleur/{form_id}")
+def delete_form_cs_douleur(form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_orm)):
+    """Delete a form_cs_douleur record"""
+    form = db.query(FormCsDouleur).filter(FormCsDouleur.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    db.delete(form)
+    db.commit()
+    log_action(db, action="form_deleted", user_id=current_user.id, details=f"Deleted form_cs_douleur #{form_id}")
     return {"message": "Form deleted"}
 
 

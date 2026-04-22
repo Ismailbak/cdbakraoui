@@ -79,6 +79,48 @@ SELECT id, 'form_cs_rd', 'Consultation Rhumatisme Dégénératif', 1, 1
 FROM ref_act_types WHERE code = 'CS_RD'
 LIMIT 1;
 
+-- Link form_cs_ric to CS_RIC act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_ric', 'Consultation Rhumatismes Inflammatoires Chroniques', 1, 1
+FROM ref_act_types WHERE code = 'CS_RIC'
+LIMIT 1;
+
+-- Link form_cs_os to CS_OS act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_os', 'Consultation Pathologie Osseuse', 1, 1
+FROM ref_act_types WHERE code = 'CS_OS'
+LIMIT 1;
+
+-- Link form_cs_echo to ECHO act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_echo', 'Séance d\'Échographie', 1, 1
+FROM ref_act_types WHERE code = 'ECHO'
+LIMIT 1;
+
+-- Link form_cs_geste to INFILT act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_geste', 'Infiltration Intra-Articulaire', 1, 1
+FROM ref_act_types WHERE code = 'INFILT'
+LIMIT 1;
+
+-- Link form_cs_seances to SEANCE_KIN act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_seances', 'Séance de Kinésithérapie', 1, 1
+FROM ref_act_types WHERE code = 'SEANCE_KIN'
+LIMIT 1;
+
+-- Link form_cs_dxa to DXA_MEASURE act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_dxa', 'Densitométrie Osseuse DXA', 1, 1
+FROM ref_act_types WHERE code = 'DXA_MEASURE'
+LIMIT 1;
+
+-- Link form_cs_douleur to CS_DOULEUR act type
+INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order, is_active)
+SELECT id, 'form_cs_douleur', 'Consultation Unité de la Douleur', 1, 1
+FROM ref_act_types WHERE code = 'CS_DOULEUR'
+LIMIT 1;
+
 -- ────────────────────────────────────────────────────────────────────────
 -- Verification queries (run these to verify data was inserted)
 -- ────────────────────────────────────────────────────────────────────────
