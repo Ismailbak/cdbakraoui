@@ -19,6 +19,7 @@ from app.models.patient import Patient as PatientModel
 from app.api.auth import get_current_user_orm
 from app.models.user import User
 from app.services.audit_service import log_action
+from app.models.form_system import ActForm
 
 # Ensure upload directory exists
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "uploads"))
@@ -36,6 +37,12 @@ class ActDocumentOut(BaseModel):
     file_path: str
     mime_type: Optional[str] = None
 
+class ActFormOut(BaseModel):
+    id: int
+    act_id: int
+    ref_form_type_id: int
+    form_table_id: int
+    
     class Config:
         from_attributes = True
 
@@ -132,6 +139,7 @@ class MedicalActOut(MedicalActBase):
     assigned_staff: List[MedicalActStaffOut] = []
     diagnoses: List[ActDiagnosisOut] = []
     treatments: List[ActTreatmentOut] = []
+    forms: List[ActFormOut] = []
 
     class Config:
         from_attributes = True
@@ -139,7 +147,7 @@ class MedicalActOut(MedicalActBase):
 
 # ─── Internal Helper ──────────────────────────────────────────────────────────
 
-def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: List[ActDocumentModel] = None, assigned_staff: List[MedicalActStaffModel] = None, diagnoses=None, treatments=None) -> dict:
+def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: List[ActDocumentModel] = None, assigned_staff: List[MedicalActStaffModel] = None, diagnoses=None, treatments=None, forms=None) -> dict:
     """
     Converts a MedicalActModel ORM row to a plain dict, injecting patient_name, diagnoses, treatments.
     Used by every endpoint that returns a MedicalActOut.
@@ -177,6 +185,7 @@ def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: L
         "assigned_staff": staff_dicts,
         "diagnoses": diag_dicts,
         "treatments": treat_dicts,
+        "forms": forms or [],
         "created_at": act.created_at.isoformat() if act.created_at else None,
     }
 
@@ -229,8 +238,29 @@ def _enrich_acts(db: Session, rows: List[MedicalActModel]) -> List[dict]:
         # Filter out treatments with NULL or empty drug_name (invalid records)
         if treat.drug_name and isinstance(treat.drug_name, str) and treat.drug_name.strip():
             treat_map.setdefault(treat.act_id, []).append(treat)
+            
+    # One DB query for all relevant forms
+    forms = (
+        db.query(ActForm).filter(ActForm.act_id.in_(act_ids)).all()
+    )
+    form_map = {}
+    for f in forms:
+        form_map.setdefault(f.act_id, []).append({
+            "id": f.id,
+            "act_id": f.act_id,
+            "ref_form_type_id": f.ref_form_type_id,
+            "form_table_id": f.form_table_id
+        })
 
-    return [_act_to_dict(row, patient_map.get(row.patient_id), doc_map.get(row.id, []), None, diag_map.get(row.id, []), treat_map.get(row.id, [])) for row in rows]
+    return [_act_to_dict(
+        row, 
+        patient_map.get(row.patient_id), 
+        doc_map.get(row.id, []), 
+        None, 
+        diag_map.get(row.id, []), 
+        treat_map.get(row.id, []),
+        form_map.get(row.id, [])
+    ) for row in rows]
 
 
 # ─── Stats ────────────────────────────────────────────────────────────────────
