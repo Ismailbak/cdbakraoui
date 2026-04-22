@@ -14,7 +14,7 @@ class MedicalAct(Base):
     notes = Column(Text, nullable=True)
     status = Column(String(20), default="completed")
     doctor_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Médecin principal
-    amount = Column(Numeric(10, 2), nullable=True)
+    amount = Column(Numeric(15, 2), nullable=True)
     category = Column(String(50), nullable=True)
     # diagnosis and treatment moved to separate tables (act_diagnoses, act_treatments)
     created_at = Column(DateTime, server_default=func.now())
