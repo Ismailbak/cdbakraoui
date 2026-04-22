@@ -40,7 +40,7 @@ This document provides a detailed explanation of every file and directory in the
     - **user.py**: User accounts and roles.
     - **patient.py**: Patient records (includes `date_of_birth` field; age is calculated dynamically).
     - **appointment.py**: Appointments (uses `datetime_scheduled` DateTime field for consolidated date/time).
-    - **medical_act.py**: Medical acts and attached documents (uses `act_date` Date field; `amount` is Decimal(10,2) for currency precision).
+    - **medical_act.py**: Medical acts and attached documents (uses `act_date` Date field; `amount` is Decimal(15,2) for higher financial precision).
     - **notification.py**: Notifications.
     - **audit.py**: Audit logs for actions.
     - **llm.py**: LLM (AI model) interface (stub).
@@ -129,8 +129,8 @@ This document provides a detailed explanation of every file and directory in the
   - **components/**: UI components (cards, common, layout).
   - **pages/**: Page components for each app section (Admin, Analytics, Appointments, Assistant, Dashboard, Legal, Login, MedicalActs, Notifications, Patients, Profile, Signup).
     - **MedicalActs/**: Medical acts pages including:
-      - **MedicalActsPage.js**: Medical acts list and details modal with form data display.
-      - **MedicalActForm.js**: 6-step workflow for creating/editing acts with integrated form system.
+      - **MedicalActsPage.js**: Medical acts list with clinical availability tags and simplified price display. Includes a detail modal that fetches and maps comprehensive clinical data (Douleur, Echo, DXA, etc.).
+      - **MedicalActForm.js**: 6-step workflow for creating/editing acts. Fixed critical bug to correctly link all clinical form types (not just RD) and improved data mapping for edit mode.
       - **FormCsRd.js**: 7-tab clinical form component for rheumatology consultation (Traitement, Signes, Examen, Biologie, Imagerie, Diagnostic, Conduite).
   - **styles/**: Global CSS styles.
   - **Note on Form System (April 17, 2026)**: Complete form integration with FormCsRd component, form-to-act linking, and data display in act details modal.
@@ -148,8 +148,8 @@ This document provides a detailed explanation of every file and directory in the
 
 | Area         | Feature                | Status         | Last Updated   | Notes |
 |--------------|------------------------|----------------|----------------|-------|
-| Backend      | CRUD (patients, etc.)  | Implemented    | April 14, 2026 | Schema corrected (act_date, datetime_scheduled, date_of_birth); Patient dossier export enhanced |
-| Backend      | Form System (FormCsRd) | Implemented    | April 17, 2026 | ✅ 7-tab clinical form; reference data (care/act/form types); CRUD endpoints; ActForm bridge table |
+| Backend      | CRUD (patients, etc.)  | Implemented    | April 22, 2026 | Schema corrected (act_date, datetime_scheduled, date_of_birth); Amount precision increased to Decimal(15,2) |
+| Backend      | Form System (FormCsRd) | Implemented    | April 22, 2026 | ✅ 7-tab clinical form; expanded enrichment logic to include all form types in medical acts |
 | Backend      | Analytics              | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
 | Backend      | AI Chat                | Implemented    | April 10, 2026 | ✅ Working (BioMistral & Gemma4B tested; RAG system in development) |
 | Backend      | Notifications          | Implemented    | April 10, 2026 | ✅ Peer-to-peer and broadcast messaging |
@@ -163,7 +163,7 @@ This document provides a detailed explanation of every file and directory in the
 | Mobile       | Design System          | Implemented    | April 4, 2026  | ✅ Complete theme tokens |
 | Mobile       | Bottom Tab Nav         | Implemented    | April 4, 2026  | ✅ Larger (80px), centered Assistant, improved icons |
 | Mobile       | Appointments           | Implemented    | April 10, 2026 | ✅ DateTime consolidated into datetime_scheduled |
-| Mobile       | Medical Acts           | Implemented    | April 10, 2026 | ✅ act_date field, amount as Decimal(10,2) |
+| Mobile       | Medical Acts           | Implemented    | April 22, 2026 | ✅ act_date field, amount as Decimal(15,2) |
 | Mobile       | Chat                   | Implemented    | April 4, 2026  | ✅ Ready to use |
 | Mobile       | PDF Generation         | Implemented    | April 4, 2026  | ✅ Integrated |
 | Mobile       | More Menu Component    | Implemented    | April 4, 2026  | ✅ New MoreMenuItemButton created |
@@ -179,12 +179,12 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | Appointment Edit       | Implemented    | April 15, 2026 | ✅ Pre-filled form modal, uses AppointmentForm component, patient name display corrected |
 | Web          | Calendar Day Click     | Implemented    | April 15, 2026 | ✅ Click any day in calendar grid to create appointment with pre-filled date; view existing appointments in modal |
 | Web          | Calendar Appointment Creation | Implemented | April 15, 2026 | ✅ Modal integration with AppointmentForm; toggle between view/form modes; "Ajouter un rendez-vous" button |
-| Web          | Medical Acts           | Implemented    | April 14, 2026 | ✅ Pink theme applied (all green → #fca5a5); header, buttons, step indicators, icons updated |
-| Web          | Medical Acts Form      | Implemented    | April 14, 2026 | ✅ Complete pink color scheme (header, icon, steps, inputs, buttons, chips, success state) |
+| Web          | Medical Acts           | Implemented    | April 22, 2026 | ✅ Simplified UI (text-based prices, no green boxes); clinical availability tags (📋) added to list |
+| Web          | Medical Acts Form      | Implemented    | April 22, 2026 | ✅ Fixed form-to-act linking bug for all form types; improved edit mode initialization |
 | Web          | Medical Acts PDF       | Implemented    | April 15, 2026 | ✅ Complete rewrite with lab results section, black text, comprehensive None handling; includes diagnostics, treatments, lab results with table (date, analysis, value, unit, status), and notes |
 | Web          | FormCsRd Component     | Implemented    | April 17, 2026 | ✅ 7-tab clinical form (Treatment, Signs, Exam, Labs, Imaging, Diagnosis, Plan); auto-save on tab change |
 | Web          | Form Linking to Acts   | Implemented    | April 17, 2026 | ✅ MedicalActForm integrates form creation; LinkFormToAct connects to ActForm bridge table |
-| Web          | Form Data Display      | Implemented    | April 17, 2026 | ✅ Medical act details show form data in grid; fetch FormCsRd via ActForm bridge |
+| Web          | Form Data Display      | Implemented    | April 22, 2026 | ✅ Expanded labels for all forms (Douleur, Echo, DXA, etc.); handles JSON/Array fields in details view |
 | Web          | Medical Acts Diagnostics Spacing | Implemented | April 15, 2026 | ✅ Flex layout with 24px gap for better readability of diagnostics and treatment information |
 | Web          | Notifications          | Implemented    | April 10, 2026 | ✅ P2P & broadcast messaging with categories |
 | Web          | Chat                   | Implemented    | April 14, 2026 | ✅ Language selector removed; AI auto-detects; doctor last_name shown in header (uppercase) |
