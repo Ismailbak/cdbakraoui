@@ -70,14 +70,14 @@ function PatientDetailPage() {
       // Build medical history from acts
       patientData.medicalHistory = patientData.acts.map(act => ({
         date: act.date || act.act_date,
-        event: `${act.act_type}: ${
+        event: `${act.act_type}${act.forms?.length > 0 ? ' (Données cliniques)' : ''}: ${
           act.diagnoses?.length > 0 
             ? act.diagnoses
                 .filter(d => d && d.diagnosis_label && d.diagnosis_label.trim())
                 .map(d => d.diagnosis_label)
                 .join(', ') || (act.description || 'Consultation')
             : (act.description || 'Consultation')
-        }`,
+        }${act.amount ? ` - ${act.amount} DH` : ''}`,
         doctor: act.doctor_name || 'Dr.',
       }));
 
@@ -521,9 +521,15 @@ function PatientDetailPage() {
                           <span className="month">{new Date(act.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
                         </div>
                         <div className="act-info">
-                          <h4>{act.type}</h4>
+                          <h4>
+                            {act.type} 
+                            {act.forms?.length > 0 && <span className="clinical-badge" title="Données cliniques enregistrées">📋 Clinique</span>}
+                          </h4>
                           <p className="act-report">{act.report}</p>
-                          <span className="act-doctor">{act.doctor}</span>
+                          <div className="act-footer">
+                            <span className="act-doctor">{act.doctor}</span>
+                            {act.amount > 0 && <span className="patient-act-price-tag">{act.amount} DH</span>}
+                          </div>
                         </div>
                         <span className={`act-status ${act.status === 'completed' ? 'completed' : 'pending'}`}>
                           {act.status === 'completed' ? 'Terminé' : 'En attente'}
