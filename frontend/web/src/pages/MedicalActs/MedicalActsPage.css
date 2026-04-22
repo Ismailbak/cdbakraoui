@@ -261,13 +261,9 @@
 }
 
 .patient-id {
-  font-size: 12px;
+  font-size: 13px;
   color: #94a3b8;
-  background: #f8fafc;
-  padding: 2px 8px;
-  border-radius: 6px;
   font-weight: 500;
-  border: 1px solid #f1f5f9;
 }
 
 .act-diagnosis {
@@ -320,11 +316,12 @@
   font-size: 20px;
   font-weight: 800;
   color: #1e293b;
+  display: inline-block;
 }
 
 .act-amount::after {
   content: ' DH';
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #94a3b8;
 }
@@ -761,6 +758,51 @@
   color: #2563EB;
 }
 
+/* Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .modal-overlay, .modal-content {
+    visibility: visible;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .modal-content * {
+    visibility: visible;
+  }
+  .modal-close, .detail-actions, .maf-nav, .maf-header-left button {
+    display: none !important;
+  }
+  .modal-header h2 {
+    font-size: 24px !important;
+    margin-bottom: 20px !important;
+  }
+  .detail-section {
+    break-inside: avoid;
+  }
+  .form-data-grid {
+    display: block !important;
+  }
+  .form-data-item {
+    margin-bottom: 10px !important;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 5px;
+  }
+  .form-data-item label {
+    font-weight: bold !important;
+    display: block;
+  }
+}
+
 /* Pagination Controls */
 .pagination-container {
   display: flex;
@@ -942,4 +984,14 @@
   color: #1E2A4A;
   margin: 0;
   font-weight: 500;
+}
+
+.clinical-tag {
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
