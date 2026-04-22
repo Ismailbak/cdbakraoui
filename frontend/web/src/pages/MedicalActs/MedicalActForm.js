@@ -590,7 +590,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                 <option value="">-- Sélectionner --</option>
                 {careTypes.map(ct => (
                   <option key={ct.id} value={ct.id}>
-                    {ct.label} ({ct.description || ct.code})
+                    {ct.label}
                   </option>
                 ))}
               </select>
@@ -604,7 +604,6 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                 {actTypes.map(at => (
                   <div key={at.id} className="maf-form-selector">
                     <span className="maf-form-label">{at.label}</span>
-                    <span className="maf-form-desc">{at.description || 'N/A'}</span>
                   </div>
                 ))}
               </div>

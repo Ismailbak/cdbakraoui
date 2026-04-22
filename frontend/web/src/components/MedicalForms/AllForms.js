@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { FiAlertCircle, FiCheckCircle, FiChevronDown, FiPlus, FiTrash2, FiCheck } from 'react-icons/fi';
+import { 
+  FiAlertCircle, FiCheckCircle, FiChevronDown, FiPlus, FiTrash2, FiCheck,
+  FiActivity, FiThermometer, FiDroplet, FiCalendar, FiTarget, FiBox, FiClock,
+  FiFileText, FiSearch, FiLayers, FiShield, FiZap, FiEdit3, FiInfo, FiHash
+} from 'react-icons/fi';
 import './AllForms.css';
 
 /**
@@ -610,8 +614,8 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
   return (
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
-        <h2>🔴 Consultation Rhumatismes Inflammatoires Chroniques</h2>
-        <p>Évaluation complète de l'arthrite inflammatoire</p>
+        <h2>🔴 Consultation RIC</h2>
+        <p>Rhumatismes Inflammatoires Chroniques - Évaluation de l'activité</p>
       </div>
 
       {/* SECTION 1: INFLAMMATORY MARKERS */}
@@ -621,24 +625,30 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('markers')}
         >
-          <FiChevronDown style={{ transform: expandedSections.markers ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Marqueurs Inflammatoires</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.markers ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiDroplet className="section-icon" />
+            <span>Marqueurs Inflammatoires</span>
+          </div>
         </button>
         
         {expandedSections.markers && (
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>CRP (C-Reactive Protein) - mg/L</label>
-                <input 
-                  type="number" 
-                  step="0.1"
-                  name="crp_value" 
-                  value={formData.crp_value}
-                  onChange={handleInputChange}
-                  placeholder="0.0"
-                  className="form-input"
-                />
+                <label>CRP (C-Reactive Protein)</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="crp_value" 
+                    value={formData.crp_value}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">mg/L</span>
+                </div>
               </div>
               <div className="form-group">
                 <label>Date du dosage CRP</label>
@@ -654,16 +664,19 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
 
             <div className="form-row">
               <div className="form-group">
-                <label>VSH (Erythrocyte Sedimentation Rate) - mm/h</label>
-                <input 
-                  type="number" 
-                  step="0.1"
-                  name="esr_value" 
-                  value={formData.esr_value}
-                  onChange={handleInputChange}
-                  placeholder="0.0"
-                  className="form-input"
-                />
+                <label>VSH (Sedimentation Rate)</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="esr_value" 
+                    value={formData.esr_value}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">mm/h</span>
+                </div>
               </div>
               <div className="form-group">
                 <label>Date du dosage VSH</label>
@@ -687,8 +700,11 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('activity')}
         >
-          <FiChevronDown style={{ transform: expandedSections.activity ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Activité de la Maladie</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.activity ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiActivity className="section-icon" />
+            <span>Activité de la Maladie</span>
+          </div>
         </button>
         
         {expandedSections.activity && (
@@ -709,7 +725,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Nombre d'articulations sensibles</label>
+                <label>Articulations sensibles</label>
                 <input 
                   type="number" 
                   name="tender_joint_count" 
@@ -721,7 +737,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Nombre d'articulations gonflées</label>
+                <label>Articulations gonflées</label>
                 <input 
                   type="number" 
                   name="swollen_joint_count" 
@@ -735,16 +751,19 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
             </div>
 
             <div className="form-group">
-              <label>Durée de la raideur matinale - minutes</label>
-              <input 
-                type="number" 
-                name="morning_stiffness_duration" 
-                value={formData.morning_stiffness_duration}
-                onChange={handleInputChange}
-                placeholder="30"
-                className="form-input"
-                min="0"
-              />
+              <label>Raideur matinale (minutes)</label>
+              <div className="input-with-icon">
+                <FiClock className="field-icon" />
+                <input 
+                  type="number" 
+                  name="morning_stiffness_duration" 
+                  value={formData.morning_stiffness_duration}
+                  onChange={handleInputChange}
+                  placeholder="30"
+                  className="form-input"
+                  min="0"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -757,8 +776,11 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('symptoms')}
         >
-          <FiChevronDown style={{ transform: expandedSections.symptoms ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Symptômes Systémiques</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.symptoms ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiThermometer className="section-icon" />
+            <span>Symptômes Systémiques</span>
+          </div>
         </button>
         
         {expandedSections.symptoms && (
@@ -776,7 +798,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
             </div>
 
             <div className="form-group">
-              <label>Niveau de fatigue (1-10)</label>
+              <label>Niveau de fatigue</label>
               <div className="slider-container">
                 <input 
                   type="range" 
@@ -801,14 +823,17 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('medications')}
         >
-          <FiChevronDown style={{ transform: expandedSections.medications ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Traitements</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.medications ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiBox className="section-icon" />
+            <span>Traitements & Réponse</span>
+          </div>
         </button>
         
         {expandedSections.medications && (
           <div className="section-content">
             <div className="form-group">
-              <label>Réponse au traitement</label>
+              <label>Réponse globale au traitement</label>
               <select 
                 name="treatment_response" 
                 value={formData.treatment_response}
@@ -827,12 +852,15 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
 
       {/* NOTES */}
       <div className="form-section">
-        <label>Notes Cliniques</label>
+        <div className="section-header-simple">
+          <FiEdit3 className="section-icon" />
+          <label>Notes Cliniques & Observations</label>
+        </div>
         <textarea 
           name="clinical_notes" 
           value={formData.clinical_notes}
           onChange={handleInputChange}
-          placeholder="Observations cliniques importantes..."
+          placeholder="Détails cliniques, évolution, modifications thérapeutiques..."
           className="form-textarea"
           rows="4"
         />
@@ -841,7 +869,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Enregistrer le bilan RIC
         </button>
       </div>
     </form>
@@ -896,8 +924,8 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
   return (
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
-        <h2>🦴 Consultation Ostéopathies Fragilisantes</h2>
-        <p>Évaluation de la santé osseuse et du risque de fracture</p>
+        <h2>🦴 Consultation Ostéopathies</h2>
+        <p>Santé osseuse et évaluation du risque fracturaire (FRAX)</p>
       </div>
 
       {/* SECTION 1: DXA RESULTS */}
@@ -907,8 +935,11 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('dxa')}
         >
-          <FiChevronDown style={{ transform: expandedSections.dxa ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Résultats DXA</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.dxa ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiTarget className="section-icon" />
+            <span>Résultats DXA</span>
+          </div>
         </button>
         
         {expandedSections.dxa && (
@@ -926,7 +957,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
             <div className="form-row">
               <div className="form-group">
-                <label>T-score Colonne lombaire</label>
+                <label>T-score Lombaire</label>
                 <input 
                   type="number" 
                   step="0.01"
@@ -936,10 +967,9 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
                   placeholder="-1.5"
                   className="form-input"
                 />
-                <small className="help-text">Normal: &gt; -1.0 | Ostéopénie: -1.0 à -2.5 | Ostéoporose: &lt; -2.5</small>
               </div>
               <div className="form-group">
-                <label>T-score Hanche totale</label>
+                <label>T-score Hanche</label>
                 <input 
                   type="number" 
                   step="0.01"
@@ -963,6 +993,10 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
             </div>
+            <div className="info-box" style={{ marginTop: '1rem' }}>
+              <FiInfo />
+              <span>Normal: &gt; -1 | Ostéopénie: -1 à -2.5 | Ostéoporose: &lt; -2.5</span>
+            </div>
           </div>
         )}
       </div>
@@ -974,34 +1008,39 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('fractures')}
         >
-          <FiChevronDown style={{ transform: expandedSections.fractures ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Historique de Fractures</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.fractures ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiHash className="section-icon" />
+            <span>Historique de Fractures</span>
+          </div>
         </button>
         
         {expandedSections.fractures && (
           <div className="section-content">
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="fracture_history_present" 
-                  checked={formData.fracture_history_present}
-                  onChange={handleInputChange}
-                />
-                <span>Antécédent de fracture</span>
-              </label>
-            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    name="fracture_history_present" 
+                    checked={formData.fracture_history_present}
+                    onChange={handleInputChange}
+                  />
+                  <span>Antécédent de fracture</span>
+                </label>
+              </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="vertebral_fracture_present" 
-                  checked={formData.vertebral_fracture_present}
-                  onChange={handleInputChange}
-                />
-                <span>Fracture vertébrale présente</span>
-              </label>
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    name="vertebral_fracture_present" 
+                    checked={formData.vertebral_fracture_present}
+                    onChange={handleInputChange}
+                  />
+                  <span>Fracture vertébrale</span>
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -1014,36 +1053,45 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('risk')}
         >
-          <FiChevronDown style={{ transform: expandedSections.risk ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Score FRAX & Évaluation du Risque</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.risk ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiActivity className="section-icon" />
+            <span>Score FRAX & Risque</span>
+          </div>
         </button>
         
         {expandedSections.risk && (
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>Probabilité FRAX fracture majeure - %</label>
-                <input 
-                  type="number" 
-                  step="0.1"
-                  name="frax_major_osteoporotic" 
-                  value={formData.frax_major_osteoporotic}
-                  onChange={handleInputChange}
-                  placeholder="15.2"
-                  className="form-input"
-                />
+                <label>FRAX Fracture Majeure</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="frax_major_osteoporotic" 
+                    value={formData.frax_major_osteoporotic}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">%</span>
+                </div>
               </div>
               <div className="form-group">
-                <label>Probabilité FRAX fracture de la hanche - %</label>
-                <input 
-                  type="number" 
-                  step="0.1"
-                  name="frax_hip_fracture" 
-                  value={formData.frax_hip_fracture}
-                  onChange={handleInputChange}
-                  placeholder="5.0"
-                  className="form-input"
-                />
+                <label>FRAX Hanche</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="frax_hip_fracture" 
+                    value={formData.frax_hip_fracture}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">%</span>
+                </div>
               </div>
             </div>
 
@@ -1064,46 +1112,53 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
         )}
       </div>
 
-      {/* SECTION 4: VITAMIN D */}
+      {/* SECTION 4: VITAMIN D & LIFESTYLE */}
       <div className="form-section">
         <button 
           type="button"
           className="section-header"
           onClick={() => toggleSection('vitamin')}
         >
-          <FiChevronDown style={{ transform: expandedSections.vitamin ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Vitamine D & Activité</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.vitamin ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiZap className="section-icon" />
+            <span>Biologie & Hygiène</span>
+          </div>
         </button>
         
         {expandedSections.vitamin && (
           <div className="section-content">
-            <div className="form-group">
-              <label>Niveau de Vitamine D - ng/mL</label>
-              <input 
-                type="number" 
-                step="0.1"
-                name="vitamin_d_level" 
-                value={formData.vitamin_d_level}
-                onChange={handleInputChange}
-                placeholder="25.0"
-                className="form-input"
-              />
-              <small className="help-text">Idéal: 30-100 ng/mL | Insuffisant: &lt; 20 ng/mL</small>
-            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Vitamine D</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="vitamin_d_level" 
+                    value={formData.vitamin_d_level}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">ng/mL</span>
+                </div>
+              </div>
 
-            <div className="form-group">
-              <label>Activité physique</label>
-              <select 
-                name="physical_activity" 
-                value={formData.physical_activity}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="Sedentary">Sédentaire</option>
-                <option value="Light">Légère</option>
-                <option value="Moderate">Modérée</option>
-                <option value="Vigorous">Vigoreuse</option>
-              </select>
+              <div className="form-group">
+                <label>Activité physique</label>
+                <select 
+                  name="physical_activity" 
+                  value={formData.physical_activity}
+                  onChange={handleInputChange}
+                  className="form-input"
+                >
+                  <option value="Sedentary">Sédentaire</option>
+                  <option value="Light">Légère</option>
+                  <option value="Moderate">Modérée</option>
+                  <option value="Vigorous">Vigoureuse</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -1111,19 +1166,22 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
       {/* PAIN ASSESSMENT */}
       <div className="form-section">
-        <label className="checkbox-label">
-          <input 
-            type="checkbox" 
-            name="back_pain_present" 
-            checked={formData.back_pain_present}
-            onChange={handleInputChange}
-          />
-          <span>Douleur dorsale présente</span>
-        </label>
+        <div className="section-header-simple">
+          <FiThermometer className="section-icon" />
+          <label className="checkbox-label" style={{ fontWeight: 600 }}>
+            <input 
+              type="checkbox" 
+              name="back_pain_present" 
+              checked={formData.back_pain_present}
+              onChange={handleInputChange}
+            />
+            <span>Douleur dorsale associée</span>
+          </label>
+        </div>
 
         {formData.back_pain_present && (
-          <div className="form-group" style={{ marginTop: '1rem' }}>
-            <label>Sévérité de la douleur (1-10)</label>
+          <div style={{ marginTop: '1rem', padding: '0 1rem 1rem' }}>
+            <label>Intensité de la douleur</label>
             <div className="slider-container">
               <input 
                 type="range" 
@@ -1142,12 +1200,15 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
       {/* NOTES */}
       <div className="form-section">
-        <label>Notes Cliniques</label>
+        <div className="section-header-simple">
+          <FiEdit3 className="section-icon" />
+          <label>Notes Cliniques</label>
+        </div>
         <textarea 
           name="clinical_notes" 
           value={formData.clinical_notes}
           onChange={handleInputChange}
-          placeholder="Observations importantes..."
+          placeholder="Observations, antécédents familiaux, traitements en cours..."
           className="form-textarea"
           rows="4"
         />
@@ -1156,7 +1217,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Enregistrer le bilan osseux
         </button>
       </div>
     </form>
@@ -1210,8 +1271,8 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
   return (
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
-        <h2>🔊 Consultation Échographie (Ultrasound)</h2>
-        <p>Évaluation par imagerie ultrasonore</p>
+        <h2>🔊 Consultation Échographie</h2>
+        <p>Bilan d'imagerie ostéo-articulaire et musculaire</p>
       </div>
 
       {/* SECTION 1: GENERAL */}
@@ -1221,8 +1282,11 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('general')}
         >
-          <FiChevronDown style={{ transform: expandedSections.general ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Informations Générales</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.general ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiCalendar className="section-icon" />
+            <span>Informations Générales</span>
+          </div>
         </button>
         
         {expandedSections.general && (
@@ -1278,7 +1342,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
                 name="indication" 
                 value={formData.indication}
                 onChange={handleInputChange}
-                placeholder="Raison de l'examen..."
+                placeholder="Raison de l'examen et contexte clinique..."
                 className="form-textarea"
                 rows="2"
               />
@@ -1294,64 +1358,69 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('findings')}
         >
-          <FiChevronDown style={{ transform: expandedSections.findings ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Résultats et Constatations</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.findings ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiSearch className="section-icon" />
+            <span>Résultats & Constatations</span>
+          </div>
         </button>
         
         {expandedSections.findings && (
           <div className="section-content">
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="synovitis_present" 
-                  checked={formData.synovitis_present}
-                  onChange={handleInputChange}
-                />
-                <span>Synovite présente</span>
-              </label>
-              {formData.synovitis_present && (
-                <select 
-                  name="synovitis_grade" 
-                  value={formData.synovitis_grade}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  style={{ marginTop: '0.75rem' }}
-                >
-                  <option value="0">Grade 0 - Absent</option>
-                  <option value="1">Grade 1 - Faible</option>
-                  <option value="2">Grade 2 - Modéré</option>
-                  <option value="3">Grade 3 - Sévère</option>
-                </select>
-              )}
+            <div className="form-row">
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    name="synovitis_present" 
+                    checked={formData.synovitis_present}
+                    onChange={handleInputChange}
+                  />
+                  <span>Synovite présente</span>
+                </label>
+                {formData.synovitis_present && (
+                  <select 
+                    name="synovitis_grade" 
+                    value={formData.synovitis_grade}
+                    onChange={handleInputChange}
+                    className="form-input"
+                    style={{ marginTop: '0.75rem' }}
+                  >
+                    <option value="0">Grade 0 - Absent</option>
+                    <option value="1">Grade 1 - Faible</option>
+                    <option value="2">Grade 2 - Modéré</option>
+                    <option value="3">Grade 3 - Sévère</option>
+                  </select>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    name="effusion_present" 
+                    checked={formData.effusion_present}
+                    onChange={handleInputChange}
+                  />
+                  <span>Épanchement présent</span>
+                </label>
+                {formData.effusion_present && (
+                  <select 
+                    name="effusion_volume" 
+                    value={formData.effusion_volume}
+                    onChange={handleInputChange}
+                    className="form-input"
+                    style={{ marginTop: '0.75rem' }}
+                  >
+                    <option value="Small">Petit</option>
+                    <option value="Moderate">Modéré</option>
+                    <option value="Large">Important</option>
+                  </select>
+                )}
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="effusion_present" 
-                  checked={formData.effusion_present}
-                  onChange={handleInputChange}
-                />
-                <span>Épanchement présent</span>
-              </label>
-              {formData.effusion_present && (
-                <select 
-                  name="effusion_volume" 
-                  value={formData.effusion_volume}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  style={{ marginTop: '0.75rem' }}
-                >
-                  <option value="Small">Petit</option>
-                  <option value="Moderate">Modéré</option>
-                  <option value="Large">Important</option>
-                </select>
-              )}
-            </div>
-
-            <div className="form-group">
+            <div className="form-group" style={{ marginTop: '1rem' }}>
               <label className="checkbox-label">
                 <input 
                   type="checkbox" 
@@ -1373,37 +1442,42 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('doppler')}
         >
-          <FiChevronDown style={{ transform: expandedSections.doppler ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Doppler Couleur</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.doppler ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiZap className="section-icon" />
+            <span>Doppler Énergie</span>
+          </div>
         </button>
         
         {expandedSections.doppler && (
           <div className="section-content">
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="doppler_performed" 
-                  checked={formData.doppler_performed}
-                  onChange={handleInputChange}
-                />
-                <span>Doppler effectué</span>
-              </label>
-            </div>
-
-            {formData.doppler_performed && (
+            <div className="form-row">
               <div className="form-group">
                 <label className="checkbox-label">
                   <input 
                     type="checkbox" 
-                    name="doppler_hyperemia_present" 
-                    checked={formData.doppler_hyperemia_present}
+                    name="doppler_performed" 
+                    checked={formData.doppler_performed}
                     onChange={handleInputChange}
                   />
-                  <span>Hyperhémie détectée</span>
+                  <span>Examen Doppler effectué</span>
                 </label>
               </div>
-            )}
+
+              {formData.doppler_performed && (
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      name="doppler_hyperemia_present" 
+                      checked={formData.doppler_hyperemia_present}
+                      onChange={handleInputChange}
+                    />
+                    <span>Hyperhémie (Signal Doppler)</span>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -1415,19 +1489,22 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('impression')}
         >
-          <FiChevronDown style={{ transform: expandedSections.impression ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Conclusion et Recommandations</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.impression ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiFileText className="section-icon" />
+            <span>Conclusion & Compte-rendu</span>
+          </div>
         </button>
         
         {expandedSections.impression && (
           <div className="section-content">
             <div className="form-group">
-              <label>Conclusion clinique *</label>
+              <label>Conclusion de l'examen *</label>
               <textarea 
                 name="impression" 
                 value={formData.impression}
                 onChange={handleInputChange}
-                placeholder="Résumé des constatations et conclusion..."
+                placeholder="Synthèse des anomalies détectées et conclusion diagnostique..."
                 className="form-textarea"
                 required
                 rows="4"
@@ -1435,12 +1512,12 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
             </div>
 
             <div className="form-group">
-              <label>Recommandations</label>
+              <label>Recommandations de suivi</label>
               <textarea 
                 name="recommendations" 
                 value={formData.recommendations}
                 onChange={handleInputChange}
-                placeholder="Recommandations pour le suivi..."
+                placeholder="Proposition de surveillance ou geste complémentaire..."
                 className="form-textarea"
                 rows="3"
               />
@@ -1452,7 +1529,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Enregistrer le compte-rendu Echo
         </button>
       </div>
     </form>
@@ -1508,7 +1585,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
         <h2>💉 Consultation Gestes Techniques</h2>
-        <p>Documentation complète des procédures interventionnelles</p>
+        <p>Documentation des procédures interventionnelles ostéo-articulaires</p>
       </div>
 
       {/* SECTION 1: PROCEDURE */}
@@ -1518,8 +1595,11 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('procedure')}
         >
-          <FiChevronDown style={{ transform: expandedSections.procedure ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Détails de la Procédure</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.procedure ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiCalendar className="section-icon" />
+            <span>Détails de la Procédure</span>
+          </div>
         </button>
         
         {expandedSections.procedure && (
@@ -1545,9 +1625,9 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
                   className="form-input"
                 >
                   <option value="Injection">Injection intra-articulaire</option>
-                  <option value="Aspiration">Aspiration</option>
-                  <option value="Biopsy">Biopsie</option>
-                  <option value="Infiltration">Infiltration</option>
+                  <option value="Aspiration">Ponction évacuatrice</option>
+                  <option value="Biopsy">Biopsie synoviale</option>
+                  <option value="Infiltration">Infiltration péri-tendineuse</option>
                 </select>
               </div>
             </div>
@@ -1560,7 +1640,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
                   name="anatomical_site" 
                   value={formData.anatomical_site}
                   onChange={handleInputChange}
-                  placeholder="ex: Genou droit, Épaule gauche..."
+                  placeholder="ex: Genou, Épaule, Poignet..."
                   required
                   className="form-input"
                 />
@@ -1586,7 +1666,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
                 name="clinical_indication" 
                 value={formData.clinical_indication}
                 onChange={handleInputChange}
-                placeholder="Raison de la procédure..."
+                placeholder="Motif de l'intervention..."
                 className="form-textarea"
                 required
                 rows="2"
@@ -1603,48 +1683,56 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('technique')}
         >
-          <FiChevronDown style={{ transform: expandedSections.technique ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Technique et Produits</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.technique ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiLayers className="section-icon" />
+            <span>Technique & Produits</span>
+          </div>
         </button>
         
         {expandedSections.technique && (
           <div className="section-content">
-            <div className="form-group">
-              <label>Méthode de guidage</label>
-              <select 
-                name="guidance_method" 
-                value={formData.guidance_method}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="Palpation">Palpation</option>
-                <option value="Ultrasound">Échographie</option>
-                <option value="Fluoroscopy">Radioscopie</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="anesthesia_used" 
-                  checked={formData.anesthesia_used}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Méthode de guidage</label>
+                <select 
+                  name="guidance_method" 
+                  value={formData.guidance_method}
                   onChange={handleInputChange}
-                />
-                <span>Anesthésie utilisée</span>
-              </label>
+                  className="form-input"
+                >
+                  <option value="Palpation">Palpation (Repères anatomiques)</option>
+                  <option value="Ultrasound">Écho-guidage</option>
+                  <option value="Fluoroscopy">Radioscopie</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label" style={{ marginTop: '2.2rem' }}>
+                  <input 
+                    type="checkbox" 
+                    name="anesthesia_used" 
+                    checked={formData.anesthesia_used}
+                    onChange={handleInputChange}
+                  />
+                  <span>Anesthésie locale</span>
+                </label>
+              </div>
             </div>
 
             <div className="form-group">
-              <label>Produit injecté</label>
-              <input 
-                type="text" 
-                name="product_injected" 
-                value={formData.product_injected}
-                onChange={handleInputChange}
-                placeholder="ex: Acide hyaluronique, Corticoïde..."
-                className="form-input"
-              />
+              <label>Produit injecté / Matériel</label>
+              <div className="input-with-icon">
+                <FiBox className="field-icon" />
+                <input 
+                  type="text" 
+                  name="product_injected" 
+                  value={formData.product_injected}
+                  onChange={handleInputChange}
+                  placeholder="ex: Diprostène, Altim, AH..."
+                  className="form-input"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -1657,23 +1745,29 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('findings')}
         >
-          <FiChevronDown style={{ transform: expandedSections.findings ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Résultats et Aspirats</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.findings ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiDroplet className="section-icon" />
+            <span>Résultats de la Ponction</span>
+          </div>
         </button>
         
         {expandedSections.findings && (
           <div className="section-content">
             <div className="form-group">
-              <label>Volume de liquide aspiré - mL</label>
-              <input 
-                type="number" 
-                step="0.5"
-                name="fluid_aspirated_volume" 
-                value={formData.fluid_aspirated_volume}
-                onChange={handleInputChange}
-                placeholder="0.0"
-                className="form-input"
-              />
+              <label>Volume de liquide aspiré</label>
+              <div className="input-with-unit">
+                <input 
+                  type="number" 
+                  step="0.5"
+                  name="fluid_aspirated_volume" 
+                  value={formData.fluid_aspirated_volume}
+                  onChange={handleInputChange}
+                  placeholder="0.0"
+                  className="form-input"
+                />
+                <span className="input-unit">mL</span>
+              </div>
             </div>
           </div>
         )}
@@ -1686,74 +1780,81 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('complications')}
         >
-          <FiChevronDown style={{ transform: expandedSections.complications ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Tolérance et Complications</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.complications ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiShield className="section-icon" />
+            <span>Tolérance & Suivi</span>
+          </div>
         </button>
         
         {expandedSections.complications && (
           <div className="section-content">
-            <div className="form-group">
-              <label>Tolérance du patient</label>
-              <select 
-                name="patient_tolerance" 
-                value={formData.patient_tolerance}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="Excellent">Excellente</option>
-                <option value="Good">Bonne</option>
-                <option value="Fair">Acceptable</option>
-                <option value="Poor">Mauvaise</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Douleur pendant la procédure (1-10)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="pain_during_procedure" 
-                  value={formData.pain_during_procedure}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Tolérance globale</label>
+                <select 
+                  name="patient_tolerance" 
+                  value={formData.patient_tolerance}
                   onChange={handleInputChange}
-                  min="1"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.pain_during_procedure}/10</span>
+                  className="form-input"
+                >
+                  <option value="Excellent">Excellente</option>
+                  <option value="Good">Bonne</option>
+                  <option value="Fair">Passable</option>
+                  <option value="Poor">Mauvaise</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Douleur (Procédure)</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    name="pain_during_procedure" 
+                    value={formData.pain_during_procedure}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="10"
+                    className="slider"
+                  />
+                  <span className="slider-value">{formData.pain_during_procedure}/10</span>
+                </div>
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="complications_present" 
-                  checked={formData.complications_present}
-                  onChange={handleInputChange}
-                />
-                <span>Complications présentes</span>
-              </label>
+            <div className="form-row" style={{ marginTop: '1rem' }}>
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    name="complications_present" 
+                    checked={formData.complications_present}
+                    onChange={handleInputChange}
+                  />
+                  <span>Complication immédiate</span>
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    name="follow_up_recommended" 
+                    checked={formData.follow_up_recommended}
+                    onChange={handleInputChange}
+                  />
+                  <span>Suivi spécifique requis</span>
+                </label>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="follow_up_recommended" 
-                  checked={formData.follow_up_recommended}
-                  onChange={handleInputChange}
-                />
-                <span>Suivi recommandé</span>
-              </label>
-            </div>
-
-            <div className="form-group">
-              <label>Notes cliniques</label>
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>Observations post-geste</label>
               <textarea 
                 name="clinical_notes" 
                 value={formData.clinical_notes}
                 onChange={handleInputChange}
-                placeholder="Observations importantes..."
+                placeholder="Détails sur l'aspect du liquide, réaction du patient..."
                 className="form-textarea"
                 rows="3"
               />
@@ -1765,7 +1866,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Valider le geste technique
         </button>
       </div>
     </form>
@@ -1818,8 +1919,8 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
   return (
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
-        <h2>⚡ Consultation Séances Thérapeutiques</h2>
-        <p>Suivi des séances de physiothérapie et rééducation</p>
+        <h2>⚡ Séances Thérapeutiques</h2>
+        <p>Suivi de rééducation, physiothérapie et appareillage</p>
       </div>
 
       {/* SECTION 1: SESSION DETAILS */}
@@ -1829,15 +1930,18 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('session')}
         >
-          <FiChevronDown style={{ transform: expandedSections.session ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Détails de la Séance</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.session ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiCalendar className="section-icon" />
+            <span>Détails de la Séance</span>
+          </div>
         </button>
         
         {expandedSections.session && (
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>Date de la séance</label>
+                <label>Date</label>
                 <input 
                   type="date" 
                   name="session_date" 
@@ -1848,36 +1952,41 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Durée - minutes</label>
-                <input 
-                  type="number" 
-                  name="session_duration" 
-                  value={formData.session_duration}
-                  onChange={handleInputChange}
-                  className="form-input"
-                />
+                <label>Durée (min)</label>
+                <div className="input-with-icon">
+                  <FiClock className="field-icon" />
+                  <input 
+                    type="number" 
+                    name="session_duration" 
+                    value={formData.session_duration}
+                    onChange={handleInputChange}
+                    className="form-input"
+                    min="0"
+                  />
+                </div>
               </div>
               <div className="form-group">
-                <label>Numéro de séance</label>
+                <label>N° Séance</label>
                 <input 
                   type="number" 
                   name="session_number_in_series" 
                   value={formData.session_number_in_series}
                   onChange={handleInputChange}
                   className="form-input"
+                  min="1"
                 />
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>Nom du thérapeute</label>
+                <label>Thérapeute / Intervenant</label>
                 <input 
                   type="text" 
                   name="therapist_name" 
                   value={formData.therapist_name}
                   onChange={handleInputChange}
-                  placeholder="Nom complet..."
+                  placeholder="Nom du praticien..."
                   className="form-input"
                 />
               </div>
@@ -1889,24 +1998,25 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
                   onChange={handleInputChange}
                   className="form-input"
                 >
-                  <option value="TENS">TENS (électrostimulation)</option>
-                  <option value="Cryotherapy">Cryothérapie (froid)</option>
-                  <option value="Heat">Thermothérapie (chaleur)</option>
-                  <option value="Massage">Massage thérapeutique</option>
-                  <option value="Stretching">Étirements</option>
+                  <option value="TENS">TENS / Électrostimulation</option>
+                  <option value="Cryotherapy">Cryothérapie</option>
+                  <option value="Heat">Thermothérapie</option>
+                  <option value="Massage">Massage / Thérapie manuelle</option>
+                  <option value="Stretching">Étirements / Gain de mobilité</option>
                   <option value="Strengthening">Renforcement musculaire</option>
+                  <option value="Occupational">Ergothérapie</option>
                 </select>
               </div>
             </div>
 
             <div className="form-group">
-              <label>Régions traitées</label>
+              <label>Régions anatomiques ciblées</label>
               <input 
                 type="text" 
                 name="anatomical_regions" 
                 value={formData.anatomical_regions}
                 onChange={handleInputChange}
-                placeholder="ex: Épaule gauche, Genou droit..."
+                placeholder="ex: Rachis cervical, Genou bilatéral..."
                 className="form-input"
               />
             </div>
@@ -1914,140 +2024,114 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
         )}
       </div>
 
-      {/* SECTION 2: PARAMETERS */}
-      <div className="form-section">
-        <button 
-          type="button"
-          className="section-header"
-          onClick={() => toggleSection('parameters')}
-        >
-          <FiChevronDown style={{ transform: expandedSections.parameters ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Paramètres de Traitement</span>
-        </button>
-        
-        {expandedSections.parameters && (
-          <div className="section-content">
-            <div className="info-box">
-              <FiAlertCircle />
-              <span>Remplir selon le type de séance sélectionné</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 3: CLINICAL ASSESSMENT */}
+      {/* SECTION 2: CLINICAL ASSESSMENT */}
       <div className="form-section">
         <button 
           type="button"
           className="section-header"
           onClick={() => toggleSection('assessment')}
         >
-          <FiChevronDown style={{ transform: expandedSections.assessment ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Évaluation Clinique</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.assessment ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiActivity className="section-icon" />
+            <span>Évaluation & Efficacité</span>
+          </div>
         </button>
         
         {expandedSections.assessment && (
           <div className="section-content">
-            <div className="form-group">
-              <label>Douleur avant la séance (1-10)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="pain_before_session" 
-                  value={formData.pain_before_session}
-                  onChange={handleInputChange}
-                  min="1"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.pain_before_session}/10</span>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Douleur Avant</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    name="pain_before_session" 
+                    value={formData.pain_before_session}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="10"
+                    className="slider"
+                  />
+                  <span className="slider-value">{formData.pain_before_session}/10</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Douleur Après</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    name="pain_after_session" 
+                    value={formData.pain_after_session}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="10"
+                    className="slider"
+                  />
+                  <span className="slider-value">{formData.pain_after_session}/10</span>
+                </div>
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Douleur après la séance (1-10)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="pain_after_session" 
-                  value={formData.pain_after_session}
+            <div className="form-row" style={{ marginTop: '1rem' }}>
+              <div className="form-group">
+                <label>Gain fonctionnel</label>
+                <select 
+                  name="functional_improvement" 
+                  value={formData.functional_improvement}
                   onChange={handleInputChange}
-                  min="1"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.pain_after_session}/10</span>
+                  className="form-input"
+                >
+                  <option value="None">Aucun</option>
+                  <option value="Slight">Léger</option>
+                  <option value="Moderate">Modéré</option>
+                  <option value="Significant">Significatif</option>
+                </select>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label>Amélioration fonctionnelle</label>
-              <select 
-                name="functional_improvement" 
-                value={formData.functional_improvement}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="None">Aucune</option>
-                <option value="Slight">Légère</option>
-                <option value="Moderate">Modérée</option>
-                <option value="Significant">Importante</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Confort du patient</label>
-              <select 
-                name="patient_comfort_level" 
-                value={formData.patient_comfort_level}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="Poor">Mauvais</option>
-                <option value="Fair">Acceptable</option>
-                <option value="Good">Bon</option>
-                <option value="Excellent">Excellent</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Adhérence du patient</label>
-              <select 
-                name="patient_compliance" 
-                value={formData.patient_compliance}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="Poor">Mauvaise</option>
-                <option value="Fair">Acceptable</option>
-                <option value="Good">Bonne</option>
-                <option value="Excellent">Excellente</option>
-              </select>
+              <div className="form-group">
+                <label>Confort du patient</label>
+                <select 
+                  name="patient_comfort_level" 
+                  value={formData.patient_comfort_level}
+                  onChange={handleInputChange}
+                  className="form-input"
+                >
+                  <option value="Poor">Mauvais</option>
+                  <option value="Fair">Passable</option>
+                  <option value="Good">Bon</option>
+                  <option value="Excellent">Excellent</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* SECTION 4: PROGRESS */}
+      {/* SECTION 3: PROGRESS */}
       <div className="form-section">
         <button 
           type="button"
           className="section-header"
           onClick={() => toggleSection('progress')}
         >
-          <FiChevronDown style={{ transform: expandedSections.progress ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Notes de Progression</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.progress ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiEdit3 className="section-icon" />
+            <span>Notes de Progression</span>
+          </div>
         </button>
         
         {expandedSections.progress && (
           <div className="section-content">
             <div className="form-group">
-              <label>Observations et progression</label>
+              <label>Observations cliniques</label>
               <textarea 
                 name="progress_notes" 
                 value={formData.progress_notes}
                 onChange={handleInputChange}
-                placeholder="Observez la progression du patient, les réactions, les améliorations..."
+                placeholder="Évolution des amplitudes, force musculaire, adhérence au protocole..."
                 className="form-textarea"
                 rows="4"
               />
@@ -2059,7 +2143,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Enregistrer la séance
         </button>
       </div>
     </form>
@@ -2087,8 +2171,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
 
   const [expandedSections, setExpandedSections] = useState({
     general: true,
-    spine: true,
-    hip: false,
+    scores: true,
     frax: false,
     impression: false,
   });
@@ -2113,8 +2196,8 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
   return (
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
-        <h2>📊 Consultation Ostéodensitométrie (DXA)</h2>
-        <p>Résultats d'examen de densité minérale osseuse</p>
+        <h2>📊 Bilan Ostéodensitométrie (DXA)</h2>
+        <p>Analyse de la densité minérale osseuse et classification WHO</p>
       </div>
 
       {/* SECTION 1: GENERAL */}
@@ -2124,8 +2207,11 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
           className="section-header"
           onClick={() => toggleSection('general')}
         >
-          <FiChevronDown style={{ transform: expandedSections.general ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Informations Générales</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.general ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiCalendar className="section-icon" />
+            <span>Informations de l'Examen</span>
+          </div>
         </button>
         
         {expandedSections.general && (
@@ -2143,66 +2229,71 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Qualité du scan</label>
+                <label>Qualité technique</label>
                 <select 
                   name="scan_quality" 
                   value={formData.scan_quality}
                   onChange={handleInputChange}
                   className="form-input"
                 >
-                  <option value="Excellent">Excellente</option>
+                  <option value="Excellent">Optimale</option>
                   <option value="Good">Bonne</option>
-                  <option value="Fair">Acceptable</option>
-                  <option value="Poor">Mauvaise</option>
+                  <option value="Fair">Limitation technique</option>
+                  <option value="Poor">Ininterprétable</option>
                 </select>
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  name="vfa_performed" 
-                  checked={formData.vfa_performed}
-                  onChange={handleInputChange}
-                />
-                <span>VFA (Vertebral Fracture Assessment) effectué</span>
-              </label>
-            </div>
-
-            {formData.vfa_performed && (
+            <div className="form-row" style={{ marginTop: '1rem' }}>
               <div className="form-group">
                 <label className="checkbox-label">
                   <input 
                     type="checkbox" 
-                    name="vertebral_deformities_present" 
-                    checked={formData.vertebral_deformities_present}
+                    name="vfa_performed" 
+                    checked={formData.vfa_performed}
                     onChange={handleInputChange}
                   />
-                  <span>Déformités vertébrales détectées</span>
+                  <span>VFA effectué</span>
                 </label>
               </div>
-            )}
+
+              {formData.vfa_performed && (
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      name="vertebral_deformities_present" 
+                      checked={formData.vertebral_deformities_present}
+                      onChange={handleInputChange}
+                    />
+                    <span>Déformités détectées</span>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* SECTION 2: SPINE */}
+      {/* SECTION 2: SCORES */}
       <div className="form-section">
         <button 
           type="button"
           className="section-header"
-          onClick={() => toggleSection('spine')}
+          onClick={() => toggleSection('scores')}
         >
-          <FiChevronDown style={{ transform: expandedSections.spine ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Colonne Lombaire (L1-L4)</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.scores ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiTarget className="section-icon" />
+            <span>Densité & Classification</span>
+          </div>
         </button>
         
-        {expandedSections.spine && (
+        {expandedSections.scores && (
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>T-score colonne</label>
+                <label>T-score L1-L4</label>
                 <input 
                   type="number" 
                   step="0.01"
@@ -2214,39 +2305,23 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Classification WHO</label>
+                <label>Diagnostic (WHO)</label>
                 <select 
                   name="who_diagnosis_spine" 
                   value={formData.who_diagnosis_spine}
                   onChange={handleInputChange}
                   className="form-input"
                 >
-                  <option value="Normal">Normal (T-score &gt; -1.0)</option>
+                  <option value="Normal">Normal (T &gt; -1.0)</option>
                   <option value="Osteopenia">Ostéopénie (-1.0 à -2.5)</option>
-                  <option value="Osteoporosis">Ostéoporose (T-score &lt; -2.5)</option>
+                  <option value="Osteoporosis">Ostéoporose (T &lt; -2.5)</option>
                 </select>
               </div>
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* SECTION 3: HIP */}
-      <div className="form-section">
-        <button 
-          type="button"
-          className="section-header"
-          onClick={() => toggleSection('hip')}
-        >
-          <FiChevronDown style={{ transform: expandedSections.hip ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Hanche et Col Fémoral</span>
-        </button>
-        
-        {expandedSections.hip && (
-          <div className="section-content">
-            <div className="form-row">
+            <div className="form-row" style={{ marginTop: '1rem' }}>
               <div className="form-group">
-                <label>T-score hanche totale</label>
+                <label>T-score Hanche</label>
                 <input 
                   type="number" 
                   step="0.01"
@@ -2258,7 +2333,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label>T-score col fémoral</label>
+                <label>T-score Col fémoral</label>
                 <input 
                   type="number" 
                   step="0.01"
@@ -2274,58 +2349,70 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
         )}
       </div>
 
-      {/* SECTION 4: FRAX */}
+      {/* SECTION 3: FRAX */}
       <div className="form-section">
         <button 
           type="button"
           className="section-header"
           onClick={() => toggleSection('frax')}
         >
-          <FiChevronDown style={{ transform: expandedSections.frax ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Score FRAX (10 ans)</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.frax ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiActivity className="section-icon" />
+            <span>Risque FRAX (10 ans)</span>
+          </div>
         </button>
         
         {expandedSections.frax && (
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>Fracture majeure - %</label>
-                <input 
-                  type="number" 
-                  step="0.1"
-                  name="frax_major_fracture_probability" 
-                  value={formData.frax_major_fracture_probability}
-                  onChange={handleInputChange}
-                  placeholder="15.2"
-                  className="form-input"
-                />
+                <label>Fracture majeure</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="frax_major_fracture_probability" 
+                    value={formData.frax_major_fracture_probability}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">%</span>
+                </div>
               </div>
               <div className="form-group">
-                <label>Fracture de hanche - %</label>
-                <input 
-                  type="number" 
-                  step="0.1"
-                  name="frax_hip_fracture_probability" 
-                  value={formData.frax_hip_fracture_probability}
-                  onChange={handleInputChange}
-                  placeholder="5.0"
-                  className="form-input"
-                />
+                <label>Fracture de hanche</label>
+                <div className="input-with-unit">
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    name="frax_hip_fracture_probability" 
+                    value={formData.frax_hip_fracture_probability}
+                    onChange={handleInputChange}
+                    placeholder="0.0"
+                    className="form-input"
+                  />
+                  <span className="input-unit">%</span>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* SECTION 5: IMPRESSION */}
+      {/* SECTION 4: IMPRESSION */}
       <div className="form-section">
         <button 
           type="button"
           className="section-header"
           onClick={() => toggleSection('impression')}
         >
-          <FiChevronDown style={{ transform: expandedSections.impression ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Conclusion et Recommandations</span>
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.impression ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiFileText className="section-icon" />
+            <span>Conclusion & Plan thérapeutique</span>
+          </div>
         </button>
         
         {expandedSections.impression && (
@@ -2336,20 +2423,20 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
                 name="impression" 
                 value={formData.impression}
                 onChange={handleInputChange}
-                placeholder="Résumé des résultats et diagnostic..."
+                placeholder="Synthèse des résultats et orientation diagnostique..."
                 className="form-textarea"
                 required
-                rows="4"
+                rows="3"
               />
             </div>
 
             <div className="form-group">
-              <label>Recommandations de traitement</label>
+              <label>Recommandations</label>
               <textarea 
                 name="recommendations" 
                 value={formData.recommendations}
                 onChange={handleInputChange}
-                placeholder="Plan de gestion et suivi..."
+                placeholder="Plan de gestion, supplémentation, traitement anti-ostéoporotique..."
                 className="form-textarea"
                 rows="3"
               />
@@ -2361,7 +2448,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Valider le bilan DXA
         </button>
       </div>
     </form>
@@ -2371,47 +2458,42 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
 /**
  * Douleur Form: Unité de la Douleur (Pain Management)
  */
+/**
+ * Douleur Form: Unité de la Douleur (Pain Management)
+ */
 export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
     pain_locations: initialData.pain_locations || [],
-    pain_intensity_vas: initialData.pain_intensity_vas || '',
+    pain_intensity_vas: initialData.pain_intensity_vas || 5,
     pain_duration: initialData.pain_duration || '',
-    pain_character: initialData.pain_character || [],
-    onset_type: initialData.onset_type || '',
+    pain_character: initialData.pain_character || '',
+    onset_type: initialData.onset_type || 'Progressive',
     initial_pain_date: initialData.initial_pain_date || '',
-    pain_progression: initialData.pain_progression || 'stable',
-    aggravating_factors: initialData.aggravating_factors || [],
-    relieving_factors: initialData.relieving_factors || [],
-    time_of_day_pattern: initialData.time_of_day_pattern || '',
+    pain_progression: initialData.pain_progression || 'Stable',
+    aggravating_factors: initialData.aggravating_factors || '',
+    relieving_factors: initialData.relieving_factors || '',
+    time_of_day_pattern: initialData.time_of_day_pattern || 'Mechanical',
     functional_limitation_score: initialData.functional_limitation_score || '',
-    sleep_disturbance_present: initialData.sleep_disturbance_present || 0,
+    sleep_disturbance_present: initialData.sleep_disturbance_present || false,
     sleep_quality: initialData.sleep_quality || 'Good',
-    work_impact: initialData.work_impact || '',
+    work_impact: initialData.work_impact || 'None',
     daily_activity_limitations: initialData.daily_activity_limitations || '',
-    analgesics_json: initialData.analgesics_json || [],
-    anxiety_level: initialData.anxiety_level || '',
+    anxiety_level: initialData.anxiety_level || 5,
     depression_screening: initialData.depression_screening || 'negative',
-    catastrophizing_score: initialData.catastrophizing_score || '',
-    recommended_interventions: initialData.recommended_interventions || [],
+    catastrophizing_score: initialData.catastrophizing_score || 5,
     follow_up_plan: initialData.follow_up_plan || '',
     clinical_notes: initialData.clinical_notes || ''
   });
 
   const [expandedSections, setExpandedSections] = useState({
-    assessment: true,
-    history: false,
-    triggers: false,
-    functional: false,
-    medications: false,
-    psychosocial: false,
-    management: false
+    profile: true,
+    impact: true,
+    psychological: false,
+    plan: false,
   });
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
   const handleInputChange = (e) => {
@@ -2430,180 +2512,221 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
   return (
     <form onSubmit={handleSubmit} className="medical-form">
       <div className="form-header">
-        <h2>🩹 Unité de la Douleur</h2>
-        <p>Évaluation et gestion de la douleur chronique</p>
+        <h2>🔥 Évaluation de la Douleur</h2>
+        <p>Bilan multidimensionnel et impact sur la qualité de vie</p>
       </div>
 
-      {/* SECTION 1: PAIN ASSESSMENT */}
+      {/* SECTION 1: PAIN PROFILE */}
       <div className="form-section">
-        <button type="button" className="section-header" onClick={() => toggleSection('assessment')}>
-          <FiChevronDown style={{ transform: expandedSections.assessment ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Évaluation de la Douleur</span>
+        <button 
+          type="button" 
+          className="section-header" 
+          onClick={() => toggleSection('profile')}
+        >
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.profile ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiThermometer className="section-icon" />
+            <span>Profil de la Douleur</span>
+          </div>
         </button>
-        {expandedSections.assessment && (
+        
+        {expandedSections.profile && (
           <div className="section-content">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Intensité VAS (0-10)</label>
-                <input type="number" min="0" max="10" name="pain_intensity_vas" value={formData.pain_intensity_vas} onChange={handleInputChange} className="form-input" />
-              </div>
-              <div className="form-group">
-                <label>Localisation</label>
-                <input type="text" name="pain_locations" value={formData.pain_locations.join(', ')} onChange={(e) => setFormData(prev => ({...prev, pain_locations: e.target.value.split(',').map(s => s.trim())}))} placeholder="Cervicale, Lombaire, etc." className="form-input" />
+            <div className="form-group">
+              <label>Intensité (EVA 0-10)</label>
+              <div className="slider-container">
+                <input 
+                  type="range" 
+                  name="pain_intensity_vas" 
+                  value={formData.pain_intensity_vas}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="10"
+                  className="slider"
+                />
+                <span className="slider-value">{formData.pain_intensity_vas}/10</span>
               </div>
             </div>
+
             <div className="form-row">
               <div className="form-group">
-                <label>Durée</label>
-                <input type="text" name="pain_duration" value={formData.pain_duration} onChange={handleInputChange} placeholder="ex: chronique depuis 2 ans" className="form-input" />
+                <label>Date de début</label>
+                <input 
+                  type="date" 
+                  name="initial_pain_date" 
+                  value={formData.initial_pain_date}
+                  onChange={handleInputChange}
+                  className="form-input"
+                />
               </div>
               <div className="form-group">
-                <label>Type d'apparition</label>
-                <select name="onset_type" value={formData.onset_type} onChange={handleInputChange} className="form-input">
-                  <option value="">Sélectionner</option>
-                  <option value="sudden">Soudaine</option>
-                  <option value="gradual">Progressive</option>
+                <label>Rythme</label>
+                <select 
+                  name="time_of_day_pattern" 
+                  value={formData.time_of_day_pattern}
+                  onChange={handleInputChange}
+                  className="form-input"
+                >
+                  <option value="Mechanical">Mécanique</option>
+                  <option value="Inflammatory">Inflammatoire</option>
+                  <option value="Neuropathic">Neuropathique</option>
+                  <option value="Mixed">Mixte</option>
                 </select>
               </div>
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* SECTION 2: PAIN HISTORY */}
-      <div className="form-section">
-        <button type="button" className="section-header" onClick={() => toggleSection('history')}>
-          <FiChevronDown style={{ transform: expandedSections.history ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Historique de la Douleur</span>
-        </button>
-        {expandedSections.history && (
-          <div className="section-content">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Date d'apparition</label>
-                <input type="date" name="initial_pain_date" value={formData.initial_pain_date} onChange={handleInputChange} className="form-input" />
-              </div>
-              <div className="form-group">
-                <label>Progression</label>
-                <select name="pain_progression" value={formData.pain_progression} onChange={handleInputChange} className="form-input">
-                  <option value="stable">Stable</option>
-                  <option value="worsening">S'aggrave</option>
-                  <option value="improving">S'améliore</option>
-                </select>
-              </div>
+            <div className="form-group">
+              <label>Caractère de la douleur</label>
+              <input 
+                type="text" 
+                name="pain_character" 
+                value={formData.pain_character}
+                onChange={handleInputChange}
+                placeholder="ex: Brûlure, Décharge électrique, Étau..."
+                className="form-input"
+              />
             </div>
           </div>
         )}
       </div>
 
-      {/* SECTION 3: TRIGGERING FACTORS */}
+      {/* SECTION 2: FUNCTIONAL IMPACT */}
       <div className="form-section">
-        <button type="button" className="section-header" onClick={() => toggleSection('triggers')}>
-          <FiChevronDown style={{ transform: expandedSections.triggers ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Facteurs Déclencheurs</span>
-        </button>
-        {expandedSections.triggers && (
-          <div className="section-content">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Facteurs aggravants</label>
-                <textarea name="aggravating_factors" value={formData.aggravating_factors.join(', ')} onChange={(e) => setFormData(prev => ({...prev, aggravating_factors: e.target.value.split(',').map(s => s.trim())}))} placeholder="Mouvement, stress, position, etc." className="form-textarea"></textarea>
-              </div>
-              <div className="form-group">
-                <label>Facteurs soulageurs</label>
-                <textarea name="relieving_factors" value={formData.relieving_factors.join(', ')} onChange={(e) => setFormData(prev => ({...prev, relieving_factors: e.target.value.split(',').map(s => s.trim())}))} placeholder="Repos, chaleur, massage, etc." className="form-textarea"></textarea>
-              </div>
-            </div>
+        <button 
+          type="button" 
+          className="section-header" 
+          onClick={() => toggleSection('impact')}
+        >
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.impact ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiActivity className="section-icon" />
+            <span>Impact Fonctionnel</span>
           </div>
-        )}
-      </div>
-
-      {/* SECTION 4: FUNCTIONAL IMPACT */}
-      <div className="form-section">
-        <button type="button" className="section-header" onClick={() => toggleSection('functional')}>
-          <FiChevronDown style={{ transform: expandedSections.functional ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Impact Fonctionnel</span>
         </button>
-        {expandedSections.functional && (
+        
+        {expandedSections.impact && (
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>Score limitation fonctionnelle (0-10)</label>
-                <input type="number" min="0" max="10" name="functional_limitation_score" value={formData.functional_limitation_score} onChange={handleInputChange} className="form-input" />
+                <label className="checkbox-label" style={{ marginTop: '0.5rem' }}>
+                  <input 
+                    type="checkbox" 
+                    name="sleep_disturbance_present" 
+                    checked={formData.sleep_disturbance_present}
+                    onChange={handleInputChange}
+                  />
+                  <span>Troubles du sommeil</span>
+                </label>
               </div>
               <div className="form-group">
                 <label>Qualité du sommeil</label>
-                <select name="sleep_quality" value={formData.sleep_quality} onChange={handleInputChange} className="form-input">
-                  <option value="Good">Bonne</option>
+                <select 
+                  name="sleep_quality" 
+                  value={formData.sleep_quality}
+                  onChange={handleInputChange}
+                  className="form-input"
+                >
+                  <option value="Good">Reposant</option>
                   <option value="Fair">Passable</option>
-                  <option value="Poor">Mauvaise</option>
+                  <option value="Poor">Fragmenté / Non reposant</option>
                 </select>
               </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Impact au travail</label>
-                <textarea name="work_impact" value={formData.work_impact} onChange={handleInputChange} className="form-textarea"></textarea>
+
+            <div className="form-group">
+              <label>Impact professionnel</label>
+              <select 
+                name="work_impact" 
+                value={formData.work_impact}
+                onChange={handleInputChange}
+                className="form-input"
+              >
+                <option value="None">Aucun</option>
+                <option value="Partial">Adaptation nécessaire</option>
+                <option value="Total">Arrêt de travail</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 3: PSYCHOLOGICAL IMPACT */}
+      <div className="form-section">
+        <button 
+          type="button" 
+          className="section-header" 
+          onClick={() => toggleSection('psychological')}
+        >
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.psychological ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiZap className="section-icon" />
+            <span>Retentissement Psychologique</span>
+          </div>
+        </button>
+        
+        {expandedSections.psychological && (
+          <div className="section-content">
+            <div className="form-group">
+              <label>Niveau d'Anxiété</label>
+              <div className="slider-container">
+                <input 
+                  type="range" 
+                  name="anxiety_level" 
+                  value={formData.anxiety_level}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="10"
+                  className="slider"
+                />
+                <span className="slider-value">{formData.anxiety_level}/10</span>
               </div>
-              <div className="form-group">
-                <label>Limitations d'activités quotidiennes</label>
-                <textarea name="daily_activity_limitations" value={formData.daily_activity_limitations} onChange={handleInputChange} className="form-textarea"></textarea>
+            </div>
+
+            <div className="form-group">
+              <label>Score de Catastrophisme</label>
+              <div className="slider-container">
+                <input 
+                  type="range" 
+                  name="catastrophizing_score" 
+                  value={formData.catastrophizing_score}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="10"
+                  className="slider"
+                />
+                <span className="slider-value">{formData.catastrophizing_score}/10</span>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* SECTION 5: PSYCHOSOCIAL */}
+      {/* SECTION 4: PLAN */}
       <div className="form-section">
-        <button type="button" className="section-header" onClick={() => toggleSection('psychosocial')}>
-          <FiChevronDown style={{ transform: expandedSections.psychosocial ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Facteurs Psychosociaux</span>
-        </button>
-        {expandedSections.psychosocial && (
-          <div className="section-content">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Niveau d'anxiété (0-10)</label>
-                <input type="number" min="0" max="10" name="anxiety_level" value={formData.anxiety_level} onChange={handleInputChange} className="form-input" />
-              </div>
-              <div className="form-group">
-                <label>Dépression</label>
-                <select name="depression_screening" value={formData.depression_screening} onChange={handleInputChange} className="form-input">
-                  <option value="negative">Négative</option>
-                  <option value="mild">Légère</option>
-                  <option value="moderate">Modérée</option>
-                  <option value="severe">Sévère</option>
-                </select>
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Score de catastrophisation (0-52)</label>
-              <input type="number" min="0" max="52" name="catastrophizing_score" value={formData.catastrophizing_score} onChange={handleInputChange} className="form-input" />
-            </div>
+        <button 
+          type="button" 
+          className="section-header" 
+          onClick={() => toggleSection('plan')}
+        >
+          <div className="section-header-left">
+            <FiChevronDown style={{ transform: expandedSections.plan ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+            <FiShield className="section-icon" />
+            <span>Stratégie Thérapeutique</span>
           </div>
-        )}
-      </div>
-
-      {/* SECTION 6: MANAGEMENT */}
-      <div className="form-section">
-        <button type="button" className="section-header" onClick={() => toggleSection('management')}>
-          <FiChevronDown style={{ transform: expandedSections.management ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
-          <span>Plan de Traitement</span>
         </button>
-        {expandedSections.management && (
+        
+        {expandedSections.plan && (
           <div className="section-content">
             <div className="form-group">
-              <label>Interventions recommandées</label>
-              <textarea name="recommended_interventions" value={formData.recommended_interventions.join(', ')} onChange={(e) => setFormData(prev => ({...prev, recommended_interventions: e.target.value.split(',').map(s => s.trim())}))} placeholder="Pharmacologique, PT, psychologique, etc." className="form-textarea"></textarea>
-            </div>
-            <div className="form-group">
-              <label>Plan de suivi</label>
-              <textarea name="follow_up_plan" value={formData.follow_up_plan} onChange={handleInputChange} className="form-textarea"></textarea>
-            </div>
-            <div className="form-group">
-              <label>Notes cliniques</label>
-              <textarea name="clinical_notes" value={formData.clinical_notes} onChange={handleInputChange} className="form-textarea"></textarea>
+              <label>Plan de suivi & Objectifs</label>
+              <textarea 
+                name="follow_up_plan" 
+                value={formData.follow_up_plan}
+                onChange={handleInputChange}
+                placeholder="Réajustement thérapeutique, orientations spécialisées..."
+                className="form-textarea"
+                rows="4"
+              />
             </div>
           </div>
         )}
@@ -2612,7 +2735,7 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
       {/* SUBMIT */}
       <div className="form-actions">
         <button type="submit" className="btn-submit">
-          <FiCheckCircle /> Enregistrer le formulaire
+          <FiCheckCircle /> Enregistrer le bilan Douleur
         </button>
       </div>
     </form>
