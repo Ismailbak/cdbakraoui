@@ -387,7 +387,7 @@
   backdrop-filter: blur(4px);
 }
 
-.modal-content {
+.medical-acts-page .modal-content {
   background: #fff;
   border-radius: 20px;
   width: 95%;

@@ -760,11 +760,11 @@
   backdrop-filter: blur(4px);
 }
 
-.modal-content {
+.appointments-page .modal-content {
   background: #fff;
   border-radius: 20px;
   width: 90%;
-  max-width: 500px;
+  max-width: 820px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);

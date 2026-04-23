@@ -437,14 +437,19 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                 <label className="pf-label">
                   Civilité <span className="pf-optional">(optionnel)</span>
                 </label>
-                <input
-                  className="pf-input"
-                  type="text"
+                <select
+                  className="pf-select"
                   name="civility"
                   value={form.civility}
                   onChange={handleChange}
-                  placeholder="Ex: M., Mme, Mlle"
-                />
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="M.">M.</option>
+                  <option value="Mme">Mme</option>
+                  <option value="Mlle">Mlle</option>
+                  <option value="Dr">Dr</option>
+                  <option value="Pr">Pr</option>
+                </select>
               </div>
               <div className="pf-field">
                 <label className="pf-label">
