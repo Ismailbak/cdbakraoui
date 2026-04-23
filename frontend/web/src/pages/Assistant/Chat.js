@@ -179,6 +179,20 @@ function Chat({ patientId, currentUser }) {
     }
   }, [messages]);
 
+  // Manage scroll locking on mobile when sidebar is open
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (sidebarOpen) {
+        document.body.classList.add('sidebar-open');
+      } else {
+        document.body.classList.remove('sidebar-open');
+      }
+    }
+    return () => {
+      document.body.classList.remove('sidebar-open');
+    };
+  }, [sidebarOpen]);
+
   const handleCopyMessage = async (messageId, content) => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -343,21 +357,14 @@ function Chat({ patientId, currentUser }) {
 
   return (
     <div 
-      className={`chat-container ${sidebarOpen ? 'sidebar-open' : ''}`}
-      onClick={(e) => {
-        // Close sidebar when clicking the overlay
-        if (sidebarOpen && e.target === e.currentTarget) {
-          setSidebarOpen(false);
-        }
-      }}
+      className="chat-container"
     >
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Sidebar Overlay - Mobile only */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        role="presentation"
+      />
 
       {/* Sidebar with History */}
       <div className={`chat-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -402,21 +409,22 @@ function Chat({ patientId, currentUser }) {
 
       {/* Main Chat Area */}
       <div className="chat-main">
-        <div className="chat-header">
+        <div className="chat-toolbar">
           <button 
             className="sidebar-toggle-open"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Ouvrir la barre latérale"
+            aria-label="Ouvrir l'historique"
             title="Ouvrir l'historique"
           >
             ☰
           </button>
-          <div className="header-left">
-            <h2>Assistant Médical IA</h2>
+          
+          <div className="toolbar-center">
+             <span className="assistant-badge">ASSISTANT IA</span>
           </div>
           
           <div className="doctor-context">
-            <span className="context-label">MÉDECIN:</span>
+            <span className="context-label">DR.</span>
             <span className="doctor-name">{((currentUser?.last_name || currentUser?.username) || 'DOCTEUR').toUpperCase()}</span>
           </div>
         </div>

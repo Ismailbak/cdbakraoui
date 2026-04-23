@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPatient } from '../../api/api';
-import ChatSessions from '../../components/ChatSessions';
+import ChatSessions from '../Assistant/components/ChatSessions';
 import './ChatPage.css';
 
 const ChatPage = () => {

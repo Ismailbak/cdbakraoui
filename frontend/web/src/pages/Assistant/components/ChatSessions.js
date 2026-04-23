@@ -3,7 +3,7 @@ import {
   listPatientChatSessions,
   createChatSession,
   deleteChatSession,
-} from '../api/api';
+} from '../../../api/api';
 import './ChatSessions.css';
 
 const ChatSessions = ({ patientId }) => {
@@ -144,7 +144,7 @@ const ChatSessionDetail = ({ session, onClose }) => {
 
   const fetchMessages = async () => {
     try {
-      const { getSessionMessages } = await import('../api/api');
+      const { getSessionMessages } = await import('../../../api/api');
       const response = await getSessionMessages(session.id);
       setMessages(response.data);
     } catch (err) {
@@ -160,7 +160,7 @@ const ChatSessionDetail = ({ session, onClose }) => {
 
     try {
       setSending(true);
-      const { addMessageToSession } = await import('../api/api');
+      const { addMessageToSession } = await import('../../../api/api');
       await addMessageToSession(session.id, 'user', newMessage);
       setNewMessage('');
       fetchMessages();

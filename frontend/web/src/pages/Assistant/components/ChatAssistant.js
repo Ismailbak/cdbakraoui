@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendChatMessage, addMessageToSession, getSessionMessages } from '../api/api';
+import { sendChatMessage, addMessageToSession, getSessionMessages } from '../../../api/api';
 import './ChatAssistant.css';
 
 const ChatAssistant = ({ patientId, sessionId = null, onSessionCreated = null }) => {
