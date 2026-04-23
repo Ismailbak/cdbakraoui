@@ -25,8 +25,8 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
     rachialgie_duration: initialData.rachialgie_duration || '',
     rachialgie_locations: initialData.rachialgie_locations || [],
     other_signs_text: initialData.other_signs_text || '',
-    articular_index: initialData.articular_index || '',
-    synovial_index: initialData.synovial_index || '',
+    articular_index: initialData.articular_index || null,
+    synovial_index: initialData.synovial_index || null,
     clinical_examination_notes: initialData.clinical_examination_notes || '',
     imaging_xray: initialData.imaging_xray || 0,
     imaging_xray_findings: initialData.imaging_xray_findings || '',
@@ -91,7 +91,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>🦴 Consultation Rhumatisme Dégénératif</h2>
         <div className="form-row" style={{ marginTop: '1rem', marginBottom: 0 }}>
@@ -331,7 +331,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                   type="number"
                   placeholder="0"
                   value={formData.articular_index}
-                  onChange={(e) => handleInputChange('articular_index', e.target.value)}
+                  onChange={(e) => handleInputChange('articular_index', e.target.value === '' ? null : Number(e.target.value))}
                   className="form-input"
                 />
               </div>
@@ -341,7 +341,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                   type="number"
                   placeholder="0"
                   value={formData.synovial_index}
-                  onChange={(e) => handleInputChange('synovial_index', e.target.value)}
+                  onChange={(e) => handleInputChange('synovial_index', e.target.value === '' ? null : Number(e.target.value))}
                   className="form-input"
                 />
               </div>
@@ -556,11 +556,11 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le formulaire
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -569,14 +569,14 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsRic = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    crp_value: initialData.crp_value || '',
-    crp_date: initialData.crp_date || '',
-    esr_value: initialData.esr_value || '',
-    esr_date: initialData.esr_date || '',
-    das28_score: initialData.das28_score || '',
-    tender_joint_count: initialData.tender_joint_count || '',
-    swollen_joint_count: initialData.swollen_joint_count || '',
-    morning_stiffness_duration: initialData.morning_stiffness_duration || '',
+    crp_value: initialData.crp_value || null,
+    crp_date: initialData.crp_date || null,
+    esr_value: initialData.esr_value || null,
+    esr_date: initialData.esr_date || null,
+    das28_score: initialData.das28_score || null,
+    tender_joint_count: initialData.tender_joint_count || null,
+    swollen_joint_count: initialData.swollen_joint_count || null,
+    morning_stiffness_duration: initialData.morning_stiffness_duration || null,
     affected_joints: initialData.affected_joints || [],
     fever_present: initialData.fever_present || false,
     fatigue_level: initialData.fatigue_level || 5,
@@ -602,7 +602,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
@@ -612,7 +612,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>🔴 Consultation RIC</h2>
         <p>Rhumatismes Inflammatoires Chroniques - Évaluation de l'activité</p>
@@ -798,19 +798,17 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
             </div>
 
             <div className="form-group">
-              <label>Niveau de fatigue</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="fatigue_level" 
-                  value={formData.fatigue_level}
-                  onChange={handleInputChange}
-                  min="1"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.fatigue_level}/10</span>
-              </div>
+              <label>Niveau de fatigue (1-10)</label>
+              <input 
+                type="number" 
+                name="fatigue_level" 
+                value={formData.fatigue_level}
+                onChange={handleInputChange}
+                min="1"
+                max="10"
+                className="form-input"
+                style={{ maxWidth: '120px' }}
+              />
             </div>
           </div>
         )}
@@ -868,11 +866,11 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le bilan RIC
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -881,16 +879,16 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsOs = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    dxa_date: initialData.dxa_date || '',
-    spine_tscore: initialData.spine_tscore || '',
-    hip_tscore: initialData.hip_tscore || '',
-    femoral_neck_tscore: initialData.femoral_neck_tscore || '',
+    dxa_date: initialData.dxa_date || null,
+    spine_tscore: initialData.spine_tscore || null,
+    hip_tscore: initialData.hip_tscore || null,
+    femoral_neck_tscore: initialData.femoral_neck_tscore || null,
     fracture_history_present: initialData.fracture_history_present || false,
     vertebral_fracture_present: initialData.vertebral_fracture_present || false,
-    frax_major_osteoporotic: initialData.frax_major_osteoporotic || '',
-    frax_hip_fracture: initialData.frax_hip_fracture || '',
+    frax_major_osteoporotic: initialData.frax_major_osteoporotic || null,
+    frax_hip_fracture: initialData.frax_hip_fracture || null,
     fall_risk: initialData.fall_risk || 'Moderate',
-    vitamin_d_level: initialData.vitamin_d_level || '',
+    vitamin_d_level: initialData.vitamin_d_level || null,
     physical_activity: initialData.physical_activity || 'Moderate',
     back_pain_present: initialData.back_pain_present || false,
     back_pain_severity: initialData.back_pain_severity || 5,
@@ -912,7 +910,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
@@ -922,7 +920,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>🦴 Consultation Ostéopathies</h2>
         <p>Santé osseuse et évaluation du risque fracturaire (FRAX)</p>
@@ -1181,18 +1179,18 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
         {formData.back_pain_present && (
           <div style={{ marginTop: '1rem', padding: '0 1rem 1rem' }}>
-            <label>Intensité de la douleur</label>
-            <div className="slider-container">
+            <div className="form-group">
+              <label>Intensité de la douleur (1-10)</label>
               <input 
-                type="range" 
+                type="number" 
                 name="back_pain_severity" 
                 value={formData.back_pain_severity}
                 onChange={handleInputChange}
                 min="1"
                 max="10"
-                className="slider"
+                className="form-input"
+                style={{ maxWidth: '120px' }}
               />
-              <span className="slider-value">{formData.back_pain_severity}/10</span>
             </div>
           </div>
         )}
@@ -1216,11 +1214,11 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le bilan osseux
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -1229,7 +1227,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    echo_date: initialData.echo_date || '',
+    echo_date: initialData.echo_date || null,
     anatomical_region: initialData.anatomical_region || 'Shoulder',
     indication: initialData.indication || '',
     side_examined: initialData.side_examined || 'Right',
@@ -1259,7 +1257,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
@@ -1269,7 +1267,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>🔊 Consultation Échographie</h2>
         <p>Bilan d'imagerie ostéo-articulaire et musculaire</p>
@@ -1528,11 +1526,11 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le compte-rendu Echo
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -1541,7 +1539,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    procedure_date: initialData.procedure_date || '',
+    procedure_date: initialData.procedure_date || null,
     procedure_type: initialData.procedure_type || 'Injection',
     anatomical_site: initialData.anatomical_site || '',
     side: initialData.side || 'Right',
@@ -1549,7 +1547,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
     guidance_method: initialData.guidance_method || 'Palpation',
     anesthesia_used: initialData.anesthesia_used || false,
     product_injected: initialData.product_injected || '',
-    fluid_aspirated_volume: initialData.fluid_aspirated_volume || '',
+    fluid_aspirated_volume: initialData.fluid_aspirated_volume || null,
     patient_tolerance: initialData.patient_tolerance || 'Good',
     pain_during_procedure: initialData.pain_during_procedure || 5,
     complications_present: initialData.complications_present || false,
@@ -1572,7 +1570,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
@@ -1582,7 +1580,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>💉 Consultation Gestes Techniques</h2>
         <p>Documentation des procédures interventionnelles ostéo-articulaires</p>
@@ -1806,19 +1804,17 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
               </div>
 
               <div className="form-group">
-                <label>Douleur (Procédure)</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    name="pain_during_procedure" 
-                    value={formData.pain_during_procedure}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="10"
-                    className="slider"
-                  />
-                  <span className="slider-value">{formData.pain_during_procedure}/10</span>
-                </div>
+                <label>Douleur Procédure (1-10)</label>
+                <input 
+                  type="number" 
+                  name="pain_during_procedure" 
+                  value={formData.pain_during_procedure}
+                  onChange={handleInputChange}
+                  min="1"
+                  max="10"
+                  className="form-input"
+                  style={{ maxWidth: '120px' }}
+                />
               </div>
             </div>
 
@@ -1865,11 +1861,11 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Valider le geste technique
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -1878,7 +1874,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    session_date: initialData.session_date || '',
+    session_date: initialData.session_date || null,
     session_duration: initialData.session_duration || '30',
     therapist_name: initialData.therapist_name || '',
     session_type: initialData.session_type || 'TENS',
@@ -1888,7 +1884,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
     functional_improvement: initialData.functional_improvement || 'None',
     patient_comfort_level: initialData.patient_comfort_level || 'Good',
     patient_compliance: initialData.patient_compliance || 'Good',
-    session_number_in_series: initialData.session_number_in_series || '1',
+    session_number_in_series: initialData.session_number_in_series || null,
     progress_notes: initialData.progress_notes || '',
   });
 
@@ -1907,7 +1903,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
@@ -1917,7 +1913,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>⚡ Séances Thérapeutiques</h2>
         <p>Suivi de rééducation, physiothérapie et appareillage</p>
@@ -2042,35 +2038,31 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
           <div className="section-content">
             <div className="form-row">
               <div className="form-group">
-                <label>Douleur Avant</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    name="pain_before_session" 
-                    value={formData.pain_before_session}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="10"
-                    className="slider"
-                  />
-                  <span className="slider-value">{formData.pain_before_session}/10</span>
-                </div>
+                <label>Douleur Avant (1-10)</label>
+                <input 
+                  type="number" 
+                  name="pain_before_session" 
+                  value={formData.pain_before_session}
+                  onChange={handleInputChange}
+                  min="1"
+                  max="10"
+                  className="form-input"
+                  style={{ maxWidth: '120px' }}
+                />
               </div>
 
               <div className="form-group">
-                <label>Douleur Après</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    name="pain_after_session" 
-                    value={formData.pain_after_session}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="10"
-                    className="slider"
-                  />
-                  <span className="slider-value">{formData.pain_after_session}/10</span>
-                </div>
+                <label>Douleur Après (1-10)</label>
+                <input 
+                  type="number" 
+                  name="pain_after_session" 
+                  value={formData.pain_after_session}
+                  onChange={handleInputChange}
+                  min="1"
+                  max="10"
+                  className="form-input"
+                  style={{ maxWidth: '120px' }}
+                />
               </div>
             </div>
 
@@ -2142,11 +2134,11 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer la séance
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -2155,14 +2147,14 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    scan_date: initialData.scan_date || '',
+    scan_date: initialData.scan_date || null,
     scan_quality: initialData.scan_quality || 'Good',
-    spine_tscore: initialData.spine_tscore || '',
-    hip_tscore: initialData.hip_tscore || '',
-    femoral_neck_tscore: initialData.femoral_neck_tscore || '',
+    spine_tscore: initialData.spine_tscore || null,
+    hip_tscore: initialData.hip_tscore || null,
+    femoral_neck_tscore: initialData.femoral_neck_tscore || null,
     who_diagnosis_spine: initialData.who_diagnosis_spine || 'Normal',
-    frax_major_fracture_probability: initialData.frax_major_fracture_probability || '',
-    frax_hip_fracture_probability: initialData.frax_hip_fracture_probability || '',
+    frax_major_fracture_probability: initialData.frax_major_fracture_probability || null,
+    frax_hip_fracture_probability: initialData.frax_hip_fracture_probability || null,
     vfa_performed: initialData.vfa_performed || false,
     vertebral_deformities_present: initialData.vertebral_deformities_present || false,
     impression: initialData.impression || '',
@@ -2184,7 +2176,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
@@ -2194,7 +2186,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>📊 Bilan Ostéodensitométrie (DXA)</h2>
         <p>Analyse de la densité minérale osseuse et classification WHO</p>
@@ -2447,11 +2439,11 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Valider le bilan DXA
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -2463,17 +2455,17 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
  */
 export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    pain_locations: initialData.pain_locations || [],
+    pain_locations: Array.isArray(initialData.pain_locations) ? initialData.pain_locations.join(', ') : (initialData.pain_locations || ''),
     pain_intensity_vas: initialData.pain_intensity_vas || 5,
-    pain_duration: initialData.pain_duration || '',
+    pain_duration: initialData.pain_duration || null,
     pain_character: initialData.pain_character || '',
     onset_type: initialData.onset_type || 'Progressive',
-    initial_pain_date: initialData.initial_pain_date || '',
+    initial_pain_date: initialData.initial_pain_date || null,
     pain_progression: initialData.pain_progression || 'Stable',
     aggravating_factors: initialData.aggravating_factors || '',
     relieving_factors: initialData.relieving_factors || '',
     time_of_day_pattern: initialData.time_of_day_pattern || 'Mechanical',
-    functional_limitation_score: initialData.functional_limitation_score || '',
+    functional_limitation_score: initialData.functional_limitation_score || null,
     sleep_disturbance_present: initialData.sleep_disturbance_present || false,
     sleep_quality: initialData.sleep_quality || 'Good',
     work_impact: initialData.work_impact || 'None',
@@ -2500,17 +2492,26 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? null : Number(value)) : value)
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert comma-separated strings to arrays for the backend
+    const processedData = { ...formData };
+    ['pain_locations', 'pain_character', 'aggravating_factors', 'relieving_factors'].forEach(field => {
+      if (typeof processedData[field] === 'string' && processedData[field].trim() !== '') {
+        processedData[field] = processedData[field].split(',').map(s => s.trim()).filter(Boolean);
+      } else if (typeof processedData[field] === 'string' || processedData[field] === null) {
+        processedData[field] = [];
+      }
+    });
+    onSubmit(processedData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="medical-form">
+    <div className="medical-form">
       <div className="form-header">
         <h2>🔥 Évaluation de la Douleur</h2>
         <p>Bilan multidimensionnel et impact sur la qualité de vie</p>
@@ -2534,18 +2535,16 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
           <div className="section-content">
             <div className="form-group">
               <label>Intensité (EVA 0-10)</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="pain_intensity_vas" 
-                  value={formData.pain_intensity_vas}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.pain_intensity_vas}/10</span>
-              </div>
+              <input 
+                type="number" 
+                name="pain_intensity_vas" 
+                value={formData.pain_intensity_vas}
+                onChange={handleInputChange}
+                min="0"
+                max="10"
+                className="form-input"
+                style={{ maxWidth: '120px' }}
+              />
             </div>
 
             <div className="form-row">
@@ -2667,35 +2666,31 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
         {expandedSections.psychological && (
           <div className="section-content">
             <div className="form-group">
-              <label>Niveau d'Anxiété</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="anxiety_level" 
-                  value={formData.anxiety_level}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.anxiety_level}/10</span>
-              </div>
+              <label>Niveau d'Anxiété (0-10)</label>
+              <input 
+                type="number" 
+                name="anxiety_level" 
+                value={formData.anxiety_level}
+                onChange={handleInputChange}
+                min="0"
+                max="10"
+                className="form-input"
+                style={{ maxWidth: '120px' }}
+              />
             </div>
 
             <div className="form-group">
-              <label>Score de Catastrophisme</label>
-              <div className="slider-container">
-                <input 
-                  type="range" 
-                  name="catastrophizing_score" 
-                  value={formData.catastrophizing_score}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="10"
-                  className="slider"
-                />
-                <span className="slider-value">{formData.catastrophizing_score}/10</span>
-              </div>
+              <label>Score de Catastrophisme (0-10)</label>
+              <input 
+                type="number" 
+                name="catastrophizing_score" 
+                value={formData.catastrophizing_score}
+                onChange={handleInputChange}
+                min="0"
+                max="10"
+                className="form-input"
+                style={{ maxWidth: '120px' }}
+              />
             </div>
           </div>
         )}
@@ -2734,11 +2729,11 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le bilan Douleur
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 

@@ -10,7 +10,11 @@ import {
   FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiClock, FiTarget
 } from 'react-icons/fi';
 
-import { getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults, getActForms, getFormCsRd } from '../../api/api';
+import { 
+  getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults, 
+  getActForms, getFormCsRd, getFormCsRic, getFormCsOs, getFormCsEcho, 
+  getFormCsGeste, getFormCsSeances, getFormCsDxa, getFormCsDouleur 
+} from '../../api/api';
 import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
 import { SkeletonCard } from '../../components/common/Skeleton';
@@ -93,6 +97,7 @@ const medicalActsService = {
       documents: act.documents || [],
       diagnoses: act.diagnoses || [],
       treatments: act.treatments || [],
+      forms: act.forms || [],
     }));
   },
 
@@ -175,10 +180,11 @@ function ActCard({ act, onView, onDelete, onEdit }) {
             <FiActivity size={14} /> {act.description}
           </p>
         )}
-        {(act.diagnoses?.length > 0 || act.treatments?.length > 0) && (
+        {(act.diagnoses?.length > 0 || act.treatments?.length > 0 || act.forms?.length > 0) && (
           <p className="act-treatment">
-            {act.diagnoses?.length > 0 && <span>{act.diagnoses.length} diagnostic(s)</span>}
-            {act.treatments?.length > 0 && <span>{act.treatments.length} traitement(s)</span>}
+            {act.diagnoses?.length > 0 && <span>{act.diagnoses.length} diag.</span>}
+            {act.treatments?.length > 0 && <span>{act.treatments.length} trait.</span>}
+            {act.forms?.length > 0 && <span className="clinical-tag">📋 Clinique</span>}
           </p>
         )}
       </div>
@@ -240,23 +246,56 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
     const fetchFormData = async () => {
       try {
         setFormDataLoading(true);
-        const actFormsResponse = await getActForms(act.id);
-        const actForms = actFormsResponse.data || [];
+        // Use forms from act object if already enriched by backend
+        let actForms = act.forms || [];
         
-        // Get the first form linked to this act
+        // Fallback to manual fetch if needed
+        if (actForms.length === 0) {
+          const actFormsResponse = await getActForms(act.id);
+          actForms = actFormsResponse.data || [];
+        }
+        
         if (actForms.length > 0) {
+          // In this system, we usually have one main clinical form per act
           const actForm = actForms[0];
-          console.log('Found act_form:', actForm);
-          try {
-            const formResponse = await getFormCsRd(actForm.form_table_id);
-            console.log('Fetched form data:', formResponse.data);
-            setFormData(formResponse.data);
-          } catch (formErr) {
-            console.error('Error fetching form data:', formErr);
-            setFormData(null);
+          
+          // Determine which fetch function to use based on the ref_form_type_id or form_name
+          // If the backend doesn't provide form_name, we might need to map IDs
+          // For now, let's try to detect the form type from the available data
+          
+          let data = null;
+          let type = 'unknown';
+
+          // Try to fetch from each potential endpoint until we find the data
+          // A more robust way would be if actForm included the form_name
+          const formTableId = actForm.form_table_id;
+          
+          const fetchers = [
+            { name: 'RIC', fn: getFormCsRic },
+            { name: 'OS', fn: getFormCsOs },
+            { name: 'ECHO', fn: getFormCsEcho },
+            { name: 'GESTE', fn: getFormCsGeste },
+            { name: 'SEANCES', fn: getFormCsSeances },
+            { name: 'DXA', fn: getFormCsDxa },
+            { name: 'DOULEUR', fn: getFormCsDouleur },
+            { name: 'RD', fn: getFormCsRd }
+          ];
+
+          for (const fetcher of fetchers) {
+            try {
+              const res = await fetcher.fn(formTableId);
+              if (res.data) {
+                data = res.data;
+                type = fetcher.name;
+                break;
+              }
+            } catch (e) {
+              // Continue to next fetcher
+            }
           }
+
+          setFormData(data ? { ...data, _formType: type } : null);
         } else {
-          console.log('No forms linked to this act');
           setFormData(null);
         }
       } catch (err) {
@@ -278,25 +317,9 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
     return doctor ? `${doctor.first_name} ${doctor.last_name}` : `Médecin #${doctorId}`;
   };
 
-  // Print handler - fetches professional PDF from backend and opens print dialog
-  const handlePrint = async () => {
-    try {
-      const { getMedicalActPdf } = await import('../../api/api');
-      const response = await getMedicalActPdf(act.id);
-      const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const printWindow = window.open(url);
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.focus();
-          printWindow.print();
-          window.URL.revokeObjectURL(url);
-        };
-      }
-    } catch (err) {
-      console.error('Print error:', err);
-      alert('Erreur lors de la génération de l\'impression.');
-    }
+  // Print handler - uses browser print to capture current clinical details
+  const handlePrint = () => {
+    window.print();
   };
 
   // PDF download handler
@@ -443,56 +466,109 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
 
           {formData && (
             <div className="detail-section form-data-section">
-              <h4><FiFileText /> Données du formulaire clinique</h4>
+              <div className="detail-section-header">
+                <h4><FiFileText /> Données Cliniques ({formData._formType})</h4>
+              </div>
               <div className="form-data-grid">
-                {formData.form_date && (
-                  <div className="form-data-item">
-                    <label>Date du formulaire</label>
-                    <p>{formatDate(formData.form_date)}</p>
-                  </div>
-                )}
-                {formData.current_treatment_none !== undefined && (
-                  <div className="form-data-item">
-                    <label>Aucun traitement actuel</label>
-                    <p>{formData.current_treatment_none ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
-                {formData.arthralgie_present !== undefined && (
-                  <div className="form-data-item">
-                    <label>Arthralgie présente</label>
-                    <p>{formData.arthralgie_present ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
-                {formData.joint_swelling_present !== undefined && (
-                  <div className="form-data-item">
-                    <label>Gonflement articulaire</label>
-                    <p>{formData.joint_swelling_present ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
-                {formData.rachialgie_present !== undefined && (
-                  <div className="form-data-item">
-                    <label>Rachialgie présente</label>
-                    <p>{formData.rachialgie_present ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
-                {formData.fessialgie_present !== undefined && (
-                  <div className="form-data-item">
-                    <label>Fessialgie présente</label>
-                    <p>{formData.fessialgie_present ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
-                {formData.enthesalgie_present !== undefined && (
-                  <div className="form-data-item">
-                    <label>Enthésalgie présente</label>
-                    <p>{formData.enthesalgie_present ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
-                {formData.myalgie_present !== undefined && (
-                  <div className="form-data-item">
-                    <label>Myalgie présente</label>
-                    <p>{formData.myalgie_present ? 'Oui' : 'Non'}</p>
-                  </div>
-                )}
+                {Object.entries(formData)
+                  .filter(([key, value]) => 
+                    !key.startsWith('_') && 
+                    !['id', 'patient_id', 'act_id', 'created_at', 'updated_at', 'patientId', 'doctorId'].includes(key) &&
+                    value !== null && value !== '' && value !== undefined
+                  )
+                  .map(([key, value]) => {
+                    // Mapping for human-readable labels
+                    const labels = {
+                      form_date: 'Date',
+                      clinical_notes: 'Observations',
+                      // RIC
+                      joint_swelling_count: 'Articulations gonflées',
+                      joint_tenderness_count: 'Articulations douloureuses',
+                      morning_stiffness: 'Raideur matinale',
+                      vas_pain: 'EVA Douleur',
+                      vas_patient_global: 'EVA Globale Patient',
+                      vas_physician_global: 'EVA Globale Médecin',
+                      crp: 'CRP (mg/L)',
+                      esr: 'VS (1ère heure)',
+                      das28_score: 'Score DAS28',
+                      // OS / DXA
+                      t_score_lumbar: 'T-Score Lombaire',
+                      t_score_hip: 'T-Score Hanche',
+                      frax_score: 'Score FRAX',
+                      who_classification: 'Classification OMS',
+                      t_score_femoral_neck: 'T-Score Col Fémoral',
+                      t_score_total_hip: 'T-Score Hanche Totale',
+                      previous_fracture: 'Antécédent de fracture',
+                      // ECHO
+                      joint_site: 'Articulation examinée',
+                      synovitis_grade: 'Grade synovite',
+                      doppler_signal: 'Signal Doppler',
+                      effusion_present: 'Épanchement',
+                      erosion_present: 'Érosion osseuse',
+                      // GESTE
+                      procedure_type: 'Geste effectué',
+                      product_used: 'Produit utilisé',
+                      target_joint: 'Articulation cible',
+                      volume_aspirated: 'Volume aspiré',
+                      // DOULEUR
+                      // DOULEUR
+                      pain_intensity_vas: 'EVA Douleur',
+                      pain_duration: 'Durée de la douleur',
+                      pain_character: 'Caractère de la douleur',
+                      onset_type: 'Type de début',
+                      initial_pain_date: 'Date de début',
+                      previous_treatments_json: 'Traitements antérieurs',
+                      pain_progression: 'Évolution de la douleur',
+                      aggravating_factors: 'Facteurs aggravants',
+                      relieving_factors: 'Facteurs soulageants',
+                      time_of_day_pattern: 'Rythme nycthéméral',
+                      functional_limitation_score: 'Score de limitation fonctionnelle',
+                      sleep_disturbance_present: 'Troubles du sommeil',
+                      sleep_quality: 'Qualité du sommeil',
+                      work_impact: 'Impact sur le travail',
+                      daily_activity_limitations: 'Limitations activités quotidiennes',
+                      analgesics_json: 'Analgésiques',
+                      nsaids_json: 'AINS',
+                      other_medications_json: 'Autres médicaments',
+                      tender_points_locations: 'Localisation points douloureux',
+                      range_of_motion_findings: 'Examen de la mobilité',
+                      neurological_exam_findings: 'Examen neurologique',
+                      anxiety_level: 'Niveau d\'anxiété',
+                      depression_screening: 'Dépistage dépression',
+                      catastrophizing_score: 'Score de catastrophisme',
+                      coping_mechanisms: 'Mécanismes de défense',
+                      recommended_interventions: 'Interventions recommandées',
+                      referrals_needed: 'Avis spécialisés nécessaires',
+                      follow_up_plan: 'Plan de suivi',
+                      // SEANCES
+                      session_number_in_series: 'N° de séance',
+                      session_duration: 'Durée (min)',
+                      therapist_name: 'Thérapeute',
+                      session_type: 'Type de séance',
+                      functional_improvement: 'Amélioration fonctionnelle',
+                      pain_before_session: 'Douleur avant',
+                      pain_after_session: 'Douleur après',
+                    };
+                    
+                    const label = labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    let displayValue = value;
+                    if (Array.isArray(value)) {
+                      displayValue = value.map(item => 
+                        typeof item === 'object' ? JSON.stringify(item) : String(item)
+                      ).join(', ');
+                    } else if (typeof value === 'boolean' || (typeof value === 'number' && (key.endsWith('_present') || key.endsWith('_done')))) {
+                      displayValue = value ? 'Oui' : 'Non';
+                    }
+                    
+                    return (
+                      <div className="form-data-item" key={key}>
+                        <label>{label}</label>
+                        <p>{displayValue}</p>
+                      </div>
+                    );
+                  })
+                }
               </div>
             </div>
           )}

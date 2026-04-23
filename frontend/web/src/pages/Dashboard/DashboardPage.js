@@ -59,6 +59,9 @@ function DashboardPage() {
         const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
         const actsSafe = Array.isArray(acts) ? acts : [];
 
+        console.log('Sample Appointment:', appointments[0]);
+        console.log('Sample Act:', actsSafe[0]);
+
         // 1. Calculate Stats
         const todayStr = new Date().toISOString().split('T')[0];
         const todayApps = appointments.filter(a => a.date === todayStr);
@@ -81,13 +84,23 @@ function DashboardPage() {
           return d.toISOString().split('T')[0];
         });
 
+        console.log('Appointments Data:', appointments);
+        console.log('Acts Data:', actsSafe);
+        console.log('Last 7 Days:', last7Days);
+
         const newTrend = last7Days.map(date => {
           const dayDate = new Date(date);
           const dayName = dayDate.toLocaleDateString('fr-FR', { weekday: 'short' });
+          const rdvCount = appointments.filter(a => {
+            const appointmentDate = a.datetime_scheduled.split('T')[0]; // Extract date part
+            return appointmentDate === date;
+          }).length;
+          const actesCount = actsSafe.filter(a => a.act_date === date).length; // Use correct field
+
           return {
             name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-            rdv: appointments.filter(a => a.date === date).length,
-            actes: actsSafe.filter(a => a.date === date).length
+            rdv: rdvCount,
+            actes: actesCount
           };
         });
         setTrendData(newTrend);
