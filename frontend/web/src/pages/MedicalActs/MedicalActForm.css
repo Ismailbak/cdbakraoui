@@ -214,6 +214,12 @@
     gap: 40px;
 }
 
+.maf-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+}
+
 .maf-lab-row {
     display: grid;
     grid-template-columns: 1fr 120px 180px;
@@ -876,6 +882,71 @@
 
 .maf-form-note p {
     margin: 0;
+}
+
+/* ── Treatments Multi-Select ──────────────── */
+.maf-treatments-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: #FAFAFA;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.maf-treatments-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.maf-treatments-container::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 10px;
+}
+
+.maf-treatment-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.maf-treatment-group-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4B5563;
+    margin: 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.maf-treatment-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.maf-treatment-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+
+.maf-treatment-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #fca5a5;
+}
+
+.maf-treatment-checkbox:hover {
+    color: #fca5a5;
 }
 
 /* ── Responsive ──────────────────────────── */
