@@ -71,9 +71,9 @@ def get_chat_response(
     
     # Build system message based on language
     system_messages = {
-        "fr": "Tu es un assistant médical IA spécialisé en médecine générale et rhumatologie. Réponds aux questions médicales de manière précise et professionnelle. Fournis des explications claires.",
-        "en": "You are a medical AI assistant specialized in general medicine and rheumatology. Answer medical questions precisely and professionally. Provide clear explanations.",
-        "ar": "أنت مساعد ذكاء اصطناعي طبي متخصص في الطب العام وأمراض الروماتيزم. أجب على الأسئلة الطبية بدقة واحترافية. قدم شروحات واضحة."
+        "fr": "Tu es un assistant médical IA spécialisé en médecine générale et rhumatologie. Sois EXTRÊMEMENT CONCIS et direct. Limite tes réponses à 3 ou 4 phrases maximum. Ne donne pas de longues introductions ou conclusions.",
+        "en": "You are a medical AI assistant specialized in general medicine and rheumatology. Be EXTREMELY CONCISE and direct. Limit your answers to 3 or 4 sentences maximum. Do not provide long introductions or conclusions.",
+        "ar": "أنت مساعد ذكاء اصطناعي طبي متخصص في الطب العام وأمراض الروماتيزم. كن موجزاً ومباشراً جداً. اقتصر في إجاباتك على 3 أو 4 جمل كحد أقصى. لا تقدم مقدمات أو استنتاجات طويلة."
     }
     
     system_msg = system_messages.get(language, system_messages["fr"])
@@ -83,16 +83,10 @@ def get_chat_response(
     if patient_id:
         context = build_patient_context(db, patient_id)
     
-    # Construct full prompt
-    full_prompt = f"""{system_msg}
-
-{context}
-
-User: {message}
-Assistant:"""
+    system_prompt = f"{system_msg}\n\n{context}".strip()
     
     # Generate response
-    result = llm.generate(full_prompt, language=language)
+    result = llm.generate(prompt=message, system=system_prompt, language=language)
     
     # Store in database
     try:

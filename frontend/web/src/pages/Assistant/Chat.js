@@ -101,37 +101,7 @@ function Chat({ patientId, currentUser }) {
       const res = await getChatHistory(patientId);
       if (!res?.data) return;
 
-      let filteredData = res.data;
-      if (filterByDate) {
-        filteredData = res.data.filter(msg => {
-          if (!isValidDate(msg.created_at)) return false;
-          const msgDate = new Date(msg.created_at).toLocaleDateString('fr-FR');
-          return msgDate === filterByDate;
-        });
-      }
-
-      const history = filteredData.flatMap(msg => [
-        {
-          id: msg.id ? `${msg.id}-user` : generateId(),
-          role: 'user',
-          content: msg.message || '',
-          timestamp: parseTimestamp(msg.created_at),
-          feedback: null
-        },
-        {
-          id: msg.id ? `${msg.id}-assistant` : generateId(),
-          role: 'assistant',
-          content: msg.response || 'No response available.',
-          tokens: msg.tokens_used || 0,
-          model: msg.model || 'Unknown',
-          timestamp: parseTimestamp(msg.created_at),
-          feedback: null
-        }
-      ]).sort((a, b) => a.timestamp - b.timestamp);
-      
-      setMessages(history);
-      
-      // Extract unique sessions (group by date)
+      // Extract unique sessions (group by date) for the sidebar
       const sessions = [];
       const dateGroups = {};
       res.data.forEach(msg => {
@@ -147,6 +117,40 @@ function Chat({ patientId, currentUser }) {
         }
       });
       setChatSessions(sessions.reverse().slice(0, 10));
+
+      // Only load messages into the main view if a specific session date is requested
+      if (filterByDate) {
+        const filteredData = res.data.filter(msg => {
+          if (!isValidDate(msg.created_at)) return false;
+          const msgDate = new Date(msg.created_at).toLocaleDateString('fr-FR');
+          return msgDate === filterByDate;
+        });
+
+        const history = filteredData.flatMap(msg => [
+          {
+            id: msg.id ? `${msg.id}-user` : generateId(),
+            role: 'user',
+            content: msg.message || '',
+            timestamp: parseTimestamp(msg.created_at),
+            feedback: null
+          },
+          {
+            id: msg.id ? `${msg.id}-assistant` : generateId(),
+            role: 'assistant',
+            content: msg.response || 'No response available.',
+            tokens: msg.tokens_used || 0,
+            model: msg.model || 'Unknown',
+            timestamp: parseTimestamp(msg.created_at),
+            feedback: null
+          }
+        ]).sort((a, b) => a.timestamp - b.timestamp);
+        
+        setMessages(history);
+      } else {
+        // Default behavior: start a new chat
+        setMessages([]);
+      }
+      
       setError('');
     } catch (err) {
       console.error('Failed to load chat history:', err);
@@ -167,17 +171,10 @@ function Chat({ patientId, currentUser }) {
     };
   }, []);
 
-  // Smart Auto-scroll: Only scroll to bottom if user is already near bottom
+  // Auto-scroll to bottom when messages update or loading state changes
   useEffect(() => {
-    if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    
-    // If we're within 100px of the bottom, or just started (few messages), scroll down automatically.
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    if (isNearBottom || messages.length <= 2) {
-      messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   // Manage scroll locking on mobile when sidebar is open
   useEffect(() => {

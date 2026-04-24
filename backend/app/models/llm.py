@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class LLMModel:
     def __init__(self,
                  ollama_host: str = "http://10.13.19.180:11434",
-                 model_name: str = "cniongolo/biomistral"):
+                 model_name: str = "gemma4:e4b"):
         """
         Initialize LLM model connection to Ollama
 
@@ -63,15 +63,16 @@ class LLMModel:
             logger.error(f"Failed to connect to Ollama at {self.ollama_host}: {e}")
             return False
 
-    def generate(self, prompt: str, language: str = "fr", **kwargs) -> Dict:
+    def generate(self, prompt: str, system: str = None, language: str = "fr", **kwargs) -> Dict:
         """
         Generate response using BioMistral via Ollama.
         Always attempts the API call — does NOT depend on is_available.
 
         Args:
             prompt: The full prompt (may include patient context)
+            system: Optional system prompt to guide the model behavior
             language: Language code (fr, en, ar)
-            **kwargs: Additional parameters (temperature, top_p, top_k)
+            **kwargs: Additional parameters (temperature, top_p, top_k, num_predict)
 
         Returns:
             dict: {"response": str, "tokens": int, "model": str}
@@ -87,6 +88,9 @@ class LLMModel:
                     "top_k": kwargs.get("top_k", 40),
                 }
             }
+            
+            if system:
+                payload["system"] = system
 
             logger.debug(f"Calling Ollama ({self.model_name}): {prompt[:100]}...")
             response = requests.post(
@@ -135,5 +139,5 @@ class LLMModel:
 # Global singleton
 llm = LLMModel(
     ollama_host="http://10.13.19.180:11434",
-    model_name="cniongolo/biomistral"
+    model_name="gemma4:e4b"
 )
