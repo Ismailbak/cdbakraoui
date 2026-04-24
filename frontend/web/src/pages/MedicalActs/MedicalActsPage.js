@@ -411,7 +411,10 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
             <h4>Traitement / Prescription</h4>
             <p className="detail-value">
               {act.treatments && act.treatments.length > 0
-                ? act.treatments.map((t) => `${t.drug_name}${t.dosage ? ` (${t.dosage})` : ''}`).join(', ')
+                ? act.treatments.map((t) => {
+                    const details = [t.dosage, t.frequency, t.duration].filter(Boolean).join(' - ');
+                    return details ? `${t.drug_name} (${details})` : t.drug_name;
+                  }).join(', ')
                 : 'Aucun traitement'}
             </p>
           </div>
