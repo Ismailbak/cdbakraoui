@@ -101,6 +101,13 @@ class ActTreatmentCreate(BaseModel):
     duration: Optional[str] = None
     notes: Optional[str] = None
 
+class TreatmentInput(BaseModel):
+    drug_name: str
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    duration: Optional[str] = None
+    notes: Optional[str] = None
+
 
 class MedicalActBase(BaseModel):
     patient_id: int
@@ -127,7 +134,7 @@ class MedicalActBase(BaseModel):
 class MedicalActCreate(MedicalActBase):
     """Schema used for POST / (creation only)."""
     diagnosis: Optional[str] = None  # Accept diagnosis from form
-    treatment: Optional[str] = None  # Accept treatment from form
+    treatment: Optional[Union[str, List[Union[str, TreatmentInput]]]] = None  # Accept treatment from form as string or list
 
 
 class MedicalActOut(MedicalActBase):
@@ -347,12 +354,32 @@ def create_medical_act(
         db.add(db_diagnosis)
     
     # Create ActTreatment if treatment is provided
-    if treatment_text and treatment_text.strip():
-        db_treatment = ActTreatmentModel(
-            act_id=db_act.id,
-            drug_name=treatment_text.strip()
-        )
-        db.add(db_treatment)
+    if treatment_text:
+        if isinstance(treatment_text, list):
+            for t in treatment_text:
+                if isinstance(t, TreatmentInput):
+                    if t.drug_name and t.drug_name.strip():
+                        db_treatment = ActTreatmentModel(
+                            act_id=db_act.id,
+                            drug_name=t.drug_name.strip(),
+                            dosage=t.dosage,
+                            frequency=t.frequency,
+                            duration=t.duration,
+                            notes=t.notes
+                        )
+                        db.add(db_treatment)
+                elif isinstance(t, str) and t.strip():
+                    db_treatment = ActTreatmentModel(
+                        act_id=db_act.id,
+                        drug_name=t.strip()
+                    )
+                    db.add(db_treatment)
+        elif isinstance(treatment_text, str) and treatment_text.strip():
+            db_treatment = ActTreatmentModel(
+                act_id=db_act.id,
+                drug_name=treatment_text.strip()
+            )
+            db.add(db_treatment)
     
     db.commit()
     
@@ -448,7 +475,26 @@ def update_medical_act(
     # Handle treatment: Delete old treatment for this act and create new one if provided
     if treatment_text is not None:  # Only update if treatment was provided in request
         db.query(ActTreatmentModel).filter(ActTreatmentModel.act_id == act_id).delete()
-        if isinstance(treatment_text, str) and treatment_text.strip():
+        if isinstance(treatment_text, list):
+            for t in treatment_text:
+                if isinstance(t, TreatmentInput):
+                    if t.drug_name and t.drug_name.strip():
+                        db_treatment = ActTreatmentModel(
+                            act_id=act_id,
+                            drug_name=t.drug_name.strip(),
+                            dosage=t.dosage,
+                            frequency=t.frequency,
+                            duration=t.duration,
+                            notes=t.notes
+                        )
+                        db.add(db_treatment)
+                elif isinstance(t, str) and t.strip():
+                    db_treatment = ActTreatmentModel(
+                        act_id=act_id,
+                        drug_name=t.strip()
+                    )
+                    db.add(db_treatment)
+        elif isinstance(treatment_text, str) and treatment_text.strip():
             db_treatment = ActTreatmentModel(
                 act_id=act_id,
                 drug_name=treatment_text.strip()
