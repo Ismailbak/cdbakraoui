@@ -11,7 +11,7 @@ from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = 'create_rag_tables'
-down_revision = None  # Set this to the latest migration ID
+down_revision = 'add_chat_sessions_table'
 branch_labels = None
 depends_on = None
 
@@ -31,10 +31,13 @@ def upgrade():
         sa.Column('qdrant_point_id', sa.Integer(), nullable=True),
         sa.Column('language', sa.String(length=10), nullable=False, server_default='en'),
         sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('embedding_model', sa.String(length=255), nullable=True, 
+                  server_default='sentence-transformers/all-MiniLM-L6-v2'),
+        sa.Column('is_embedded', sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column('embedding_created_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, 
                   server_default=sa.func.now(), onupdate=sa.func.now()),
-        sa.ForeignKeyConstraint(['patient_id'], ['patient.id']),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('qdrant_point_id'),
         mysql_charset='utf8mb4',
@@ -47,6 +50,7 @@ def upgrade():
     op.create_index('ix_rag_chunks_created_at', 'rag_chunks', ['created_at'])
     op.create_index('ix_rag_chunks_source_lookup', 'rag_chunks', 
                     ['source_type', 'source_id'])
+    op.create_index('ix_rag_chunks_is_embedded', 'rag_chunks', ['is_embedded'])
     
     # Table: rag_query_cache
     op.create_table(
@@ -59,7 +63,6 @@ def upgrade():
         sa.Column('expires_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('hit_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.ForeignKeyConstraint(['patient_id'], ['patient.id']),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('query_hash'),
         mysql_charset='utf8mb4'
@@ -76,6 +79,7 @@ def downgrade():
     op.drop_index('ix_rag_query_cache_hash', 'rag_query_cache')
     op.drop_table('rag_query_cache')
     
+    op.drop_index('ix_rag_chunks_is_embedded', 'rag_chunks')
     op.drop_index('ix_rag_chunks_source_lookup', 'rag_chunks')
     op.drop_index('ix_rag_chunks_created_at', 'rag_chunks')
     op.drop_index('ix_rag_chunks_source_type', 'rag_chunks')

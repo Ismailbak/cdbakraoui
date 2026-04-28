@@ -81,8 +81,28 @@ export const updateActResult = (resultId, data) => api.put(`/act-results/${resul
 export const deleteActResult = (resultId) => api.delete(`/act-results/${resultId}`);
 
 // Chat
-export const sendChatMessage = (message, userId, patientId = null, language = 'fr') =>
-  api.post('/chat/', { message, patient_id: patientId, language });
+// Supports both signatures:
+// 1) sendChatMessage(message, patientId, language, config)
+// 2) sendChatMessage(message, userId, patientId, language, config) (legacy)
+export const sendChatMessage = (message, arg2 = null, arg3 = 'fr', arg4 = {}, arg5 = {}) => {
+  let patientId = null;
+  let language = 'fr';
+  let config = {};
+
+  if (typeof arg2 === 'string' && (typeof arg3 === 'number' || arg3 === null || typeof arg3 === 'undefined')) {
+    // Legacy: (message, userId, patientId, language, config)
+    patientId = arg3 ?? null;
+    language = typeof arg4 === 'string' ? arg4 : 'fr';
+    config = (arg5 && typeof arg5 === 'object') ? arg5 : {};
+  } else {
+    // Preferred: (message, patientId, language, config)
+    patientId = arg2 ?? null;
+    language = typeof arg3 === 'string' ? arg3 : 'fr';
+    config = (arg4 && typeof arg4 === 'object') ? arg4 : {};
+  }
+
+  return api.post('/chat/', { message, patient_id: patientId, language }, config);
+};
 
 export const getChatHistory = (patientId = null, limit = 50) => {
   const params = new URLSearchParams({ limit });

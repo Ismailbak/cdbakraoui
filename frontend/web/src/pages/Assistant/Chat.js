@@ -233,7 +233,6 @@ function Chat({ patientId, currentUser }) {
     try {
       const res = await sendChatMessage(
         textToSend,
-        currentUser?.id,
         patientId,
         'fr', // Message is resolved by AI language detection
         { signal: abortControllerRef.current.signal }
