@@ -52,8 +52,13 @@ This document provides a detailed explanation of every file and directory in the
     - **audit_service.py**: Audit logging.
     - **auth_service.py**: User authentication and password hashing.
     - **chat_service.py**: AI chat logic (calls LLM).
+    - **rag_chat_service.py**: RAG integration layer for grounded chat responses (Phase 1).
+    - **rag_orchestrator.py**: Central coordinator for entire RAG pipeline (query classification, retrieval, authorization, prompt building).
+    - **retrievers/query_classifier.py**: Rule-based intent classification with IPP pattern matching.
+    - **retrievers/structured_retriever.py**: Four ORM-based fact retrievers (Patient, Appointment, MedicalAct, ActResult).
+    - **retrievers/prompt_builder.py**: Deterministic prompt assembly with versioned templates and evidence sections.
     - **notification_service.py**: Notification management.
-    - **patient_service.py**: Patient CRUD, dynamic age calculation, and anonymization (stub).
+    - **patient_service.py**: Patient CRUD, dynamic age calculation, authorization checks, and anonymization (stub).
     - **pdf_service.py**: Generates PDF reports for Medical Acts and Patient Dossiers (handles `datetime_scheduled` and `act_date` fields).
   - **utils/**: Utility functions:
     - **preprocessing.py**: Text cleaning, keyword extraction, anonymization.
@@ -63,7 +68,7 @@ This document provides a detailed explanation of every file and directory in the
 - Core CRUD for patients, appointments, medical acts, users: **Implemented** ✅
 - Authentication & role management: **Implemented** ✅
 - Analytics: **Implemented** ✅ (Real-time aggregation of demographics, trends, financial stats with corrected date/datetime fields)
-- AI chat assistant: **Stub** (LLM logic not fully implemented)
+- AI chat assistant: **Implemented** ✅ (RAG pipeline with grounded retrieval; LLM adapter pending)
 - Notifications: **Implemented** ✅ (Manual peer-to-peer messaging, categories, sender visibility)
 - Audit logging: **Implemented** ✅
 - PDF generation: **Implemented** ✅ (Medical Act reports and Patient Dossier with corrected field mappings)
@@ -151,7 +156,7 @@ This document provides a detailed explanation of every file and directory in the
 | Backend      | CRUD (patients, etc.)  | Implemented    | April 22, 2026 | Schema corrected (act_date, datetime_scheduled, date_of_birth); Amount precision increased to Decimal(15,2) |
 | Backend      | Form System (FormCsRd) | Implemented    | April 22, 2026 | ✅ 7-tab clinical form; expanded enrichment logic to include all form types in medical acts |
 | Backend      | Analytics              | Implemented    | April 10, 2026 | Updated for consolidated datetime/date fields |
-| Backend      | AI Chat                | Implemented    | April 10, 2026 | ✅ Working (BioMistral & Gemma4B tested; RAG system in development) |
+| Backend      | AI Chat (RAG Phase 1)  | Implemented    | April 28, 2026 | ✅ Phase 1 complete: structured retrieval (4 sources), query classification, grounded prompts, citations; 28/28 tests passing |
 | Backend      | Notifications          | Implemented    | April 10, 2026 | ✅ Peer-to-peer and broadcast messaging |
 | Backend      | PDF Generation         | Implemented    | April 14, 2026 | Enhanced dossier export with allergies, emergency contact, lab results, medical notes |
 | Backend      | File Upload            | Partial        | -              | -     |
@@ -192,6 +197,12 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | Chat Assistant UX      | Implemented    | April 14, 2026 | ✅ Doctor context in header, copy/regenerate/feedback buttons with proper hover visibility |
 | Web          | PDF Generation         | Implemented    | April 15, 2026 | ✅ Enhanced medical acts PDF service: lab results table integration, professional black text, robust None value handling |
 | Web          | File Upload            | Not Impl.      | -              | -     |
+| Backend      | RAG Query Classifier   | Implemented    | April 28, 2026 | ✅ Rule-based intent detection; 3/3 tests passing |
+| Backend      | RAG Structured Retrieval | Implemented    | April 28, 2026 | ✅ Four ORM-based retrievers; 4/4 retriever tests passing |
+| Backend      | RAG Prompt Builder     | Implemented    | April 28, 2026 | ✅ Versioned (v0.1) templates; 3/3 tests passing |
+| Backend      | RAG Orchestrator       | Implemented    | April 28, 2026 | ✅ Central coordinator with authorization; 3/3 tests passing |
+| Backend      | RAG Tests (Full Suite) | Implemented    | April 28, 2026 | ✅ 28/28 tests passing (13 unit + 15 evaluation) |
+| Frontend     | SourceCitationPanel    | Implemented    | April 28, 2026 | ✅ Expandable citations, confidence badges, dark mode, accessibility |
 
 ---
 
