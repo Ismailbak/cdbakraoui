@@ -24,6 +24,7 @@ from app.services.chat_service import (
     add_message_to_session,
     get_session_messages
 )
+from app.services.rag_chat_service import get_grounded_chat_response
 from app.api.auth import get_current_user_orm
 from app.models.user import User
 from app.schemas.chat_session import (
@@ -51,6 +52,28 @@ class ChatResponse(BaseModel):
     tokens: int
     model: str
     language: str
+
+
+class SourceReference(BaseModel):
+    """Citation source for retrieved evidence."""
+    source_type: str
+    source_id: int
+    label: str
+    timestamp: Optional[str] = None
+    snippet: str
+    score: Optional[float] = None
+
+
+class GroundedChatResponse(BaseModel):
+    """Chat response with grounding evidence and metadata."""
+    response: str
+    sources: List[SourceReference] = []
+    confidence: str  # "high" | "medium" | "low"
+    warnings: List[str] = []
+    tokens: int
+    model: str
+    language: str
+    retrieval_type: str = "structured"  # "structured" | "hybrid" | "none"
 
 
 class ChatHistoryItem(BaseModel):
@@ -94,6 +117,72 @@ def chat(
     except Exception as e:
         logger.error(f"Chat error for user {current_user.id}:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Error generating response")
+
+
+@router.post("/grounded", response_model=GroundedChatResponse)
+async def chat_grounded(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """
+    Send a message to the RAG-powered assistant with grounded responses.
+    
+    This endpoint uses the RAG orchestrator to:
+    1. Classify query intent
+    2. Retrieve relevant medical facts
+    3. Build a grounded prompt with evidence
+    4. Generate response with sources and confidence
+    
+    - **message**: User's question or message
+    - **patient_id**: Optional patient ID for medical context
+    - **language**: Response language (fr, en, ar)
+    
+    Returns:
+    - **response**: The assistant's answer
+    - **sources**: List of retrieved facts with citations
+    - **confidence**: "high" | "medium" | "low" based on evidence quality
+    - **warnings**: Warnings about insufficient data or ambiguities
+    - **retrieval_type**: "structured" | "hybrid" | "none"
+    """
+    try:
+        result = await get_grounded_chat_response(
+            message=request.message,
+            user_id=current_user.id,
+            db=db,
+            patient_id=request.patient_id,
+            language=request.language,
+            retrieval_mode="auto"
+        )
+        
+        # Convert source dicts to SourceReference objects
+        sources = [
+            SourceReference(
+                source_type=s.get("source_type"),
+                source_id=s.get("source_id"),
+                label=s.get("label"),
+                timestamp=s.get("timestamp"),
+                snippet=s.get("snippet"),
+                score=s.get("score")
+            )
+            for s in result.get("sources", [])
+        ]
+        
+        return GroundedChatResponse(
+            response=result.get("response", ""),
+            sources=sources,
+            confidence=result.get("confidence", "low"),
+            warnings=result.get("warnings", []),
+            tokens=result.get("tokens", 0),
+            model=result.get("model", "biomistral"),
+            language=result.get("language", "fr"),
+            retrieval_type=result.get("retrieval_type", "structured")
+        )
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access to this patient is not allowed")
+    except Exception as e:
+        logger.error(f"Grounded chat error for user {current_user.id}:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Error generating grounded response")
 
 
 @router.get("/history", response_model=List[ChatHistoryItem])
