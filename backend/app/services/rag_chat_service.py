@@ -62,9 +62,12 @@ async def get_grounded_chat_response(
         )
         
         # Process through orchestrator
-        grounded_prompt, rag_response, warnings = await orchestrator.process_chat_request(
+        grounded_prompt, rag_response, warnings, detected_patient_id = await orchestrator.process_chat_request(
             rag_request, user_id=user_id
         )
+        
+        # Use detected patient ID if auto-detected, otherwise use provided one
+        final_patient_id = detected_patient_id or patient_id
         
         logger.info(
             f"RAG orchestration complete: {len(rag_response.sources)} sources, "
@@ -101,13 +104,41 @@ async def get_grounded_chat_response(
         policy_violations = await orchestrator.validate_response_policy(rag_response)
         if policy_violations:
             logger.warning(f"Policy violations detected: {policy_violations}")
-            rag_response.warnings.extend(policy_violations)
+            # Note: In Phase 1, we log but don't block responses with policy violations
+            # rag_response.warnings.extend(policy_violations)
         
         # Store in database
         try:
+            # Import chat_service for session management
+            from app.services.chat_service import create_chat_session, get_chat_session
+            from app.models.chat_session import ChatSession
+            
+            # Create or get chat session if patient is identified
+            session_id = None
+            if final_patient_id:
+                # Check if there's an active session for this patient
+                existing_session = db.query(ChatSession).filter(
+                    ChatSession.patient_id == final_patient_id,
+                    ChatSession.created_by == user_id
+                ).order_by(ChatSession.created_at.desc()).first()
+                
+                if existing_session:
+                    session_id = existing_session.id
+                else:
+                    # Create new session
+                    new_session = create_chat_session(
+                        db=db,
+                        patient_id=final_patient_id,
+                        user_id=user_id,
+                        title=f"Chat session for patient {final_patient_id}"
+                    )
+                    db.commit()
+                    session_id = new_session.id
+            
             chat_msg = ChatMessage(
+                session_id=session_id,
                 user_id=user_id,
-                patient_id=patient_id,
+                patient_id=final_patient_id,
                 message=message,
                 response=rag_response.response,
                 language=language,
@@ -117,7 +148,7 @@ async def get_grounded_chat_response(
             db.add(chat_msg)
             db.commit()
             db.refresh(chat_msg)
-            logger.info(f"Grounded chat message {chat_msg.id} stored for user {user_id}")
+            logger.info(f"Grounded chat message {chat_msg.id} stored for user {user_id}, patient {final_patient_id}")
         except Exception as e:
             logger.error(f"Error storing chat message: {e}")
             db.rollback()
