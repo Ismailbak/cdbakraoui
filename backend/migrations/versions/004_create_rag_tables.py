@@ -30,7 +30,7 @@ def upgrade():
         sa.Column('chunk_index', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('qdrant_point_id', sa.Integer(), nullable=True),
         sa.Column('language', sa.String(length=10), nullable=False, server_default='en'),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('chunk_metadata', sa.JSON(), nullable=True),
         sa.Column('embedding_model', sa.String(length=255), nullable=True, 
                   server_default='sentence-transformers/all-MiniLM-L6-v2'),
         sa.Column('is_embedded', sa.Boolean(), nullable=False, server_default=sa.false()),

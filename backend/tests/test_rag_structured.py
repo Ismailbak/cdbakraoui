@@ -167,7 +167,7 @@ class TestRAGOrchestrator:
         
         # Test: 0 facts = low confidence
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=[])
-        _, resp_0, _ = await orchestrator.process_chat_request(
+        _, resp_0, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -181,7 +181,7 @@ class TestRAGOrchestrator:
             )
         ]
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_med)
-        _, resp_med, _ = await orchestrator.process_chat_request(
+        _, resp_med, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -190,7 +190,7 @@ class TestRAGOrchestrator:
         # Test: 3+ facts = high confidence
         facts_high = facts_med * 3
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_high)
-        _, resp_high, _ = await orchestrator.process_chat_request(
+        _, resp_high, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )

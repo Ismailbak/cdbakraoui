@@ -7,7 +7,9 @@ from app.models.act_result import ActResult
 from app.models.notification import Notification
 from app.models.audit import AuditLog
 from app.models.chat_message import ChatMessage
+from app.models.chat_session import ChatSession
 from app.models.llm import LLMModel
+from app.models.rag_chunk import RAGChunk, RAGQueryCache
 
 __all__ = [
     "User",
@@ -23,5 +25,8 @@ __all__ = [
     "Notification",
     "AuditLog",
     "ChatMessage",
+    "ChatSession",
     "LLMModel",
+    "RAGChunk",
+    "RAGQueryCache",
 ]

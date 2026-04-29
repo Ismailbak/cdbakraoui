@@ -53,7 +53,7 @@ class RAGChunk(Base):
     
     # Metadata
     language = Column(String(10), nullable=False, default="en")
-    metadata = Column(
+    chunk_metadata = Column(
         JSON,
         nullable=True,
         comment="Additional metadata: dates, tags, author, relevance hints, etc."
@@ -64,10 +64,10 @@ class RAGChunk(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Indexing for search
-    __table_args__ = (
-        # Composite index for source lookups
-        "mysql_charset=utf8mb4 mysql_collate=utf8mb4_unicode_ci",
-    )
+    __table_args__ = {
+        'mysql_charset': 'utf8mb4',
+        'mysql_collate': 'utf8mb4_unicode_ci'
+    }
     
     def __repr__(self):
         return f"<RAGChunk(id={self.id}, source={self.source_type}:{self.source_id})>"
@@ -93,7 +93,7 @@ class RAGChunk(Base):
                 "language": self.language,
                 "created_at": self.created_at.isoformat(),
                 "text": self.chunk_text[:500],  # Preview in payload
-                "metadata": self.metadata or {}
+                "metadata": self.chunk_metadata or {}
             }
         }
 

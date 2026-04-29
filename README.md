@@ -99,7 +99,15 @@
 ### AI & LLM Development
 - **AI Chat Fully Functional**: Chat assistant now working on both web and mobile interfaces.
 - **LLM Model Evaluation**: Active testing of BioMistral and Gemma4B to determine optimal model for clinical workflows.
-- **RAG System in Development**: Building Retrieval-Augmented Generation system to enable local data exploitation, allowing LLM to leverage patient records and clinical guidelines for contextualized responses.
+- **RAG Phase 1 Complete (April 29, 2026)**: ✅ Full Retrieval-Augmented Generation system implemented
+  - **IPP Auto-Detection**: Queries like "15 souffre de quoi?" automatically extract patient ID (supports numeric "01"-"16" and international "FR######" formats)
+  - **Structured Retrieval**: Four ORM-based retrievers aggregate facts from patients, appointments, medical acts, and lab results
+  - **Grounded Prompts**: Deterministic prompt assembly with versioned templates, evidence sections, and citations
+  - **Authorization Guards**: Role-based access checks before retrieval (Phase 1: all authenticated users access all patients)
+  - **LLM Confusion Fix**: Hidden internal patient IDs in evidence to prevent LLM confusion about ID mismatches (query "14" → internal ID "19" no longer confuses LLM)
+  - **Test Coverage**: 28/28 tests passing (13 structured retrieval + 15 evaluation)
+  - **Verified**: Works for multiple patient lookups without confusion (tested with IPP "15" → "Arthrose" and IPP "14" → "Goutte")
+  - **Next Phase**: Semantic retrieval with Qdrant vector DB for fuzzy search across 1000+ records
 
 ### Deployment & Infrastructure
 - **Proxmox VM Deployment**: Complete application stack being deployed on dedicated Proxmox virtual machine with resources provisioned for LLM inference engine.
@@ -214,7 +222,7 @@
 |-----|---------|-----|----------|
 | **50 users** | ⚠️ LLM queue | Add async queue + streaming | Q3 2026 |
 | **200 patients** | ✅ Fine | None (DB scales) | N/A |
-| **10,000 patients** | ❌ Search slow | Add vector DB (Milvus) + semantic search | Post-July 2026 |
+| **10,000 patients** | ❌ Search slow | Add vector DB + semantic search | Post-July 2026 |
 
 ---
 

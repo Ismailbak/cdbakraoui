@@ -135,7 +135,7 @@ class LLMModel:
                 "model": "error"
             }
 
-
+"15 souffre de quoi?"
 # Global singleton
 llm = LLMModel(
     ollama_host="http://10.13.19.180:11434",

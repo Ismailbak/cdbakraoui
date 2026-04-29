@@ -58,7 +58,10 @@ class PatientRetriever(StructuredRetriever):
         facts = []
         query_lower = query.lower()
         
+        print(f"\n🔍 PatientRetriever.retrieve() - patient_id={patient_id}, query='{query}'")
+        
         if not patient_id:
+            print(f"   ❌ No patient_id provided, returning empty")
             return facts
         
         # Import models here to avoid circular imports
@@ -107,7 +110,9 @@ class PatientRetriever(StructuredRetriever):
                     confidence=1.0
                 ))
             
-            if any(kw in query_lower for kw in ["diagnosis", "condition"]) and patient.primary_diagnosis:
+            # Diagnosis - check both English and French keywords
+            if any(kw in query_lower for kw in ["diagnosis", "condition", "souffre", "pathologie", "maladie", "quoi"]) and patient.primary_diagnosis:
+                print(f"   ✅ Found diagnosis: {patient.primary_diagnosis}")
                 facts.append(RetrievedFact(
                     source_type="patient",
                     source_id=patient.id,
@@ -115,6 +120,8 @@ class PatientRetriever(StructuredRetriever):
                     snippet=f"Diagnosis: {patient.primary_diagnosis}",
                     confidence=1.0
                 ))
+            else:
+                print(f"   ❌ No diagnosis match - keywords not found or no diagnosis data")
         
         # Retrieve allergies
         if any(kw in query_lower for kw in ["allerg", "reaction", "adverse"]):
@@ -131,6 +138,7 @@ class PatientRetriever(StructuredRetriever):
                     confidence=1.0
                 ))
         
+        print(f"   📦 Returning {len(facts)} facts")
         return facts[:top_k]
 
 

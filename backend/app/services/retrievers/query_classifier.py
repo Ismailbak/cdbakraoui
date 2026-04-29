@@ -34,7 +34,8 @@ class QueryClassifier:
     
     def __init__(self):
         # Patterns for detecting patient identifiers
-        self.ipp_pattern = re.compile(r'\b[A-Z]{2}\d{6,8}\b')  # Example: FR123456
+        # Support both formats: FR123456 (international) or simple numeric like 01
+        self.ipp_pattern = re.compile(r'\b(?:[A-Z]{2}\d{6,8}|\d{1,3})\b')
         self.age_pattern = re.compile(r'\b(\d{1,3})\s*(?:years?|ans|yo)\b', re.IGNORECASE)
         self.gender_pattern = re.compile(r'\b(male|female|m|f|h|f)\b', re.IGNORECASE)
     

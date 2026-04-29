@@ -51,28 +51,88 @@ class RAGOrchestrator:
         self,
         request: ChatRequest,
         user_id: int
-    ) -> Tuple[str, GroundedChatResponse, list]:
+    ) -> Tuple[str, GroundedChatResponse, list, Optional[int]]:
         """
         Process a chat request end-to-end.
         
         Returns:
-            (grounded_prompt, response_object, warnings)
+            (grounded_prompt, response_object, warnings, detected_patient_id)
         """
+        print("\n" + "="*80)
+        print(f"🚀 RAG_ORCHESTRATOR.process_chat_request START")
+        print(f"   Query: '{request.query}'")
+        print(f"   Patient ID from request: {request.patient_id}")
+        print("="*80)
+        
         warnings = []
         patient_id = request.patient_id
+        detected_patient_id = None
         
         # Step 1: Classify intent
         classification = self.classifier.classify(request.query)
-        logger.info(f"Classification: {classification.intent} (confidence={classification.confidence})")
+        print(f"📊 Classification: {classification.intent} (confidence={classification.confidence}, patient_confidence={classification.patient_confidence})")
         
         # Step 2: Auto-detect patient if enabled and not explicitly provided
+        print(f"\n🔎 Step 2: Auto-detect check")
+        print(f"   patient_id={patient_id}, intent={classification.intent}, AUTO_DETECT_ENABLED={rag_config.AUTO_DETECT_ENABLED}")
+        
         if (not patient_id and 
             classification.intent == QueryIntent.PATIENT_SPECIFIC and
             rag_config.AUTO_DETECT_ENABLED):
             
-            patient_id, auto_detect_confidence = await self._auto_detect_patient(
-                classification, user_id
-            )
+            print(f"   ✅ ENTERING IPP DETECTION BLOCK")
+            
+            # Try to extract IPP from query and lookup patient
+            import re
+            ipp_pattern = re.compile(r'\b(?:[A-Z]{2}\d{6,8}|\d{1,3})\b')
+            ipp_match = ipp_pattern.search(request.query)
+            
+            print(f"\n🔍 DEBUG: Query: '{request.query}'")
+            print(f"🔍 DEBUG: IPP match: {ipp_match.group() if ipp_match else 'NOT FOUND'}")
+            
+            if ipp_match:
+                # IPP detected - look it up in database
+                ipp_value = ipp_match.group()
+                from app.models.patient import Patient
+                print(f"🔍 DEBUG: Looking up patient with IPP='{ipp_value}'")
+                
+                db_patient = self.db.query(Patient).filter(Patient.ipp == ipp_value).first()
+                print(f"🔍 DEBUG: Database query result: {db_patient}")
+                
+                if db_patient:
+                    patient_id = db_patient.id
+                    detected_patient_id = patient_id
+                    print(f"✅ DEBUG: Auto-detected patient {patient_id} ({db_patient.first_name} {db_patient.last_name}) from IPP {ipp_value}")
+                else:
+                    print(f"❌ DEBUG: IPP {ipp_value} not found in database")
+                    # Try alternative formats
+                    print(f"🔍 DEBUG: Trying alternative formats for IPP '{ipp_value}'...")
+                    db_patient_alt = self.db.query(Patient).filter(
+                        Patient.ipp.ilike(f"%{ipp_value}%")
+                    ).first()
+                    if db_patient_alt:
+                        print(f"✅ DEBUG: Found with partial match: IPP={db_patient_alt.ipp}, Patient={db_patient_alt.id}")
+                        patient_id = db_patient_alt.id
+                        detected_patient_id = patient_id
+                    else:
+                        print(f"❌ DEBUG: Patient with IPP '{ipp_value}' not found in system.")
+                        warnings.append(f"Patient with IPP '{ipp_value}' not found in system.")
+            
+            # If still no patient found, apply confidence threshold check
+            if not patient_id and classification.patient_confidence >= rag_config.AUTO_DETECT_CONFIDENCE_THRESHOLD:
+                # Try alternative detection methods (placeholder for future)
+                patient_id, auto_detect_confidence = await self._auto_detect_patient(
+                    classification, user_id
+                )
+                detected_patient_id = patient_id
+            
+            # Check authorization
+            if patient_id:
+                authorized = await self.patient_service.user_can_access_patient(user_id, patient_id)
+                if not authorized:
+                    logger.warning(f"User {user_id} not authorized for patient {patient_id}")
+                    patient_id = None
+                    warnings.append(f"Access denied to patient {patient_id}.")
             
             if not patient_id and classification.patient_confidence > 0:
                 warnings.append(
@@ -96,7 +156,8 @@ class RAGOrchestrator:
             user_query=request.query,
             retrieved_facts=facts,
             patient_id=patient_id,
-            language=request.language or "en"
+            language=request.language or "en",
+            detected_from_ipp=detected_patient_id is not None
         )
         
         # Step 5: Determine confidence level
@@ -120,41 +181,40 @@ class RAGOrchestrator:
             metadata=metadata
         )
         
-        return grounded_prompt, response, warnings
+        return grounded_prompt, response, warnings, detected_patient_id or patient_id
     
     async def _auto_detect_patient(self, classification, user_id: int) -> Tuple[Optional[int], float]:
         """
-        Attempt to auto-detect patient from query classification.
-        Only auto-binds if confidence meets threshold.
+        Fallback auto-detect when IPP lookup doesn't succeed.
+        For future enhancement (name-based lookup, etc.).
         
         Returns:
             (patient_id, confidence) or (None, 0)
         """
-        if classification.detected_patient_id:
-            # Already found in classifier
-            patient_id = classification.detected_patient_id
-            confidence = classification.patient_confidence
-        else:
-            # Need to search by name or other identifiers
-            patient_id = None
-            confidence = 0.0
+        # Placeholder for future enhancements like name-based lookup
+        return None, 0.0
+    
+    async def _lookup_patient_by_ipp(self, ipp_value: str) -> Optional[int]:
+        """
+        Look up patient ID by IPP code.
         
-        # Check authorization
-        if patient_id:
-            authorized = await self.patient_service.user_can_access_patient(user_id, patient_id)
-            if not authorized:
-                logger.warning(f"User {user_id} not authorized for patient {patient_id}")
-                return None, 0.0
+        Args:
+            ipp_value: IPP code (e.g., "15", "01", "FR123456")
         
-        # Apply confidence threshold
-        if confidence < rag_config.AUTO_DETECT_CONFIDENCE_THRESHOLD:
-            logger.info(
-                f"Auto-detect confidence {confidence} below threshold "
-                f"{rag_config.AUTO_DETECT_CONFIDENCE_THRESHOLD}"
-            )
-            return None, confidence
-        
-        return patient_id, confidence
+        Returns:
+            patient_id or None if not found
+        """
+        from app.models.patient import Patient
+        try:
+            patient = self.db.query(Patient).filter(Patient.ipp == ipp_value).first()
+            if patient:
+                logger.info(f"Found patient {patient.id} with IPP {ipp_value}")
+                return patient.id
+            logger.warning(f"Patient with IPP {ipp_value} not found")
+            return None
+        except Exception as e:
+            logger.error(f"Error looking up patient by IPP {ipp_value}: {e}")
+            return None
     
     def _assess_confidence(self, fact_count: int) -> str:
         """

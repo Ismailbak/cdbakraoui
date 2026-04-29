@@ -61,7 +61,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -100,7 +100,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 2
         assert response.metadata.confidence == "medium"
@@ -142,7 +142,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 2
         assert response.metadata.confidence == "medium"
@@ -187,7 +187,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 2
         assert response.metadata.confidence == "medium"
@@ -223,7 +223,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -246,7 +246,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 0
         assert response.metadata.confidence == "low"
@@ -280,7 +280,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -302,7 +302,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 0
         assert response.metadata.confidence == "low"
@@ -334,7 +334,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -383,7 +383,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 3
         assert response.metadata.confidence == "high"
@@ -426,7 +426,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 2
         assert "2026-04-10" in prompt
@@ -447,7 +447,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         # Should have no sources and either warnings or empty response
         assert len(response.sources) == 0
@@ -469,7 +469,7 @@ class TestEvaluationScenarios:
         # Mock no retrieval for general questions
         self.orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=[])
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         # Classification should detect general knowledge question
         assert response.metadata.retrieval_type == "structured"
@@ -500,7 +500,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert len(response.sources[0].snippet) > 0  # Should have content
@@ -532,7 +532,7 @@ class TestEvaluationScenarios:
             language="ar"
         )
         
-        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert "Mohamed Ali" in prompt or "محمد" in prompt
