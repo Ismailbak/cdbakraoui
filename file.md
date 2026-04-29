@@ -198,6 +198,11 @@ This document provides a detailed explanation of every file and directory in the
 | Web          | PDF Generation         | Implemented    | April 15, 2026 | ✅ Enhanced medical acts PDF service: lab results table integration, professional black text, robust None value handling |
 | Web          | File Upload            | Not Impl.      | -              | -     |
 | Backend      | RAG Query Classifier   | Implemented    | April 28, 2026 | ✅ Rule-based intent detection; 3/3 tests passing |
+| Backend      | RAG Orchestrator       | Implemented    | April 29, 2026 | ✅ Central pipeline coordinator; IPP auto-detection; 4-source retrieval; grounded prompts; 28/28 tests passing |
+| Backend      | RAG Chat Service       | Implemented    | April 29, 2026 | ✅ LLM integration with grounded responses; ChatSession lifecycle; evidence citations |
+| Backend      | RAG Structured Retrieval | Implemented  | April 29, 2026 | ✅ Four retrievers (Patient, Appointment, MedicalAct, ActResult) with French keyword support; authorization guards |
+| Backend      | RAG Prompt Builder     | Implemented    | April 29, 2026 | ✅ Deterministic prompt assembly; context/evidence/answer policy sections; auto-detected IPP handling |
+| Backend      | RAG Phase 1 Complete   | Implemented    | April 29, 2026 | ✅ **PHASE 1 COMPLETE**: IPP auto-detection (supports "01"-"16" and "FR######"), patient lookup, diagnosis retrieval, LLM confusion fix (hides internal patient IDs), clean responses for multiple patients |
 | Backend      | RAG Structured Retrieval | Implemented    | April 28, 2026 | ✅ Four ORM-based retrievers; 4/4 retriever tests passing |
 | Backend      | RAG Prompt Builder     | Implemented    | April 28, 2026 | ✅ Versioned (v0.1) templates; 3/3 tests passing |
 | Backend      | RAG Orchestrator       | Implemented    | April 28, 2026 | ✅ Central coordinator with authorization; 3/3 tests passing |
