@@ -101,7 +101,7 @@ export const sendChatMessage = (message, arg2 = null, arg3 = 'fr', arg4 = {}, ar
     config = (arg4 && typeof arg4 === 'object') ? arg4 : {};
   }
 
-  return api.post('/chat/', { message, patient_id: patientId, language }, config);
+  return api.post('/chat/grounded', { message, patient_id: patientId, language }, config);
 };
 
 export const getChatHistory = (patientId = null, limit = 50) => {
