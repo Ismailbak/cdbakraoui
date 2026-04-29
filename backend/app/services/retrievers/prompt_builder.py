@@ -24,6 +24,9 @@ CRITICAL RULES:
 4. Always cite your sources
 5. Be concise and medically accurate
 6. For ambiguous questions, ask for clarification
+7. IMPORTANT: When the context section contains "Patient identifier auto-detected from user query and mapped to this internal Patient ID", 
+   the evidence provided IS the correct answer to the user's question. Do NOT doubt or question this mapping.
+   The system has already verified the patient. Use the provided evidence directly.
 
 Evidence format:
 - [TYPE: source_type | ID: source_id] excerpt
@@ -49,7 +52,8 @@ class PromptBuilder:
         user_query: str,
         retrieved_facts: List[RetrievedFact],
         patient_id: Optional[int] = None,
-        language: str = "en"
+        language: str = "en",
+        detected_from_ipp: bool = False
     ) -> str:
         """
         Build a deterministic prompt with evidence sections.
@@ -59,6 +63,7 @@ class PromptBuilder:
             retrieved_facts: Facts from structured retrieval
             patient_id: Optional patient scope
             language: User's language (for context setting)
+            detected_from_ipp: Whether patient was auto-detected from IPP in query
         
         Returns:
             Complete prompt string for LLM
@@ -69,37 +74,49 @@ class PromptBuilder:
         sections.append(PromptTemplate.SYSTEM_PROMPT)
         
         # 2. Context setting
-        context_section = self._build_context_section(patient_id, language)
+        context_section = self._build_context_section(patient_id, language, detected_from_ipp)
         sections.append(context_section)
         
         # 3. Evidence section
         if retrieved_facts:
-            evidence_section = self._build_evidence_section(retrieved_facts)
+            evidence_section = self._build_evidence_section(retrieved_facts, detected_from_ipp)
             sections.append(evidence_section)
         else:
-            sections.append("\nEVIDENCE:\nNo relevant evidence found in medical records.")
+            if language == "fr":
+                sections.append("\nEVIDENCE:\nAucune donnée médicale trouvée dans les dossiers.")
+            else:
+                sections.append("\nEVIDENCE:\nNo relevant evidence found in medical records.")
         
         # 4. User query
         query_section = f"\nUSER QUESTION:\n{user_query}"
         sections.append(query_section)
         
         # 5. Answer policy
-        answer_policy = self._build_answer_policy(len(retrieved_facts))
+        answer_policy = self._build_answer_policy(len(retrieved_facts), language)
         sections.append(answer_policy)
         
         return "\n".join(sections)
     
-    def _build_context_section(self, patient_id: Optional[int], language: str) -> str:
+    def _build_context_section(self, patient_id: Optional[int], language: str, detected_from_ipp: bool = False) -> str:
         """Build context information header."""
         context = "\nCONTEXT:"
         if patient_id:
-            context += f"\n- Patient ID: {patient_id}"
+            # When auto-detected from IPP, DON'T show internal Patient ID to avoid confusing the LLM
+            # about mismatch between query ID (e.g., "14") and internal ID (e.g., "19")
+            if not detected_from_ipp:
+                context += f"\n- Patient ID (in system): {patient_id}"
+            else:
+                context += "\n- Patient: Automatically identified from medical ID in query"
         context += f"\n- Language: {language}"
         context += f"\n- Timestamp: {datetime.utcnow().isoformat()}"
         return context
     
-    def _build_evidence_section(self, facts: List[RetrievedFact]) -> str:
-        """Build evidence section from retrieved facts."""
+    def _build_evidence_section(self, facts: List[RetrievedFact], detected_from_ipp: bool = False) -> str:
+        """Build evidence section from retrieved facts.
+        
+        When detected_from_ipp=True, hide internal patient IDs from citations
+        to avoid confusing LLM about ID mismatches (e.g., query "14" vs internal ID "19").
+        """
         evidence_lines = ["\nEVIDENCE:"]
         
         # Group by source type
@@ -114,36 +131,51 @@ class PromptBuilder:
             evidence_lines.append(f"\n[{source_type.upper()}]")
             for fact in source_facts:
                 timestamp_str = fact.timestamp.isoformat() if fact.timestamp else "Unknown date"
-                evidence_lines.append(
-                    f"- [{source_type}:{fact.source_id}] {fact.fact_text} ({timestamp_str})"
-                )
+                
+                # Hide internal patient IDs when auto-detected from IPP
+                if detected_from_ipp and source_type.lower() == "patient":
+                    citation = f"- {fact.fact_text} ({timestamp_str})"
+                else:
+                    citation = f"- [{source_type}:{fact.source_id}] {fact.fact_text} ({timestamp_str})"
+                
+                evidence_lines.append(citation)
                 if fact.snippet:
                     evidence_lines.append(f"  Snippet: {fact.snippet[:200]}")
         
         return "\n".join(evidence_lines)
     
-    def _build_answer_policy(self, fact_count: int) -> str:
+    def _build_answer_policy(self, fact_count: int, language: str = "en") -> str:
         """Build answer policy based on evidence availability."""
         policy = "\nANSWER POLICY:"
         
         if fact_count == 0:
-            policy += (
-                "\n- NO EVIDENCE FOUND for this query."
-                "\n- Respond with: 'I don't have sufficient data to answer this question.'"
-                "\n- Suggest what additional information would help."
-            )
-        elif fact_count < 3:
-            policy += (
-                "\n- SPARSE EVIDENCE available."
-                "\n- Provide answer based on available facts."
-                "\n- Include a note: 'This answer is based on limited data.'"
-            )
+            if language == "fr":
+                policy += (
+                    "\n- NO EVIDENCE FOUND for this query."
+                    "\n- Respond with: 'I don't have sufficient data to answer this question.'"
+                    "\n- Suggest what additional information would help."
+                )
+            else:
+                policy += (
+                    "\n- NO EVIDENCE FOUND for this query."
+                    "\n- Respond with: 'I don't have sufficient data to answer this question.'"
+                    "\n- Suggest what additional information would help."
+                )
         else:
-            policy += (
-                "\n- SUFFICIENT EVIDENCE available."
-                "\n- Provide a complete, evidence-grounded answer."
-                "\n- Cite sources for key facts."
-            )
+            # 1 or more facts = provide answer
+            if language == "fr":
+                policy += (
+                    "\n- EVIDENCE AVAILABLE / PREUVES DISPONIBLES."
+                    "\n- Provide a direct, evidence-grounded answer in French."
+                    "\n- DO NOT question or doubt the patient mapping. The system has verified it."
+                    "\n- Cite sources for key facts."
+                )
+            else:
+                policy += (
+                    "\n- EVIDENCE AVAILABLE."
+                    "\n- Provide a direct, evidence-grounded answer."
+                    "\n- Cite sources for key facts."
+                )
         
         return policy
     
