@@ -1,9 +1,9 @@
 
 from sqlalchemy import create_engine
 from app.models.user import User
-from app.services.auth_service import hash_password
-from app.database import Base
-from app.config import settings
+from app.auth.service import hash_password
+from app.core.database import Base
+from app.core.config import settings
 
 def setup_admin():
     engine = create_engine(settings.DATABASE_URL)

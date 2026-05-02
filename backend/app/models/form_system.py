@@ -5,7 +5,7 @@ Includes reference catalog tables and form data tables.
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, JSON, Boolean
 from sqlalchemy.sql import func
-from app.database import Base
+from app.core.database import Base
 
 
 class RefCareType(Base):

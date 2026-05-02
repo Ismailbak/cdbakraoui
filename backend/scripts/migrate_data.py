@@ -215,7 +215,7 @@ def generate_health_report(db: Session) -> str:
 
 def main():
     """Main entry point."""
-    from app.database import SessionLocal
+    from app.core.database import SessionLocal
     
     db = SessionLocal()
     

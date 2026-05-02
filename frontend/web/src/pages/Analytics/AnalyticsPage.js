@@ -41,6 +41,16 @@ function AnalyticsPage() {
     return () => { cancelled = true; };
   }, [dateRange]);
 
+  // Debug: log backend summary to help diagnose empty charts
+  useEffect(() => {
+    if (summary) {
+      // eslint-disable-next-line no-console
+      console.debug('Analytics summary loaded:', summary);
+      // eslint-disable-next-line no-console
+      console.debug('monthlyRevenueData:', summary.revenue_trends);
+    }
+  }, [summary]);
+
   const totalPatients = summary?.total_patients ?? 0;
   const avgAge = summary?.avg_age ?? 0;
   const commonDiagnoses = summary?.common_diagnoses ?? [];
@@ -169,11 +179,10 @@ function AnalyticsPage() {
     if (topTreatmentsData.length > 0) {
       const treatmentData = topTreatmentsData.slice(0, 10).map((treatment, index) => [
         String(index + 1),
-        treatment.name,
-        String(treatment.count || 0),
-        `${treatment.percentage || 0}%`
+        treatment.treatment,
+        String(treatment.count || 0)
       ]);
-      yPosition = addTable(['Rang', 'Traitement', 'Nombre', '%'], treatmentData, yPosition, [16, 185, 129]);
+      yPosition = addTable(['Rang', 'Traitement', 'Nombre'], treatmentData, yPosition, [16, 185, 129]);
     }
 
     // ===== PAGE 2: ACTIVITY & REVENUE =====
@@ -189,11 +198,10 @@ function AnalyticsPage() {
 
       if (activityTrendData.length > 0) {
         const activityData = activityTrendData.slice(0, 12).map(item => [
-          item.month || 'N/A',
-          String(item.actes || 0),
-          String(item.rdv || 0)
+          item.period || 'N/A',
+          String(item.count || 0)
         ]);
-        yPosition = addTable(['Mois', 'Actes', 'RDV'], activityData, yPosition, [139, 92, 246]);
+        yPosition = addTable(['Période', 'Activité'], activityData, yPosition, [139, 92, 246]);
       }
 
       // Revenue Section
@@ -206,11 +214,10 @@ function AnalyticsPage() {
 
       if (monthlyRevenueData.length > 0) {
         const revenueData = monthlyRevenueData.slice(0, 12).map(item => [
-          item.month || 'N/A',
-          (item.revenue || 0).toLocaleString('fr-FR'),
-          String(item.patients || 0)
+          item.period || 'N/A',
+          (item.revenue || 0).toLocaleString('fr-FR')
         ]);
-        yPosition = addTable(['Mois', 'Revenus (DH)', 'Patients'], revenueData, yPosition, [59, 130, 246]);
+        yPosition = addTable(['Période', 'Revenus (DH)'], revenueData, yPosition, [59, 130, 246]);
       }
     }
 
@@ -404,9 +411,9 @@ function AnalyticsPage() {
                       <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
                     </div>
                     <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={activityTrendData}>
+                      <BarChart data={activityTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
+                        <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
                         <YAxis stroke="#9CA3AF" fontSize={12} />
                         <Tooltip 
                           contentStyle={{ 
@@ -416,23 +423,12 @@ function AnalyticsPage() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                           }} 
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="actes" 
-                          stroke="#8B5CF6" 
-                          strokeWidth={2}
-                          dot={{ fill: '#8B5CF6', r: 4 }}
-                          name="Actes"
+                        <Bar 
+                          dataKey="count" 
+                          fill="#8B5CF6"
+                          name="Activité"
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="rdv" 
-                          stroke="#F59E0B" 
-                          strokeWidth={2}
-                          dot={{ fill: '#F59E0B', r: 4 }}
-                          name="RDV"
-                        />
-                      </LineChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
 
@@ -477,24 +473,27 @@ function AnalyticsPage() {
                       <h3>Traitements les Plus Prescrits</h3>
                     </div>
                     <div className="treatments-list">
-                      {topTreatmentsData.map((treatment, index) => (
+                      {topTreatmentsData.map((treatment, index) => {
+                        const maxCount = Math.max(...topTreatmentsData.map(t => t.count), 1);
+                        const percentage = Math.round((treatment.count / maxCount) * 100);
+                        return (
                         <div key={index} className="treatment-item">
                           <div className="treatment-rank">{index + 1}</div>
                           <div className="treatment-info">
-                            <span className="treatment-name">{treatment.name}</span>
+                            <span className="treatment-name">{treatment.treatment}</span>
                             <div className="treatment-bar">
                               <div 
                                 className="treatment-progress" 
-                                style={{ width: `${treatment.percentage}%` }}
+                                style={{ width: `${percentage}%` }}
                               ></div>
                             </div>
                           </div>
                           <div className="treatment-stats">
                             <span className="treatment-count">{treatment.count}</span>
-                            <span className="treatment-percentage">{treatment.percentage}%</span>
                           </div>
                         </div>
-                      ))}
+                      );
+                      })}
                     </div>
                   </div>
                 </>
@@ -523,9 +522,8 @@ function AnalyticsPage() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-                        <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
+                        <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis stroke="#9CA3AF" fontSize={12} />
                         <Tooltip 
                           contentStyle={{ 
                             background: '#fff', 
@@ -535,52 +533,14 @@ function AnalyticsPage() {
                           }} 
                         />
                         <Area 
-                          yAxisId="left"
-                          type="monotone" 
+                          type="monotone"
                           dataKey="revenue" 
-                          stroke="#3B82F6" 
-                          strokeWidth={2}
+                          stroke="#3B82F6"
                           fill="url(#colorRevenue)"
                           name="Revenus"
                         />
-                        <Line 
-                          yAxisId="right"
-                          type="monotone" 
-                          dataKey="patients" 
-                          stroke="#10B981" 
-                          strokeWidth={2}
-                          dot={{ fill: '#10B981', r: 4 }}
-                          name="Patients"
-                        />
                       </AreaChart>
                     </ResponsiveContainer>
-                  </div>
-
-                  {/* Top Treatments (also useful in revenue context) */}
-                  <div className="chart-card">
-                    <div className="chart-header">
-                      <h3>Traitements les Plus Prescrits</h3>
-                    </div>
-                    <div className="treatments-list">
-                      {topTreatmentsData.map((treatment, index) => (
-                        <div key={index} className="treatment-item">
-                          <div className="treatment-rank">{index + 1}</div>
-                          <div className="treatment-info">
-                            <span className="treatment-name">{treatment.name}</span>
-                            <div className="treatment-bar">
-                              <div 
-                                className="treatment-progress" 
-                                style={{ width: `${treatment.percentage}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                          <div className="treatment-stats">
-                            <span className="treatment-count">{treatment.count}</span>
-                            <span className="treatment-percentage">{treatment.percentage}%</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </>
               )}
@@ -660,9 +620,9 @@ function AnalyticsPage() {
                       <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
                     </div>
                     <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={activityTrendData}>
+                      <BarChart data={activityTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
+                        <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
                         <YAxis stroke="#9CA3AF" fontSize={12} />
                         <Tooltip 
                           contentStyle={{ 
@@ -672,23 +632,12 @@ function AnalyticsPage() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                           }} 
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="actes" 
-                          stroke="#8B5CF6" 
-                          strokeWidth={2}
-                          dot={{ fill: '#8B5CF6', r: 4 }}
-                          name="Actes"
+                        <Bar 
+                          dataKey="count" 
+                          fill="#8B5CF6"
+                          name="Activité"
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="rdv" 
-                          stroke="#F59E0B" 
-                          strokeWidth={2}
-                          dot={{ fill: '#F59E0B', r: 4 }}
-                          name="RDV"
-                        />
-                      </LineChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
 

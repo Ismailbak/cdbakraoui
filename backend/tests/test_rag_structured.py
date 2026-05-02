@@ -7,11 +7,11 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
-from app.services.retrievers.query_classifier import QueryClassifier, QueryIntent
-from app.services.retrievers.structured_retriever import RetrievedFact, StructuredRetrievalPipeline
-from app.services.retrievers.prompt_builder import PromptBuilder
-from app.services.rag_orchestrator import RAGOrchestrator
-from app.schemas.rag_response import ChatRequest, GroundedChatResponse
+from app.chat.rag.retrievers.query_classifier import QueryClassifier, QueryIntent
+from app.chat.rag.retrievers.structured_retriever import RetrievedFact, StructuredRetrievalPipeline
+from app.chat.rag.retrievers.prompt_builder import PromptBuilder
+from app.chat.rag.orchestrator import RAGOrchestrator
+from app.core.schemas.rag_response import ChatRequest, GroundedChatResponse
 
 
 class TestQueryClassifier:
@@ -167,7 +167,7 @@ class TestRAGOrchestrator:
         
         # Test: 0 facts = low confidence
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=[])
-        _, resp_0, _, _ = await orchestrator.process_chat_request(
+        _, resp_0, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -181,7 +181,7 @@ class TestRAGOrchestrator:
             )
         ]
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_med)
-        _, resp_med, _, _ = await orchestrator.process_chat_request(
+        _, resp_med, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -190,7 +190,7 @@ class TestRAGOrchestrator:
         # Test: 3+ facts = high confidence
         facts_high = facts_med * 3
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_high)
-        _, resp_high, _, _ = await orchestrator.process_chat_request(
+        _, resp_high, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )

@@ -1,5 +1,11 @@
-from app.services.patient_service import anonymize_patient_data
-from app.utils.preprocessing import clean_text, anonymize_text
+from app.patients.service import PatientService
+from app.core.utils.preprocessing import clean_text, anonymize_text
+
+
+def anonymize_patient_data(data):
+    """Wrapper for backward compatibility in tests."""
+    service = PatientService.__new__(PatientService)
+    return service.anonymize_patient_data(data)
 
 def test_anonymize_patient():
     data = {"name": "John Doe", "age": 45}

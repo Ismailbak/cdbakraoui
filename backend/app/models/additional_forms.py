@@ -5,7 +5,7 @@ Date: April 22, 2026
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, DECIMAL, Date, JSON, Time, func
 from sqlalchemy.dialects.mysql import TINYINT
-from app.database import Base
+from app.core.database import Base
 from datetime import datetime
 
 class FormCsRic(Base):

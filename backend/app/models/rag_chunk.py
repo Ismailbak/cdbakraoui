@@ -7,7 +7,7 @@ Used by Qdrant ingestion pipeline.
 from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
+from app.core.database import Base
 
 
 class RAGChunk(Base):

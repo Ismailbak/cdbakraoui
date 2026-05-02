@@ -14,9 +14,9 @@ from datetime import datetime, date, timedelta
 from unittest.mock import Mock, AsyncMock, patch
 from sqlalchemy.orm import Session
 
-from app.services.rag_orchestrator import RAGOrchestrator
-from app.schemas.rag_response import ChatRequest
-from app.services.patient_service import PatientService
+from app.chat.rag.orchestrator import RAGOrchestrator
+from app.core.schemas.rag_response import ChatRequest
+from app.patients.service import PatientService
 
 
 class TestEvaluationScenarios:
@@ -41,7 +41,7 @@ class TestEvaluationScenarios:
         Scenario 1: Query patient demographics (name, age, gender)
         Expected: Return grounded demographics with high confidence
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         # Mock retriever response
         facts = [
@@ -61,7 +61,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -74,7 +74,7 @@ class TestEvaluationScenarios:
         Scenario 2: Query patient allergies and adverse reactions
         Expected: Return all allergies with severity levels
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -100,7 +100,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 2
         assert response.metadata.confidence == "medium"
@@ -114,7 +114,7 @@ class TestEvaluationScenarios:
         Scenario 3: Query recent appointments and their reasons
         Expected: Return most recent appointments with dates and reasons
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -142,7 +142,7 @@ class TestEvaluationScenarios:
             include_sources=True
         )
         
-        prompt, response, warnings, _ = await self.orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings = await self.orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 2
         assert response.metadata.confidence == "medium"
@@ -157,7 +157,7 @@ class TestEvaluationScenarios:
         Scenario 4: Query abnormal lab results
         Expected: Flag abnormal results prominently
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -202,7 +202,7 @@ class TestEvaluationScenarios:
         Scenario 5: Query normal lab results
         Expected: Show normal results without excessive warnings
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -260,7 +260,7 @@ class TestEvaluationScenarios:
         Scenario 7: Limited evidence (1 fact) triggers warning
         Expected: Medium confidence and warning about limited data
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -314,7 +314,7 @@ class TestEvaluationScenarios:
         Scenario 9: Authorized user accesses patient
         Expected: Full data retrieval and proper citation
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -348,7 +348,7 @@ class TestEvaluationScenarios:
         Scenario 10: Query spanning multiple source types
         Expected: Blend data from patient, appointment, and results
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -398,7 +398,7 @@ class TestEvaluationScenarios:
         Scenario 11: Multiple records for same fact (conflicting data)
         Expected: Return both with dates for comparison
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -481,7 +481,7 @@ class TestEvaluationScenarios:
         Scenario 14: Retrieved fact with empty snippet (fallback to fact_text)
         Expected: Graceful handling, show truncated fact_text
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(
@@ -512,7 +512,7 @@ class TestEvaluationScenarios:
         Scenario 15: Data with special characters and unicode
         Expected: Proper handling in snippets and prompts
         """
-        from app.services.retrievers.structured_retriever import RetrievedFact
+        from app.chat.rag.retrievers.structured_retriever import RetrievedFact
         
         facts = [
             RetrievedFact(

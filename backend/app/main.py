@@ -1,15 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.api import routes, auth, patients, chat, analytics, notifications, appointments, medical_acts, act_results, forms
-from app.database import engine, Base
+from app.auth.router import router as auth_router
+from app.patients.router import router as patients_router
+from app.appointments.router import router as appointments_router
+from app.medical_acts.router import router as medical_acts_router
+from app.act_results.router import router as act_results_router
+from app.forms.router import router as forms_router
+from app.chat.router import router as chat_router
+from app.analytics.router import router as analytics_router
+from app.notifications.router import router as notifications_router
+from app.core.database import engine, Base
 from app.models import user, patient, appointment, medical_act, act_result, notification, audit  # noqa: F401 - register models
 from app.models.chat_message import ChatMessage  # noqa: F401 - register model
 from app.models.chat_session import ChatSession  # noqa: F401 - register model
 from app.models.form_system import RefCareType, RefActType, RefFormType, ActForm, FormCsRd  # noqa: F401 - register form models
 from app.models.additional_forms import FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur  # noqa: F401 - register additional forms
 from app.models.llm import llm
-from app.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
+from app.core.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
 from pathlib import Path
 
 app = FastAPI(
@@ -29,15 +37,15 @@ app.add_middleware(
 # Setup rate limiting
 limiter = setup_rate_limiting(app)
 
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
-app.include_router(appointments.router, prefix="/api/appointments", tags=["appointments"])
-app.include_router(medical_acts.router, prefix="/api/medical-acts", tags=["medical-acts"])
-app.include_router(act_results.router, prefix="/api/act-results", tags=["act-results"])
-app.include_router(forms.router, prefix="/api/forms", tags=["forms"])
-app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
-app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
-app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(patients_router, prefix="/api/patients", tags=["patients"])
+app.include_router(appointments_router, prefix="/api/appointments", tags=["appointments"])
+app.include_router(medical_acts_router, prefix="/api/medical-acts", tags=["medical-acts"])
+app.include_router(act_results_router, prefix="/api/act-results", tags=["act-results"])
+app.include_router(forms_router, prefix="/api/forms", tags=["forms"])
+app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
+app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
 
 # Serve static files (uploads)
 uploads_dir = Path("data/uploads")
