@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.form_system import (
-    RefCareType, RefActType, RefFormType, ActForm, FormCsRd
+    RefCareType, RefActType, RefFormType, ActForm, FormCsRd,
+    DynamicFormTemplate, DynamicFormResponse
 )
 from app.models.additional_forms import (
     FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
@@ -892,3 +893,178 @@ def delete_act_form(
     db.commit()
     
     return {"message": "Form unlinked"}
+
+
+# ─── Dynamic Forms (Templates and Responses) ───
+
+class FormTemplateCreate(BaseModel):
+    title: str
+    schema_json: List[Dict[str, Any]]
+    is_active: bool = True
+
+class FormTemplateResponse(BaseModel):
+    id: int
+    title: str
+    schema_json: List[Dict[str, Any]]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class FormResponseCreate(BaseModel):
+    act_id: int
+    template_id: int
+    response_data: Dict[str, Any]
+
+class FormResponseResponse(BaseModel):
+    id: int
+    act_id: int
+    template_id: int
+    response_data: Dict[str, Any]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+@router.get("/templates", response_model=List[FormTemplateResponse])
+def get_templates(
+    active_only: bool = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Get all dynamic form templates. Usually active ones only."""
+    q = db.query(DynamicFormTemplate)
+    if active_only:
+        q = q.filter(DynamicFormTemplate.is_active == True)
+    return q.all()
+
+@router.get("/templates/{template_id}", response_model=FormTemplateResponse)
+def get_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Get a specific form template by ID."""
+    template = db.query(DynamicFormTemplate).filter(DynamicFormTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@router.post("/templates", response_model=FormTemplateResponse)
+def create_template(
+    data: FormTemplateCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Create a new dynamic form template."""
+    existing = db.query(DynamicFormTemplate).filter(DynamicFormTemplate.title == data.title).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A template with this title already exists")
+
+    template = DynamicFormTemplate(
+        title=data.title,
+        schema_json=data.schema_json,
+        is_active=data.is_active
+    )
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    return template
+
+@router.put("/templates/{template_id}", response_model=FormTemplateResponse)
+def update_template(
+    template_id: int,
+    data: FormTemplateCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Update an existing dynamic form template."""
+    template = db.query(DynamicFormTemplate).filter(DynamicFormTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+        
+    existing = db.query(DynamicFormTemplate).filter(
+        DynamicFormTemplate.title == data.title,
+        DynamicFormTemplate.id != template_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A template with this title already exists")
+
+    template.title = data.title
+    template.schema_json = data.schema_json
+    template.is_active = data.is_active
+    db.commit()
+    db.refresh(template)
+    return template
+
+@router.post("/responses", response_model=FormResponseResponse)
+def submit_response(
+    data: FormResponseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Submit a response to a dynamic form, tied to a medical act."""
+    response = DynamicFormResponse(
+        act_id=data.act_id,
+        template_id=data.template_id,
+        response_data=data.response_data
+    )
+    db.add(response)
+    db.commit()
+    db.refresh(response)
+
+    # Ensure the dynamic template is represented in the ref tables so it appears like other forms
+    try:
+        # Find or create a 'dynamic' care type to group dynamic templates
+        dyn_care = db.query(RefCareType).filter(RefCareType.code == 'dynamic_templates').first()
+        if not dyn_care:
+            dyn_care = RefCareType(code='dynamic_templates', label='Formulaires personnalisés', description='Templates créés par les administrateurs', is_active=True)
+            db.add(dyn_care)
+            db.commit()
+            db.refresh(dyn_care)
+
+        # Find or create an act type under that care type
+        dyn_act = db.query(RefActType).filter(RefActType.code == 'dynamic_template_act', RefActType.ref_care_type_id == dyn_care.id).first()
+        if not dyn_act:
+            dyn_act = RefActType(ref_care_type_id=dyn_care.id, code='dynamic_template_act', label='Formulaires personnalisés', description='Act types for dynamic templates', is_active=True)
+            db.add(dyn_act)
+            db.commit()
+            db.refresh(dyn_act)
+
+        # Ensure a RefFormType exists for this template
+        form_name = f"dynamic_template_{data.template_id}"
+        ref_form = db.query(RefFormType).filter(RefFormType.form_name == form_name).first()
+        template_obj = db.query(DynamicFormTemplate).filter(DynamicFormTemplate.id == data.template_id).first()
+        label = template_obj.title if template_obj else form_name
+        if not ref_form:
+            ref_form = RefFormType(ref_act_type_id=dyn_act.id, form_name=form_name, form_label=label, is_active=True)
+            db.add(ref_form)
+            db.commit()
+            db.refresh(ref_form)
+
+        # Create ActForm bridge entry linking the created dynamic response to the medical act
+        try:
+            # Avoid duplicate linking
+            existing_link = db.query(ActForm).filter(ActForm.act_id == data.act_id, ActForm.ref_form_type_id == ref_form.id, ActForm.form_table_id == response.id).first()
+            if not existing_link:
+                act_form = ActForm(act_id=data.act_id, ref_form_type_id=ref_form.id, form_table_id=response.id, created_by=current_user.id)
+                db.add(act_form)
+                db.commit()
+        except Exception:
+            db.rollback()
+    except Exception:
+        # If catalog linking fails, don't block the response creation
+        db.rollback()
+
+    return response
+
+@router.get("/responses/act/{act_id}", response_model=List[FormResponseResponse])
+def get_responses_for_act(
+    act_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """Get all dynamic form responses associated with a specific medical act."""
+    responses = db.query(DynamicFormResponse).filter(DynamicFormResponse.act_id == act_id).all()
+    return responses

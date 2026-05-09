@@ -14,11 +14,13 @@ import {
   createFormCsGeste, updateFormCsGeste,
   createFormCsSeances, updateFormCsSeances,
   createFormCsDxa, updateFormCsDxa,
-  createFormCsDouleur, updateFormCsDouleur
+  createFormCsDouleur, updateFormCsDouleur,
+  getDynamicTemplates, submitDynamicResponse
 } from '../../api/api';
 import {
   FormCsRd, FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
 } from '../../components/MedicalForms/AllForms';
+import DynamicFormRenderer from './DynamicFormRenderer';
 import './MedicalActForm.css';
 
 const RHEUMATOLOGY_TREATMENTS = [
@@ -162,10 +164,13 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [selectedDrug, setSelectedDrug] = useState('');
   const [treatmentDetails, setTreatmentDetails] = useState({ duration: '', dosage: '', frequency: '' });
   
-  // Form System State
   const [careTypes, setCareTypes] = useState([]);
   const [actTypes, setActTypes] = useState([]);
   const [formTypes, setFormTypes] = useState([]);
+  const [dynamicTemplates, setDynamicTemplates] = useState([]);
+  const [selectedDynamicTemplate, setSelectedDynamicTemplate] = useState(null);
+  const [dynamicFormData, setDynamicFormData] = useState({});
+  const [dynamicSaved, setDynamicSaved] = useState(false);
   const [isLoadingFormSystem, setIsLoadingFormSystem] = useState(false);
 
   // Initialize or update form when initialData changes
@@ -255,7 +260,40 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   useEffect(() => {
     loadDoctors();
     loadCareTypes();
+    const onStorage = async (e) => {
+      if (e.key === 'dynamic_templates_updated') {
+        try {
+          const payload = JSON.parse(e.newValue);
+          // reload templates
+          const res = await getDynamicTemplates();
+          const templates = res.data || [];
+          setDynamicTemplates(templates);
+
+          if (payload && payload.id) {
+            const template = templates.find(t => t.id === payload.id);
+            if (template) {
+              // auto-select the new template and move to step 2 so admin sees it
+              setForm(prev => ({ ...prev, careTypeId: `dynamic_${template.id}` }));
+              setSelectedDynamicTemplate(template);
+              setDynamicFormData({});
+              setDynamicSaved(false);
+              setStep(2);
+            }
+          }
+        } catch (err) {
+          // fallback: reload care types
+          loadCareTypes();
+        }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  useEffect(() => {
+    // reset saved flag when template or data changes
+    setDynamicSaved(false);
+  }, [selectedDynamicTemplate]);
 
   const loadPatients = async () => {
     setIsLoadingPatients(true);
@@ -282,8 +320,11 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     try {
       const res = await getCareTypes();
       setCareTypes(res.data || []);
+      
+      const dynRes = await getDynamicTemplates();
+      setDynamicTemplates(dynRes.data || []);
     } catch (err) {
-      console.error("Error loading care types:", err);
+      console.error("Error loading care types or dynamic templates:", err);
     }
   };
 
@@ -329,6 +370,19 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const handleCareTypeSelect = async (careTypeId) => {
     console.log('Care type selected:', careTypeId);
     setForm(prev => ({ ...prev, careTypeId, formTypeId: '', formName: '', formId: '' }));
+    
+    // Check if it's a dynamic template
+    if (String(careTypeId).startsWith('dynamic_')) {
+      const templateId = parseInt(String(careTypeId).replace('dynamic_', ''), 10);
+      const template = dynamicTemplates.find(t => t.id === templateId);
+      setSelectedDynamicTemplate(template);
+      setActTypes([]);
+      setFormTypes([]);
+      return;
+    } else {
+      setSelectedDynamicTemplate(null);
+    }
+    
     if (careTypeId) {
       try {
         const actTypesData = await loadActTypes(careTypeId);
@@ -489,6 +543,17 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         }
       } else {
         console.log('No clinical form to link:', { formName: form.formName, formId: finalFormId });
+      }
+
+      // If a dynamic template was selected and the admin filled it, submit its response tied to the created act
+      if (selectedDynamicTemplate && dynamicFormData && Object.keys(dynamicFormData).length > 0 && actId) {
+        try {
+          await submitDynamicResponse({ act_id: actId, template_id: selectedDynamicTemplate.id, response_data: dynamicFormData });
+          console.log('Dynamic form response submitted for act', actId);
+        } catch (dynErr) {
+          console.error('Error submitting dynamic form response:', dynErr);
+          // non-fatal, continue
+        }
       }
       
       // Create lab results if any were added
@@ -674,15 +739,21 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               >
                 <option value="">-- Sélectionner --</option>
                 {careTypes.map(ct => (
-                  <option key={ct.id} value={ct.id}>
+                  <option key={`ct_${ct.id}`} value={ct.id}>
                     {ct.label}
+                  </option>
+                ))}
+                {dynamicTemplates.length > 0 && <optgroup label="Formulaires Personnalisés" />}
+                {dynamicTemplates.map(dt => (
+                  <option key={`dynamic_${dt.id}`} value={`dynamic_${dt.id}`}>
+                    {dt.title}
                   </option>
                 ))}
               </select>
               {errors.careTypeId && <span className="maf-error-msg"><FiAlertCircle />{errors.careTypeId}</span>}
             </div>
 
-            {form.careTypeId && actTypes.length > 0 && (
+            {form.careTypeId && !String(form.careTypeId).startsWith('dynamic_') && actTypes.length > 0 && (
               <div className="maf-field">
                 <label className="maf-label">Type d'acte associé</label>
                 <p className="maf-hint">{actTypes.length} type(s) d'acte(s) disponible(s)</p>
@@ -704,7 +775,40 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               <span>Données de forme clinique</span>
             </div>
             
-            {form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName] ? (
+            {selectedDynamicTemplate ? (
+              <div style={{ marginTop: '1rem' }}>
+                <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FiCheckCircle style={{ color: '#10b981' }} />
+                    <span>Formulaire dynamique: <strong>{selectedDynamicTemplate.title}</strong></span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>Formulaire personnalisé</span>
+                </div>
+
+                <DynamicFormRenderer
+                  template={selectedDynamicTemplate}
+                  formData={dynamicFormData}
+                  setFormData={setDynamicFormData}
+                />
+
+                <div className="maf-dynamic-save-row">
+                  <button
+                    type="button"
+                    className="maf-btn-submit maf-dynamic-save-btn"
+                    onClick={() => {
+                      // mark dynamic data saved locally (will be submitted with the act)
+                      setDynamicSaved(true);
+                      alert('Réponses du formulaire personnalisés enregistrées localement. Elles seront envoyées lors de l\'enregistrement de l\'acte.');
+                    }}
+                  >
+                    Enregistrer les réponses
+                  </button>
+                  {dynamicSaved && (
+                    <span className="maf-dynamic-save-badge">Enregistré</span>
+                  )}
+                </div>
+              </div>
+            ) : form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName] ? (
               // Form automatically selected and rendered - no dropdown needed
               <div style={{ marginTop: '1rem' }}>
                 <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

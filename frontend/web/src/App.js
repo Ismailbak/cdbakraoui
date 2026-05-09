@@ -10,6 +10,7 @@ import AdminAnalytics from './pages/Admin/AdminAnalytics';
 import AdminSecurity from './pages/Admin/AdminSecurity';
 import AdminSettings from './pages/Admin/AdminSettings';
 import AdminUserDetail from './pages/Admin/AdminUserDetail';
+import FormBuilder from './pages/Admin/FormBuilder';
 import PatientPage from './pages/Patients';
 import PatientDetailPage from './pages/Patients/PatientDetailPage';
 import AppointmentsPage from './pages/Appointments';
@@ -73,6 +74,7 @@ function App() {
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
         <Route path="/admin/security" element={<AdminSecurity />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/form-builder" element={<FormBuilder />} />
         <Route path="/patients" element={<PatientPage />} />
         <Route path="/patients/:id" element={<PatientDetailPage />} />
         <Route path="/patients/:patientId/chat" element={<ChatPage />} />

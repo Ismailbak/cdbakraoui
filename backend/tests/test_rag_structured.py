@@ -7,11 +7,11 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
-from app.chat.rag.retrievers.query_classifier import QueryClassifier, QueryIntent
-from app.chat.rag.retrievers.structured_retriever import RetrievedFact, StructuredRetrievalPipeline
-from app.chat.rag.retrievers.prompt_builder import PromptBuilder
-from app.chat.rag.orchestrator import RAGOrchestrator
-from app.core.schemas.rag_response import ChatRequest, GroundedChatResponse
+from app.services.retrievers.query_classifier import QueryClassifier, QueryIntent
+from app.services.retrievers.structured_retriever import RetrievedFact, StructuredRetrievalPipeline
+from app.services.retrievers.prompt_builder import PromptBuilder
+from app.services.rag_orchestrator import RAGOrchestrator
+from app.schemas.rag_response import ChatRequest, GroundedChatResponse
 
 
 class TestQueryClassifier:

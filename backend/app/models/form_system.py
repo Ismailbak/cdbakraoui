@@ -61,6 +61,30 @@ class ActForm(Base):
     updated_at = Column(DateTime, onupdate=func.now())
 
 
+class DynamicFormTemplate(Base):
+    """Dynamic form structure defined by admin."""
+    __tablename__ = "dynamic_form_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False, unique=True, index=True)
+    schema_json = Column(JSON, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+
+class DynamicFormResponse(Base):
+    """Stores JSON answers to dynamic forms tied to a Medical Act."""
+    __tablename__ = "dynamic_form_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    act_id = Column(Integer, ForeignKey("medical_acts.id"), nullable=False, index=True)
+    template_id = Column(Integer, ForeignKey("dynamic_form_templates.id"), nullable=False, index=True)
+    response_data = Column(JSON, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+
 class FormCsRd(Base):
     """Form data table: Consultation Rhumatisme Dégénératif (Degenerative Rheumatism)"""
     __tablename__ = "form_cs_rd"

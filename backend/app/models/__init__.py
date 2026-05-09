@@ -10,6 +10,13 @@ from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.llm import LLMModel
 from app.models.rag_chunk import RAGChunk, RAGQueryCache
+from app.models.form_system import (
+    RefCareType, RefActType, RefFormType, ActForm,
+    FormCsRd, DynamicFormTemplate, DynamicFormResponse
+)
+from app.models.additional_forms import (
+    FormCsOs, FormCsRic, FormCsDouleur, FormCsGeste, FormCsEcho, FormCsSeances
+)
 
 __all__ = [
     "User",
@@ -29,4 +36,17 @@ __all__ = [
     "LLMModel",
     "RAGChunk",
     "RAGQueryCache",
+    "RefCareType",
+    "RefActType",
+    "RefFormType",
+    "ActForm",
+    "FormCsRd",
+    "FormCsOs",
+    "FormCsRic",
+    "FormCsDouleur",
+    "FormCsGeste",
+    "FormCsEcho",
+    "FormCsSeances",
+    "DynamicFormTemplate",
+    "DynamicFormResponse",
 ]

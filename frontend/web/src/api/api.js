@@ -256,6 +256,14 @@ export const getActForm = (actId, refFormTypeId) =>
 export const unlinkFormFromAct = (actId, refFormTypeId) =>
   api.delete(`/forms/acts/${actId}/forms/${refFormTypeId}`);
 
+// Dynamic Forms API
+export const getDynamicTemplates = (activeOnly = true) => api.get(`/forms/templates?active_only=${activeOnly}`);
+export const getDynamicTemplate = (id) => api.get(`/forms/templates/${id}`);
+export const createDynamicTemplate = (data) => api.post(`/forms/templates`, data);
+export const updateDynamicTemplate = (id, data) => api.put(`/forms/templates/${id}`, data);
+export const submitDynamicResponse = (data) => api.post(`/forms/responses`, data);
+export const getDynamicResponsesForAct = (actId) => api.get(`/forms/responses/act/${actId}`);
+
 // System health
 export const getSystemHealth = () => api.get('/analytics/system-health');
 

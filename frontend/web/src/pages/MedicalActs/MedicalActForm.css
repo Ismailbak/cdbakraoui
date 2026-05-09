@@ -663,6 +663,32 @@
     transform: none;
 }
 
+.maf-dynamic-save-row {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.maf-dynamic-save-btn {
+    min-width: 220px;
+}
+
+.maf-dynamic-save-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 /* ── Success State ────────────────────────── */
 .maf-success {
     display: flex;

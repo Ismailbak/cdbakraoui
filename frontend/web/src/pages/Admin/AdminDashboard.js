@@ -186,6 +186,9 @@ function AdminDashboard() {
               <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/security')}>
                 <FiShield /> Voir les logs
               </button>
+              <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/form-builder')}>
+                <FiFileText /> Générateur de formulaires
+              </button>
               <button type="button" className="admin-action-btn" onClick={() => navigate('/admin/settings')}>
                 <FiSettings /> Paramètres
               </button>              

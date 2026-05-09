@@ -21,7 +21,7 @@ class RAGChunk(Base):
     id = Column(Integer, primary_key=True)
     
     # Source reference
-    patient_id = Column(Integer, ForeignKey("patient.id"), nullable=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True, index=True)
     source_type = Column(
         String(50),
         nullable=False,
@@ -112,7 +112,7 @@ class RAGQueryCache(Base):
     query_hash = Column(String(64), nullable=False, unique=True, index=True)
     
     # Scope
-    patient_id = Column(Integer, ForeignKey("patient.id"), nullable=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True)
     user_id = Column(Integer, nullable=True, comment="User who made query")
     
     # Cached result
