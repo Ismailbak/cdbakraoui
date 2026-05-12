@@ -61,13 +61,13 @@ async def get_grounded_chat_response(
             language=language
         )
         
-        # Process through orchestrator
-        grounded_prompt, rag_response, warnings = await orchestrator.process_chat_request(
+        # Process through orchestrator (returns detected patient id as 4th value)
+        grounded_prompt, rag_response, warnings, detected_patient_id = await orchestrator.process_chat_request(
             rag_request, user_id=user_id
         )
-        
-        # Use provided patient ID or the one from request
-        final_patient_id = patient_id
+
+        # Determine final patient id: prefer explicit function arg, otherwise use detected id
+        final_patient_id = patient_id or detected_patient_id
         
         logger.info(
             f"RAG orchestration complete: {len(rag_response.sources)} sources, "

@@ -669,7 +669,7 @@
 
 /* Notification Creation Modal Styles */
 .notification-modal {
-  max-width: 550px !important;
+  max-width: 720px !important;
 }
 
 .notification-form {
@@ -684,6 +684,13 @@
   gap: 10px;
   margin-top: 8px;
   margin-bottom: 12px;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
 }
 
 .recipient-toggle button {
@@ -730,6 +737,13 @@
   font-size: 14px;
   transition: all 0.2s ease;
   width: 100%;
+}
+
+.char-counter {
+  text-align: right;
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-top: 6px;
 }
 
 .form-group input:focus, 

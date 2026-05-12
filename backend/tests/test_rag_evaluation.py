@@ -14,9 +14,9 @@ from datetime import datetime, date, timedelta
 from unittest.mock import Mock, AsyncMock, patch
 from sqlalchemy.orm import Session
 
-from app.services.rag_orchestrator import RAGOrchestrator
-from app.schemas.rag_response import ChatRequest
-from app.services.patient_service import PatientService
+from app.chat.rag.orchestrator import RAGOrchestrator
+from app.core.schemas.rag_response import ChatRequest
+from app.patients.service import PatientService
 
 
 class TestEvaluationScenarios:
