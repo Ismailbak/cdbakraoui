@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FiBell, FiCalendar, FiUser, FiFileText, FiAlertCircle, FiCheckCircle, 
-  FiClock, FiTrash2, FiCheck, FiFilter, FiSettings, FiMail, FiPhone,
-  FiActivity, FiHeart, FiMessageSquare
+  FiClock, FiTrash2, FiCheck, FiFilter,
+  FiActivity, FiMessageSquare
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { SkeletonListItem, useToast } from '../../components/common';
@@ -47,7 +47,6 @@ const notificationFilters = ['Toutes', 'Non lues', 'RDV', 'Patients', 'Résultat
 function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('Toutes');
-  const [showSettings, setShowSettings] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -110,7 +109,6 @@ function NotificationsPage() {
       case 'activity': return <FiActivity />;
       case 'heart': return <FiHeart />;
       case 'message': return <FiMessageSquare />;
-      case 'settings': return <FiSettings />;
       default: return <FiBell />;
     }
   };
@@ -161,9 +159,6 @@ function NotificationsPage() {
             <button className="mark-all-btn" onClick={markAllAsRead} disabled={unreadCount === 0}>
               <FiCheck />
               <span>Marquer tout lu</span>
-            </button>
-            <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
-              <FiSettings />
             </button>
           </div>
         </div>
@@ -252,109 +247,6 @@ function NotificationsPage() {
           )}
         </div>
 
-        {/* Notification Settings Modal */}
-        {showSettings && (
-          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Préférences de notifications</h2>
-                <button className="modal-close" onClick={() => setShowSettings(false)}>×</button>
-              </div>
-              <div className="settings-content">
-                <div className="settings-section">
-                  <h3>Notifications par email</h3>
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <FiMail />
-                      <div>
-                        <span className="setting-title">Rappels de rendez-vous</span>
-                        <span className="setting-desc">Recevoir un email 24h avant chaque RDV</span>
-                      </div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" defaultChecked />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <FiFileText />
-                      <div>
-                        <span className="setting-title">Résultats d'analyses</span>
-                        <span className="setting-desc">Notification immédiate des nouveaux résultats</span>
-                      </div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" defaultChecked />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <FiMessageSquare />
-                      <div>
-                        <span className="setting-title">Messages patients</span>
-                        <span className="setting-desc">Recevoir les messages des patients par email</span>
-                      </div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" defaultChecked />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="settings-section">
-                  <h3>Notifications push</h3>
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <FiCalendar />
-                      <div>
-                        <span className="setting-title">Rappels RDV</span>
-                        <span className="setting-desc">30 min avant chaque consultation</span>
-                      </div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" defaultChecked />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <FiUser />
-                      <div>
-                        <span className="setting-title">Nouveaux patients</span>
-                        <span className="setting-desc">Alertes d'inscription de nouveaux patients</span>
-                      </div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <FiHeart />
-                      <div>
-                        <span className="setting-title">Suivis recommandés</span>
-                        <span className="setting-desc">Patients sans consultation récente</span>
-                      </div>
-                    </div>
-                    <label className="toggle">
-                      <input type="checkbox" defaultChecked />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="settings-actions">
-                  <button className="btn-cancel" onClick={() => setShowSettings(false)}>Annuler</button>
-                  <button className="btn-save">Enregistrer</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         <CreateNotificationModal 
           isOpen={showCreateModal} 
           onClose={() => setShowCreateModal(false)} 
