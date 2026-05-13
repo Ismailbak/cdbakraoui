@@ -524,7 +524,7 @@ function AppointmentsPage() {
             </div>
             {/* Insights Modal with Add Appointment Form */}
             {insightsModal.open && (
-              <div className="modal-overlay" onClick={() => setInsightsModal({ open: false, date: null, appointments: [], showForm: false })}>
+              <div className="modal-overlay">
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
                   <div className="modal-header">
                     <h2>{insightsModal.showForm ? 'Créer un rendez-vous' : 'Rendez-vous du ' + formatDateForModal(insightsModal.date)}</h2>
@@ -536,6 +536,7 @@ function AppointmentsPage() {
                     <div className="modal-form-wrapper">
                       <AppointmentForm
                         defaultDate={insightsModal.date}
+                        lockDate={true}
                         onSuccess={() => { 
                           loadAppointments(); 
                           toast.success('Rendez-vous créé avec succès'); 
@@ -591,7 +592,7 @@ function AppointmentsPage() {
 
         {/* Add Appointment Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => { setShowAddModal(false); resetAddForm(); }}>
+          <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <AppointmentForm
                 defaultDate={selectedDate.toISOString().split('T')[0]}
@@ -604,7 +605,7 @@ function AppointmentsPage() {
 
         {/* Edit Modal */}
         {showEditModal && editingAppointment && (
-          <div className="modal-overlay" onClick={() => { setShowEditModal(false); setEditingAppointment(null); }}>
+          <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <AppointmentForm
                 defaultDate={editingAppointment.date}
