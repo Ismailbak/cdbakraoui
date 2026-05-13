@@ -1,7 +1,7 @@
 
 # RhumatoAI: Full-Stack Medical AI Assistant 🏥
 
-**Designed and implemented a full-stack clinical AI system supporting 20+ doctors, with on-prem LLM inference (BioMistral via Ollama), FastAPI backend, React/React Native frontends, and MySQL database. Achieves ~2–5s response latency under concurrent usage, 100% local deployment for GDPR compliance.**
+**Designed and implemented a full-stack clinical AI system supporting 20+ doctors, with on-prem LLM inference (BioMistral via Ollama), FastAPI backend, React/React Native frontends, and MySQL database. Achieves ~2–5s response latency under typical clinic concurrency on local hardware. Supports on-prem deployment aligned with healthcare data sovereignty requirements.**
 
 *Target: Rheumatology clinic (CHU Ibn Rochd, Casablanca) | Feb–July 2026*
 
@@ -96,18 +96,34 @@
 
 ---
 
+## 🖼️ Visuals
+
+Add screenshots for credibility and quick scanning:
+
+- Web dashboard
+- Patient management
+- Chat assistant (grounded response + citations)
+- Medical act form
+- Mobile app home + assistant
+- PDF export preview
+
+![App general diagram](Diagrams/App%20general%20diagram.png)
+
+---
+
+---
+
 ### AI & LLM Development
-- **AI Chat Fully Functional**: Chat assistant now working on both web and mobile interfaces.
-- **LLM Model Evaluation**: Active testing of BioMistral and Gemma4B to determine optimal model for clinical workflows.
-- **RAG Phase 1 Complete (April 29, 2026)**: ✅ Full Retrieval-Augmented Generation system implemented
-  - **IPP Auto-Detection**: Queries like "15 souffre de quoi?" automatically extract patient ID (supports numeric "01"-"16" and international "FR######" formats)
-  - **Structured Retrieval**: Four ORM-based retrievers aggregate facts from patients, appointments, medical acts, and lab results
-  - **Grounded Prompts**: Deterministic prompt assembly with versioned templates, evidence sections, and citations
-  - **Authorization Guards**: Role-based access checks before retrieval (Phase 1: all authenticated users access all patients)
-  - **LLM Confusion Fix**: Hidden internal patient IDs in evidence to prevent LLM confusion about ID mismatches (query "14" → internal ID "19" no longer confuses LLM)
-  - **Test Coverage**: 28/28 tests passing (13 structured retrieval + 15 evaluation)
-  - **Verified**: Works for multiple patient lookups without confusion (tested with IPP "15" → "Arthrose" and IPP "14" → "Goutte")
-  - **Next Phase**: Semantic retrieval with Qdrant vector DB for fuzzy search across 1000+ records
+- **Clinical Chat Assistant**: Operational on web and mobile.
+- **LLM Model Evaluation**: Ongoing comparison of BioMistral vs Gemma for clinical workflows.
+- **RAG (Structured, Phase 1)**: ✅ Live and grounded
+  - Explicit IPP and full-name matching with ambiguity guardrails
+  - Patient context carryover for follow-up questions
+  - Multi-source retrieval: patients, appointments, medical acts, lab results
+  - Deterministic prompts with evidence sections and citations
+  - General medical mode when no patient context exists
+  - Clean user-facing responses (no internal IDs)
+- **RAG (Semantic, Phase 2)**: Planned — Qdrant for notes, PDFs, and free-text fields
 
 ### Deployment & Infrastructure
 - **Proxmox VM Deployment**: Complete application stack being deployed on dedicated Proxmox virtual machine with resources provisioned for LLM inference engine.
@@ -152,10 +168,10 @@
 **Why**: Mobile needs native feel (Bottom Tab Nav, AsyncStorage), web needs full browser APIs.  
 **Tradeoff**: Business logic duplicated (auth, API calls). Fix: Extract to shared TS library (future).
 
-### 7. **No Vector DB / RAG (Yet)**
-**Decision**: Chat uses direct patient history, no semantic search.  
-**Why**: Dataset is small (~100 patients), LLM context window sufficient, added complexity not worth it.  
-**Tradeoff**: Chat can't do fuzzy search across 1000+ records. Scale to this → add Milvus/Weaviate.
+### 7. **No Vector DB (Yet)**
+**Decision**: Structured RAG is live; semantic retrieval is not.  
+**Why**: Early scale is manageable with structured data; keep latency low.  
+**Tradeoff**: Fuzzy search across unstructured notes and PDFs is limited until Phase 2.
 
 ---
 
@@ -278,11 +294,77 @@ docker exec -it backend python setup_admin.py
 
 ## 🔧 Known Limitations & Future Improvements
 
-- **RAG System** (In Development): Implementing retrieval-augmented generation for local data exploitation to enhance LLM context awareness.
-- **LLM Model Selection** (In Progress): Evaluating BioMistral vs Gemma4B for optimal clinical performance.
-- **No multi-agent reasoning** (single LLM instance - async queuing planned for Q3 2026)
-- **No vector search** (semantic patient lookup - post-July 2026)
-- **No background job queue** (async tasks - planned for scaling phase)
+- **RAG Phase 2** (Planned): Semantic retrieval for notes, PDFs, and free-text fields.
+- **LLM Model Selection** (In Progress): Ongoing comparison of BioMistral vs Gemma.
+- **No multi-agent reasoning** (single LLM instance; async queue planned for Q3 2026)
+- **No vector search** (semantic patient lookup planned post-July 2026)
+- **No background job queue** (async tasks planned for scaling phase)
+
+---
+
+## 🔐 Security & Compliance Notes
+
+- JWT auth with role-based access (admin, doctor, dept_head)
+- Password hashing via bcrypt
+- Authorization checks before any patient-bound retrieval
+- Audit logging on write operations
+- CORS configured for web/mobile clients
+- Deployment designed for on-prem, internal LAN
+
+---
+
+## 🧪 Testing
+
+- **Backend**: pytest suite with structured RAG and evaluation tests
+- **Coverage**: unit + integration-style RAG evaluation (28/28 passing in current suite)
+
+---
+
+## 📡 API Example (Grounded Chat)
+
+Request:
+
+```json
+POST /api/chat/grounded
+{
+  "query": "IPP 12 souffre de quoi ?",
+  "patient_id": null,
+  "language": "fr",
+  "retrieval_mode": "auto"
+}
+```
+
+Response (shape):
+
+```json
+{
+  "response": "...",
+  "sources": [
+    {
+      "source_type": "medical_act",
+      "source_id": 21,
+      "label": "medical_act_21",
+      "timestamp": "2026-05-08",
+      "snippet": "...",
+      "score": 1.0
+    }
+  ],
+  "confidence": "high",
+  "warnings": [],
+  "tokens": 156,
+  "model": "biomistral",
+  "language": "fr",
+  "retrieval_type": "structured"
+}
+```
+
+---
+
+## 🗓️ Development Timeline (High-Level)
+
+- **Feb–Apr 2026**: Core CRUD, auth, analytics, PDF generation
+- **Apr–May 2026**: RAG Phase 1 (structured retrieval, grounded prompts)
+- **Planned**: RAG Phase 2 (semantic retrieval with Qdrant)
 ---
 
 *Developed Feb–July 2026 | CHU Ibn Rochd, Casablanca*  

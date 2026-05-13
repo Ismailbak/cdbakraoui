@@ -6,7 +6,7 @@ This document provides a detailed explanation of every file and directory in the
 
 ## Root Directory
 
-- **docker-compose.yml**: Orchestrates multi-container Docker applications. Defines services for backend (API), database (Postgres), and frontend (web). Ensures all components run together for local development or deployment.
+- **docker-compose.yml**: Orchestrates multi-container Docker applications. Defines services for backend (API), database (MySQL), and web frontend.
 - **readme.md**: Main project overview, features, and setup instructions.
 - **data/**: Placeholder for persistent data (e.g., database files). Contains `.gitkeep` to ensure the directory exists in version control.
 - **Diagrams/**: Contains system diagrams and visual documentation (e.g., class diagrams, system flow images).
@@ -52,14 +52,15 @@ This document provides a detailed explanation of every file and directory in the
     - **audit_service.py**: Audit logging.
     - **auth_service.py**: User authentication and password hashing.
     - **chat_service.py**: AI chat logic (calls LLM).
-    - **rag_chat_service.py**: RAG integration layer for grounded chat responses (Phase 1).
-    - **rag_orchestrator.py**: Central coordinator for entire RAG pipeline (query classification, retrieval, authorization, prompt building).
-    - **retrievers/query_classifier.py**: Rule-based intent classification with IPP pattern matching.
-    - **retrievers/structured_retriever.py**: Four ORM-based fact retrievers (Patient, Appointment, MedicalAct, ActResult).
-    - **retrievers/prompt_builder.py**: Deterministic prompt assembly with versioned templates and evidence sections.
     - **notification_service.py**: Notification management.
     - **patient_service.py**: Patient CRUD, dynamic age calculation, authorization checks, and anonymization (stub).
     - **pdf_service.py**: Generates PDF reports for Medical Acts and Patient Dossiers (handles `datetime_scheduled` and `act_date` fields).
+  - **chat/rag/**: RAG pipeline and grounded chat:
+    - **orchestrator.py**: Central coordinator (classification, auto-detect, authorization, retrieval, prompt build).
+    - **chat_service.py**: LLM execution with grounded responses and response cleanup.
+    - **retrievers/query_classifier.py**: Rule-based intent classification with explicit IPP detection.
+    - **retrievers/structured_retriever.py**: Multi-source fact retrievers (Patient, Appointment, MedicalAct, ActResult).
+    - **retrievers/prompt_builder.py**: Deterministic prompt assembly with evidence sections.
   - **utils/**: Utility functions:
     - **preprocessing.py**: Text cleaning, keyword extraction, anonymization.
     - **security.py**: Password hashing/verification.
@@ -68,7 +69,7 @@ This document provides a detailed explanation of every file and directory in the
 - Core CRUD for patients, appointments, medical acts, users: **Implemented** ✅
 - Authentication & role management: **Implemented** ✅
 - Analytics: **Implemented** ✅ (Real-time aggregation of demographics, trends, financial stats with corrected date/datetime fields)
-- AI chat assistant: **Implemented** ✅ (RAG pipeline with grounded retrieval; LLM adapter pending)
+- AI chat assistant: **Implemented** ✅ (RAG pipeline with grounded retrieval, IPP/name auto-detect, session context carryover)
 - Notifications: **Implemented** ✅ (Manual peer-to-peer messaging, categories, sender visibility)
 - Audit logging: **Implemented** ✅
 - PDF generation: **Implemented** ✅ (Medical Act reports and Patient Dossier with corrected field mappings)
@@ -202,7 +203,7 @@ This document provides a detailed explanation of every file and directory in the
 | Backend      | RAG Chat Service       | Implemented    | April 29, 2026 | ✅ LLM integration with grounded responses; ChatSession lifecycle; evidence citations |
 | Backend      | RAG Structured Retrieval | Implemented  | April 29, 2026 | ✅ Four retrievers (Patient, Appointment, MedicalAct, ActResult) with French keyword support; authorization guards |
 | Backend      | RAG Prompt Builder     | Implemented    | April 29, 2026 | ✅ Deterministic prompt assembly; context/evidence/answer policy sections; auto-detected IPP handling |
-| Backend      | RAG Phase 1 Complete   | Implemented    | April 29, 2026 | ✅ **PHASE 1 COMPLETE**: IPP auto-detection (supports "01"-"16" and "FR######"), patient lookup, diagnosis retrieval, LLM confusion fix (hides internal patient IDs), clean responses for multiple patients |
+| Backend      | RAG Phase 1 Complete   | Implemented    | May 13, 2026 | ✅ **PHASE 1 COMPLETE**: explicit IPP/name auto-detection with ambiguity guardrails, multi-source retrieval, session context carryover, clean responses (no internal IDs) |
 | Backend      | RAG Structured Retrieval | Implemented    | April 28, 2026 | ✅ Four ORM-based retrievers; 4/4 retriever tests passing |
 | Backend      | RAG Prompt Builder     | Implemented    | April 28, 2026 | ✅ Versioned (v0.1) templates; 3/3 tests passing |
 | Backend      | RAG Orchestrator       | Implemented    | April 28, 2026 | ✅ Central coordinator with authorization; 3/3 tests passing |
