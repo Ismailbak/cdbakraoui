@@ -497,7 +497,7 @@ function PatientsPage() {
 
         {/* Add Patient Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <PatientForm
                 onSuccess={() => { loadPatients(); toast.success('Patient ajouté avec succès'); }}
@@ -509,7 +509,7 @@ function PatientsPage() {
 
         {/* Edit Patient Modal - Now using PatientForm with isEdit */}
         {showEditModal && selectedPatient && (
-          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <PatientForm
                 initialData={selectedPatient}
