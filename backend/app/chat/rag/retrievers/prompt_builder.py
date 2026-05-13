@@ -37,6 +37,17 @@ Safety constraints:
 - Decline to answer if data is incomplete or unreliable
 """
 
+    GENERAL_SYSTEM_PROMPT = """You are a medical assistant for a healthcare management system.
+Your role is to answer general medical questions and provide patient-safe information.
+
+CRITICAL RULES:
+1. Provide general medical information when asked
+2. Do NOT invent or assume patient-specific facts
+3. If the question is unclear or needs patient context, ask for clarification
+4. Be concise and medically accurate
+5. Do not provide diagnosis or treatment for a specific person without data
+"""
+
 
 class PromptBuilder:
     """
@@ -76,11 +87,8 @@ class PromptBuilder:
             # Patient-specific: must cite evidence
             system_prompt = PromptTemplate.SYSTEM_PROMPT
         else:
-            # General query: can answer general medical questions without evidence
-            system_prompt = PromptTemplate.SYSTEM_PROMPT.replace(
-                "3. If evidence is insufficient, explicitly say \"Insufficient data\" ",
-                "3. For general questions without patient data, provide helpful medical information when available "
-            )
+            # General query: allow ungrounded medical info without sources
+            system_prompt = PromptTemplate.GENERAL_SYSTEM_PROMPT
         sections.append(system_prompt)
         
         # 2. Context setting
@@ -93,9 +101,9 @@ class PromptBuilder:
             sections.append(evidence_section)
         else:
             if language == "fr":
-                sections.append("\nEVIDENCE:\nAucune donnée médicale trouvée dans les dossiers.")
+                sections.append("\nEVIDENCE:\nAucune donnée patient utilisée pour cette requête générale.")
             else:
-                sections.append("\nEVIDENCE:\nNo relevant evidence found in medical records.")
+                sections.append("\nEVIDENCE:\nNo patient records were used for this general query.")
         
         # 4. User query
         query_section = f"\nUSER QUERY:\n{user_query}"
@@ -103,9 +111,17 @@ class PromptBuilder:
         
         # 5. Response instruction
         if language == "fr":
-            instruction = "\nRESPONSE:\nUtilise uniquement les preuves ci-dessus pour répondre. Cite tes sources."
+            instruction = (
+                "\nRESPONSE:\n"
+                "Si des preuves sont fournies, base ta reponse sur elles et cite tes sources. "
+                "Sinon, reponds de facon generale sans inventer de details patients."
+            )
         else:
-            instruction = "\nRESPONSE:\nAnswer using only the evidence above. Cite your sources."
+            instruction = (
+                "\nRESPONSE:\n"
+                "If evidence is provided, base your answer on it and cite sources. "
+                "Otherwise, answer generally without inventing patient-specific details."
+            )
         sections.append(instruction)
         
         return "\n".join(sections)
