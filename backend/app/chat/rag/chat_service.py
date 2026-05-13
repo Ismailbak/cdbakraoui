@@ -4,6 +4,7 @@ Extends the existing chat service with RAG orchestrator for grounded responses.
 """
 
 import logging
+import re
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -96,7 +97,12 @@ async def get_grounded_chat_response(
         )
         
         # Update response with LLM output
-        rag_response.response = llm_result.get("response", "").strip()
+        response_text = llm_result.get("response", "").strip()
+        response_text = re.sub(r"\[TYPE:[^\]]+\]", "", response_text)
+        response_text = re.sub(r"\(\s*ID\s*:\s*\d+\s*\)", "", response_text)
+        response_text = re.sub(r"\bID\s*:\s*\d+\b", "", response_text)
+        response_text = re.sub(r"\s{2,}", " ", response_text).strip()
+        rag_response.response = response_text
         rag_response.metadata.model = llm_result.get("model", "biomistral")
         rag_response.metadata.tokens_used = llm_result.get("tokens", 0)
         
