@@ -320,45 +320,6 @@ docker exec -it backend python setup_admin.py
 
 ---
 
-## 📡 API Example (Grounded Chat)
-
-Request:
-
-```json
-POST /api/chat/grounded
-{
-  "query": "IPP 12 souffre de quoi ?",
-  "patient_id": null,
-  "language": "fr",
-  "retrieval_mode": "auto"
-}
-```
-
-Response (shape):
-
-```json
-{
-  "response": "...",
-  "sources": [
-    {
-      "source_type": "medical_act",
-      "source_id": 21,
-      "label": "medical_act_21",
-      "timestamp": "2026-05-08",
-      "snippet": "...",
-      "score": 1.0
-    }
-  ],
-  "confidence": "high",
-  "warnings": [],
-  "tokens": 156,
-  "model": "biomistral",
-  "language": "fr",
-  "retrieval_type": "structured"
-}
-```
-
----
 
 ## 🗓️ Development Timeline (High-Level)
 
