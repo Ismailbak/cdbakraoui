@@ -41,6 +41,11 @@ const initialForm = {
   notes: '',
 };
 
+const buildDateTimeValue = (date, time) => {
+  if (!date || !time) return '';
+  return `${date}T${time}`;
+};
+
 function AppointmentForm({ 
   onSuccess, 
   onClose, 
@@ -49,12 +54,18 @@ function AppointmentForm({
   defaultPatientId,
   defaultNotes,
   isEditing,
-  appointmentId
+  appointmentId,
+  lockDate
 }) {
+  const initialDate = defaultDate || '';
+  const initialTime = defaultTime || '';
+  const initialDateTime = buildDateTimeValue(initialDate, initialTime);
+
   const [form, setForm] = useState({ 
     ...initialForm, 
-    date: defaultDate || '',
-    time: defaultTime || '',
+    date: initialDate,
+    time: initialTime,
+    datetime_scheduled: initialDateTime,
     patientId: defaultPatientId || '',
     notes: defaultNotes || ''
   });
@@ -85,11 +96,26 @@ function AppointmentForm({
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
+  const handleTimeChange = (e) => {
+    const { value } = e.target;
+    setForm(prev => {
+      const dateValue = lockDate ? (defaultDate || prev.date) : prev.date;
+      return {
+        ...prev,
+        time: value,
+        datetime_scheduled: buildDateTimeValue(dateValue, value)
+      };
+    });
+    if (errors.datetime_scheduled) setErrors(prev => ({ ...prev, datetime_scheduled: '' }));
+  };
+
   const validateStep = (s) => {
     const errs = {};
     if (s === 1 && !form.patientId) errs.patientId = 'Veuillez sélectionner un patient';
     if (s === 2) {
-      if (!form.datetime_scheduled) errs.datetime_scheduled = 'La date et l\'heure sont requises';
+      if (!form.datetime_scheduled) {
+        errs.datetime_scheduled = lockDate ? 'L\'heure est requise' : 'La date et l\'heure sont requises';
+      }
     }
     if (s === 3 && !form.type) errs.type = 'Veuillez choisir un type de consultation';
     setErrors(errs);
@@ -121,7 +147,12 @@ function AppointmentForm({
       
       setSubmitted(true);
       setTimeout(() => {
-        setForm({ ...initialForm, datetime_scheduled: defaultDate || '' });
+        setForm({
+          ...initialForm,
+          date: defaultDate || '',
+          time: defaultTime || '',
+          datetime_scheduled: buildDateTimeValue(defaultDate || '', defaultTime || '')
+        });
         setStep(1);
         setSubmitted(false);
         if (onSuccess) onSuccess();
@@ -268,17 +299,35 @@ function AppointmentForm({
 
             <div className="af-field">
               <label className="af-label">Date & Heure <span className="af-required">*</span></label>
-              <div className="af-input-icon-wrapper">
-                <FiCalendar className="af-input-icon" />
-                <input
-                  className={`af-input af-input-with-icon ${errors.datetime_scheduled ? 'af-input-error' : ''}`}
-                  type="datetime-local"
-                  name="datetime_scheduled"
-                  value={form.datetime_scheduled}
-                  onChange={handleChange}
-                  min={new Date().toISOString().slice(0, 16)}
-                />
-              </div>
+              {lockDate ? (
+                <>
+                  <div className="af-summary-pill">
+                    <FiCalendar /> {defaultDate ? new Date(defaultDate).toLocaleDateString('fr-FR') : '-'}
+                  </div>
+                  <div className="af-input-icon-wrapper">
+                    <FiClock className="af-input-icon" />
+                    <input
+                      className={`af-input af-input-with-icon ${errors.datetime_scheduled ? 'af-input-error' : ''}`}
+                      type="time"
+                      name="time"
+                      value={form.time}
+                      onChange={handleTimeChange}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="af-input-icon-wrapper">
+                  <FiCalendar className="af-input-icon" />
+                  <input
+                    className={`af-input af-input-with-icon ${errors.datetime_scheduled ? 'af-input-error' : ''}`}
+                    type="datetime-local"
+                    name="datetime_scheduled"
+                    value={form.datetime_scheduled}
+                    onChange={handleChange}
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                </div>
+              )}
               {errors.datetime_scheduled && <span className="af-error-msg"><FiAlertCircle />{errors.datetime_scheduled}</span>}
             </div>
           </div>
