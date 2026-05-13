@@ -71,20 +71,37 @@ class RAGOrchestrator:
         # Step 1: Classify intent
         classification = self.classifier.classify(request.query)
         print(f"📊 Classification: {classification.intent} (confidence={classification.confidence}, patient_confidence={classification.patient_confidence})")
+
+        # Step 1.5: Fallback to most recent patient session if no explicit context
+        if not patient_id and classification.intent != QueryIntent.GENERAL_MEDICAL:
+            try:
+                from app.models.chat_session import ChatSession
+                recent_session = (
+                    self.db.query(ChatSession)
+                    .filter(ChatSession.created_by == user_id)
+                    .order_by(ChatSession.updated_at.desc())
+                    .first()
+                )
+                if recent_session and recent_session.patient_id:
+                    patient_id = recent_session.patient_id
+                    print(f"✅ DEBUG: Using recent chat session patient_id={patient_id}")
+            except Exception as e:
+                logger.warning(f"Recent session lookup failed: {e}")
         
         # Step 2: Auto-detect patient if enabled and not explicitly provided
         print(f"\n🔎 Step 2: Auto-detect check")
         print(f"   patient_id={patient_id}, intent={classification.intent}, AUTO_DETECT_ENABLED={rag_config.AUTO_DETECT_ENABLED}")
         
-        if (not patient_id and 
-            classification.intent == QueryIntent.PATIENT_SPECIFIC and
-            rag_config.AUTO_DETECT_ENABLED):
+        if (not patient_id and rag_config.AUTO_DETECT_ENABLED):
             
             print(f"   ✅ ENTERING IPP DETECTION BLOCK")
             
             # Try to extract IPP from query and lookup patient
             import re
-            ipp_pattern = re.compile(r'\b(?:[A-Z]{2}\d{6,8}|\d{1,3})\b')
+            ipp_pattern = re.compile(
+                r"\b(?:ipp|score\s*ipp)\s*[:=]?\s*([A-Z]{2}\d{6,8}|\d{1,8})\b",
+                re.IGNORECASE
+            )
             ipp_match = ipp_pattern.search(request.query)
             
             print(f"\n🔍 DEBUG: Query: '{request.query}'")
@@ -92,7 +109,7 @@ class RAGOrchestrator:
             
             if ipp_match:
                 # IPP detected - look it up in database
-                ipp_value = ipp_match.group()
+                ipp_value = ipp_match.group(1)
                 from app.models.patient import Patient
                 print(f"🔍 DEBUG: Looking up patient with IPP='{ipp_value}'")
                 
@@ -115,11 +132,102 @@ class RAGOrchestrator:
                         patient_id = db_patient_alt.id
                         detected_patient_id = patient_id
                     else:
-                        print(f"❌ DEBUG: Patient with IPP '{ipp_value}' not found in system.")
-                        warnings.append(f"Patient with IPP '{ipp_value}' not found in system.")
+                        # Normalize IPP (strip prefixes/zeros) as a last resort
+                        def normalize_ipp(value: str) -> str:
+                            if not value:
+                                return ""
+                            cleaned = re.sub(r"[^A-Za-z0-9]", "", value).lower()
+                            if cleaned.startswith("ipp"):
+                                cleaned = cleaned[3:]
+                            if cleaned.isdigit():
+                                cleaned = cleaned.lstrip("0") or "0"
+                            return cleaned
+
+                        normalized = normalize_ipp(ipp_value)
+                        candidates = self.db.query(Patient).filter(Patient.ipp.isnot(None)).all()
+                        matches = [p for p in candidates if normalize_ipp(p.ipp) == normalized]
+
+                        if len(matches) == 1:
+                            db_patient_norm = matches[0]
+                            patient_id = db_patient_norm.id
+                            detected_patient_id = patient_id
+                            print(
+                                f"✅ DEBUG: Found with normalized IPP match: IPP={db_patient_norm.ipp}, Patient={db_patient_norm.id}"
+                            )
+                        elif len(matches) > 1:
+                            print(f"❌ DEBUG: Multiple patients matched normalized IPP '{normalized}'.")
+                            warnings.append("Multiple patients matched the provided IPP. Please clarify.")
+                        else:
+                            print(f"❌ DEBUG: Patient with IPP '{ipp_value}' not found in system.")
+                            warnings.append(f"Patient with IPP '{ipp_value}' not found in system.")
+            else:
+                # Attempt name-based lookup when IPP is not present
+                from app.models.patient import Patient
+
+                raw_tokens = [t for t in re.split(r"\s+", request.query.lower()) if t.isalpha()]
+                stopwords = {
+                    "what", "can", "you", "tell", "me", "about", "the", "patient", "patiente",
+                    "who", "is", "of", "a", "an", "in", "on", "for", "with",
+                    "hey", "bonjour", "salut", "svp", "please",
+                    "que", "peux", "tu", "dire", "moi", "sur", "le", "la", "du", "de"
+                }
+                tokens = [t for t in raw_tokens if t not in stopwords]
+
+                name_tokens = []
+                if "patient" in raw_tokens:
+                    idx = raw_tokens.index("patient")
+                    name_tokens = raw_tokens[idx + 1 : idx + 4]
+                elif "patiente" in raw_tokens:
+                    idx = raw_tokens.index("patiente")
+                    name_tokens = raw_tokens[idx + 1 : idx + 4]
+
+                if not name_tokens:
+                    name_tokens = tokens[-3:]
+
+                name_tokens = [t for t in name_tokens if t not in stopwords]
+                if name_tokens:
+                    print(f"🔍 DEBUG: Name lookup tokens: {name_tokens}")
+
+                    first_token = name_tokens[0]
+                    last_token = name_tokens[1] if len(name_tokens) > 1 else None
+
+                    if last_token:
+                        matches = (
+                            self.db.query(Patient)
+                            .filter(
+                                (Patient.first_name.ilike(f"%{first_token}%") & Patient.last_name.ilike(f"%{last_token}%"))
+                                | (Patient.first_name.ilike(f"%{last_token}%") & Patient.last_name.ilike(f"%{first_token}%"))
+                                | ((Patient.first_name + " " + Patient.last_name).ilike(f"%{first_token} {last_token}%"))
+                            )
+                            .all()
+                        )
+                    else:
+                        matches = (
+                            self.db.query(Patient)
+                            .filter(
+                                (Patient.first_name.ilike(f"%{first_token}%"))
+                                | (Patient.last_name.ilike(f"%{first_token}%"))
+                            )
+                            .all()
+                        )
+
+                    if len(matches) == 1:
+                        db_patient = matches[0]
+                        patient_id = db_patient.id
+                        detected_patient_id = patient_id
+                        print(
+                            f"✅ DEBUG: Auto-detected patient {patient_id} ({db_patient.first_name} {db_patient.last_name}) from name match"
+                        )
+                    elif len(matches) > 1:
+                        warnings.append("Multiple patients matched the provided name. Please specify IPP.")
             
             # If still no patient found, apply confidence threshold check
-            if not patient_id and classification.patient_confidence >= rag_config.AUTO_DETECT_CONFIDENCE_THRESHOLD:
+            if (
+                not patient_id
+                and not ipp_match
+                and classification.intent == QueryIntent.PATIENT_SPECIFIC
+                and classification.patient_confidence >= rag_config.AUTO_DETECT_CONFIDENCE_THRESHOLD
+            ):
                 # Try alternative detection methods (placeholder for future)
                 patient_id, auto_detect_confidence = await self._auto_detect_patient(
                     classification, user_id
@@ -141,15 +249,21 @@ class RAGOrchestrator:
                 )
         
         # Step 3: Retrieve facts (with authorization guard)
-        facts = await self.retriever.retrieve_with_authorization(
-            query=request.query,
-            patient_id=patient_id,
-            user_id=user_id,
-            top_k_per_source=rag_config.RETRIEVAL_TOP_K
-        )
-        
-        if not facts and rag_config.RETURN_INSUFFICIENT_DATA_WHEN_EMPTY:
-            warnings.append("No relevant medical records found for this query.")
+        retrieval_type = "structured"
+        facts = []
+
+        if classification.intent == QueryIntent.GENERAL_MEDICAL and not patient_id:
+            retrieval_type = "none"
+        else:
+            facts = await self.retriever.retrieve_with_authorization(
+                query=request.query,
+                patient_id=patient_id,
+                user_id=user_id,
+                top_k_per_source=rag_config.RETRIEVAL_TOP_K
+            )
+
+            if not facts and rag_config.RETURN_INSUFFICIENT_DATA_WHEN_EMPTY:
+                warnings.append("No relevant medical records found for this query.")
         
         # Step 4: Build grounded prompt
         grounded_prompt = self.prompt_builder.build_grounded_prompt(
@@ -161,13 +275,13 @@ class RAGOrchestrator:
         )
         
         # Step 5: Determine confidence level
-        confidence = self._assess_confidence(len(facts))
+        confidence = "medium" if retrieval_type == "none" else self._assess_confidence(len(facts))
         
         # Step 6: Build response object (without LLM answer yet - Phase 0 design)
         sources = self.prompt_builder.extract_sources_from_facts(facts)
         
         metadata = RAGMetadata(
-            retrieval_type="structured",  # Phase 1 only
+            retrieval_type=retrieval_type,
             confidence=confidence,
             tokens_used=len(grounded_prompt.split()),  # Rough estimate
             language=request.language or "en",
@@ -242,6 +356,9 @@ class RAGOrchestrator:
         """
         violations = []
         
+        if response.metadata.retrieval_type == "none":
+            return violations
+
         # Policy 1: Require evidence for facts
         if rag_config.REQUIRE_EVIDENCE_FOR_FACTS:
             if response.metadata.confidence == "low" and not response.sources:
