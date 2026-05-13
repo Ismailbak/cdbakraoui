@@ -359,7 +359,7 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Détails de l'Acte</h2>
@@ -896,7 +896,7 @@ function MedicalActsPage() {
         )}
 
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <MedicalActForm
                 onSuccess={() => {
@@ -910,7 +910,7 @@ function MedicalActsPage() {
         )}
 
         {showEditModal && editAct && (
-          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <MedicalActForm
                 initialData={editAct}
