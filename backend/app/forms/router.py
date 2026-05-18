@@ -921,6 +921,7 @@ class FormResponseResponse(BaseModel):
     id: int
     act_id: int
     template_id: int
+    template_name: Optional[str] = None
     response_data: Dict[str, Any]
     created_at: datetime
 
@@ -1067,4 +1068,19 @@ def get_responses_for_act(
 ):
     """Get all dynamic form responses associated with a specific medical act."""
     responses = db.query(DynamicFormResponse).filter(DynamicFormResponse.act_id == act_id).all()
-    return responses
+    
+    # Manually add template_name to each response
+    result = []
+    for response in responses:
+        template = db.query(DynamicFormTemplate).filter(DynamicFormTemplate.id == response.template_id).first()
+        response_dict = {
+            'id': response.id,
+            'act_id': response.act_id,
+            'template_id': response.template_id,
+            'template_name': template.title if template else f'Template #{response.template_id}',
+            'response_data': response.response_data,
+            'created_at': response.created_at
+        }
+        result.append(response_dict)
+    
+    return result

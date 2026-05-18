@@ -94,6 +94,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     onSubmit(formData);
   };
 
@@ -563,7 +564,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Enregistrer le formulaire
         </button>
       </div>
@@ -879,7 +880,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Enregistrer le bilan RIC
         </button>
       </div>
@@ -929,6 +930,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     onSubmit(formData);
   };
 
@@ -1233,7 +1235,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Enregistrer le bilan osseux
         </button>
       </div>
@@ -1282,6 +1284,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     onSubmit(formData);
   };
 
@@ -1551,7 +1554,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Enregistrer le compte-rendu Echo
         </button>
       </div>
@@ -1892,7 +1895,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Valider le geste technique
         </button>
       </div>
@@ -1944,6 +1947,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     onSubmit(formData);
   };
 
@@ -2175,7 +2179,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Enregistrer la séance
         </button>
       </div>
@@ -2486,7 +2490,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Valider le bilan DXA
         </button>
       </div>
@@ -2782,7 +2786,7 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
           <FiCheckCircle /> Enregistrer le bilan Douleur
         </button>
       </div>

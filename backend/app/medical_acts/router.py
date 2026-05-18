@@ -19,7 +19,7 @@ from app.models.patient import Patient as PatientModel
 from app.auth.router import get_current_user_orm
 from app.models.user import User
 from app.analytics.audit import log_action
-from app.models.form_system import ActForm
+from app.models.form_system import ActForm, DynamicFormResponse, RefFormType
 
 # Ensure upload directory exists
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "uploads"))
@@ -246,17 +246,21 @@ def _enrich_acts(db: Session, rows: List[MedicalActModel]) -> List[dict]:
         if treat.drug_name and isinstance(treat.drug_name, str) and treat.drug_name.strip():
             treat_map.setdefault(treat.act_id, []).append(treat)
             
-    # One DB query for all relevant forms
+    # One DB query for all relevant forms (JOIN with ref_form_types to get form_name)
     forms = (
-        db.query(ActForm).filter(ActForm.act_id.in_(act_ids)).all()
+        db.query(ActForm, RefFormType.form_name)
+        .join(RefFormType, ActForm.ref_form_type_id == RefFormType.id)
+        .filter(ActForm.act_id.in_(act_ids))
+        .all()
     )
     form_map = {}
-    for f in forms:
+    for f, form_name in forms:
         form_map.setdefault(f.act_id, []).append({
             "id": f.id,
             "act_id": f.act_id,
             "ref_form_type_id": f.ref_form_type_id,
-            "form_table_id": f.form_table_id
+            "form_table_id": f.form_table_id,
+            "form_name": form_name
         })
 
     return [_act_to_dict(
@@ -543,6 +547,7 @@ def delete_medical_act(
     act_type = row.act_type
     
     # Delete related records first to avoid foreign key constraint violations
+    db.query(DynamicFormResponse).filter(DynamicFormResponse.act_id == act_id).delete()
     db.query(ActDiagnosisModel).filter(ActDiagnosisModel.act_id == act_id).delete()
     db.query(ActTreatmentModel).filter(ActTreatmentModel.act_id == act_id).delete()
     db.query(ActDocumentModel).filter(ActDocumentModel.act_id == act_id).delete()

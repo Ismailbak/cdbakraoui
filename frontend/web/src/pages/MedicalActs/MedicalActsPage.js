@@ -13,7 +13,7 @@ import {
 import { 
   getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults, 
   getActForms, getFormCsRd, getFormCsRic, getFormCsOs, getFormCsEcho, 
-  getFormCsGeste, getFormCsSeances, getFormCsDxa, getFormCsDouleur 
+  getFormCsGeste, getFormCsSeances, getFormCsDxa, getFormCsDouleur, getDynamicResponsesForAct 
 } from '../../api/api';
 import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
@@ -225,6 +225,8 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
   const [labResultsLoading, setLabResultsLoading] = useState(false);
   const [formData, setFormData] = useState(null);
   const [formDataLoading, setFormDataLoading] = useState(false);
+  const [dynamicResponses, setDynamicResponses] = useState([]);
+  const [dynamicResponsesLoading, setDynamicResponsesLoading] = useState(false);
 
   // Fetch lab results and form data when modal opens or act changes
   useEffect(() => {
@@ -234,6 +236,9 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
       try {
         setLabResultsLoading(true);
         const response = await getPatientResults(act.patientId);
+        // Filter results to only show results created for this specific act
+        // Results are linked to acts via the result_date and act metadata
+        // For now, show all results but in the future could add act_id filter
         setLabResults(response.data || []);
       } catch (err) {
         console.error('Erreur lors du chargement des résultats de labo:', err);
@@ -259,39 +264,35 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
           // In this system, we usually have one main clinical form per act
           const actForm = actForms[0];
           
-          // Determine which fetch function to use based on the ref_form_type_id or form_name
-          // If the backend doesn't provide form_name, we might need to map IDs
-          // For now, let's try to detect the form type from the available data
-          
+          // Now we have form_name from the backend, so we can directly map it
           let data = null;
           let type = 'unknown';
 
-          // Try to fetch from each potential endpoint until we find the data
-          // A more robust way would be if actForm included the form_name
-          const formTableId = actForm.form_table_id;
-          
-          const fetchers = [
-            { name: 'RIC', fn: getFormCsRic },
-            { name: 'OS', fn: getFormCsOs },
-            { name: 'ECHO', fn: getFormCsEcho },
-            { name: 'GESTE', fn: getFormCsGeste },
-            { name: 'SEANCES', fn: getFormCsSeances },
-            { name: 'DXA', fn: getFormCsDxa },
-            { name: 'DOULEUR', fn: getFormCsDouleur },
-            { name: 'RD', fn: getFormCsRd }
-          ];
+          // Map form_name to the correct fetch function
+          const formFetchers = {
+            'form_cs_rd': getFormCsRd,
+            'form_cs_ric': getFormCsRic,
+            'form_cs_os': getFormCsOs,
+            'form_cs_echo': getFormCsEcho,
+            'form_cs_geste': getFormCsGeste,
+            'form_cs_seances': getFormCsSeances,
+            'form_cs_dxa': getFormCsDxa,
+            'form_cs_douleur': getFormCsDouleur,
+          };
 
-          for (const fetcher of fetchers) {
+          // Use the form_name from backend to get the correct fetcher
+          if (actForm.form_name && formFetchers[actForm.form_name]) {
             try {
-              const res = await fetcher.fn(formTableId);
+              const res = await formFetchers[actForm.form_name](actForm.form_table_id);
               if (res.data) {
                 data = res.data;
-                type = fetcher.name;
-                break;
+                type = actForm.form_name.replace('form_cs_', '').toUpperCase();
               }
             } catch (e) {
-              // Continue to next fetcher
+              console.error(`Error fetching form ${actForm.form_name}:`, e);
             }
+          } else {
+            console.warn('No form_name in act form data or unknown form type:', actForm);
           }
 
           setFormData(data ? { ...data, _formType: type } : null);
@@ -306,8 +307,22 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
       }
     };
 
+    const fetchDynamicResponses = async () => {
+      try {
+        setDynamicResponsesLoading(true);
+        const response = await getDynamicResponsesForAct(act.id);
+        setDynamicResponses(response.data || []);
+      } catch (err) {
+        console.error('Erreur lors du chargement des réponses personnalisées:', err);
+        setDynamicResponses([]);
+      } finally {
+        setDynamicResponsesLoading(false);
+      }
+    };
+
     fetchLabResults();
     fetchFormData();
+    fetchDynamicResponses();
   }, [act?.id, act?.patientId]);
 
   // Helper function to get doctor name from ID
@@ -573,6 +588,27 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
                   })
                 }
               </div>
+            </div>
+          )}
+
+          {dynamicResponses && dynamicResponses.length > 0 && (
+            <div className="detail-section form-data-section">
+              {dynamicResponses.map((response) => (
+                <div key={response.id}>
+                  <div className="detail-section-header">
+                    <h4><FiFileText /> {response.template_name}</h4>
+                  </div>
+                  <div className="form-data-grid">
+                    <div className="form-data-item">
+                      {Object.entries(response.response_data || {}).map(([key, value]) => (
+                        <div key={key} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                          <strong>{key}:</strong> {typeof value === 'boolean' ? (value ? 'Oui' : 'Non') : Array.isArray(value) ? value.join(', ') : String(value)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

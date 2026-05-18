@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import {
   FiUser, FiCalendar, FiActivity, FiCheck, FiX,
@@ -147,6 +147,78 @@ const EMPTY_FORM = {
   notes: '',
   labResults: [],
 };
+
+/**
+ * Wrapper component to handle nested form submission
+ * Prevents clinical form submission from bubbling to parent medical act form
+ */
+function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_COMPONENT_MAP, FORM_CRUD_MAP }) {
+  const handleNestedFormSubmit = (e) => {
+    // The nested form already has its own onSubmit handler, so we just stop propagation
+    // to prevent the submit event from bubbling to the parent form
+    e.stopPropagation();
+  };
+
+  return (
+    <fieldset style={{ marginTop: '1rem', border: 'none', padding: 0 }} onSubmit={handleNestedFormSubmit}>
+      <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FiCheckCircle style={{ color: '#10b981' }} />
+          <span>Formulaire: <strong>{(formTypes.find(ft => ft.form_name === formName)?.form_label || formName).replace('Unit??', 'Unité')}</strong></span>
+        </div>
+        {formId && (
+          <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <FiCheck /> Enregistré
+          </span>
+        )}
+      </div>
+      
+      {React.createElement(FORM_COMPONENT_MAP[formName], {
+        onSubmit: async (formData) => {
+          try {
+            const crud = FORM_CRUD_MAP[formName];
+            if (!crud) throw new Error('Configuration API introuvable pour ce formulaire');
+            
+            let response;
+            
+            if (formId) {
+              // Update existing form
+              response = await crud.update(formId, formData);
+            } else {
+              // Create new form
+              response = await crud.create(formData);
+            }
+            
+            const result = response.data;
+            if (result && result.id && !formId) {
+              setForm(prev => ({ ...prev, formId: result.id }));
+              console.log('Form created successfully with ID:', result.id);
+            } else {
+              console.log('Form updated successfully');
+            }
+            
+            // Success feedback
+            alert('Données cliniques enregistrées avec succès. Vous pouvez continuer les étapes suivantes.');
+          } catch (err) {
+            console.error('Error saving form:', err);
+            let errorMsg = 'Erreur lors de l\'enregistrement du formulaire.';
+            
+            if (err.response?.data?.detail) {
+              const detail = err.response.data.detail;
+              if (Array.isArray(detail)) {
+                errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join('\n');
+              } else {
+                errorMsg = detail;
+              }
+            }
+            alert(errorMsg);
+          }
+        },
+        initialData: {},
+      })}
+    </fieldset>
+  );
+}
 
 function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -821,63 +893,15 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               </div>
             ) : form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName] ? (
               // Form automatically selected and rendered - no dropdown needed
-              <div style={{ marginTop: '1rem' }}>
-                <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FiCheckCircle style={{ color: '#10b981' }} />
-                    <span>Formulaire: <strong>{(formTypes.find(ft => ft.form_name === form.formName)?.form_label || form.formName).replace('Unit??', 'Unité')}</strong></span>
-                  </div>
-                  {form.formId && (
-                    <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <FiCheck /> Enregistré
-                    </span>
-                  )}
-                </div>
-                
-                {React.createElement(FORM_COMPONENT_MAP[form.formName], {
-                  onSubmit: async (formData) => {
-                    try {
-                      const crud = FORM_CRUD_MAP[form.formName];
-                      if (!crud) throw new Error('Configuration API introuvable pour ce formulaire');
-                      
-                      let response;
-                      
-                      if (form.formId) {
-                        // Update existing form
-                        response = await crud.update(form.formId, formData);
-                      } else {
-                        // Create new form
-                        response = await crud.create(formData);
-                      }
-                      
-                      const result = response.data;
-                      if (result && result.id && !form.formId) {
-                        setForm(prev => ({ ...prev, formId: result.id }));
-                        console.log('Form created successfully with ID:', result.id);
-                      } else {
-                        console.log('Form updated successfully');
-                      }
-                      
-                      // Success feedback
-                      alert('Données cliniques enregistrées avec succès. Vous pouvez continuer les étapes suivantes.');
-                    } catch (err) {
-                      console.error('Error saving form:', err);
-                      let errorMsg = 'Erreur lors de l\'enregistrement du formulaire.';
-                      
-                      if (err.response?.data?.detail) {
-                        const detail = err.response.data.detail;
-                        if (Array.isArray(detail)) {
-                          errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join('\n');
-                        } else {
-                          errorMsg = detail;
-                        }
-                      }
-                      alert(errorMsg);
-                    }
-                  },
-                  initialData: {},
-                })}
-              </div>
+              <ClinicalFormWrapper
+                formName={form.formName}
+                formTypes={formTypes}
+                formId={form.formId}
+                form={form}
+                setForm={setForm}
+                FORM_COMPONENT_MAP={FORM_COMPONENT_MAP}
+                FORM_CRUD_MAP={FORM_CRUD_MAP}
+              />
             ) : form.careTypeId && formTypes.length === 0 ? (
               <div className="maf-form-note">
                 <p>⚠️ Chargement du formulaire...</p>
