@@ -231,8 +231,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
         labResults: [],
       });
       
-      // Reset step to 1 when editing
-      setStep(1);
+      // When editing, skip to step 4 (Clinical Details) instead of starting from step 1
+      setStep(4);
       setErrors({});
       setSubmitted(false);
       setSearchQuery('');
