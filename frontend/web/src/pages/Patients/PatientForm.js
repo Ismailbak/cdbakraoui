@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FiUser, FiPhone, FiMail, FiMapPin, FiShield,
   FiFileText, FiChevronRight, FiChevronLeft, FiCheck, FiX,
   FiAlertCircle, FiUserPlus, FiEdit2, FiHeart, FiAlertTriangle, FiHome
 } from 'react-icons/fi';
 import { createPatient, updatePatient, createPatientAllergy } from '../../api/api';
+import useFormNavigation from '../../hooks/useFormNavigation';
 import './PatientForm.css';
 
 
@@ -144,6 +145,9 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
   const [allergies, setAllergies] = useState([]);
   const [newAllergy, setNewAllergy] = useState({ allergen: '', reaction_type: '', severity: '', notes: '' });
   const [editingAllergyIndex, setEditingAllergyIndex] = useState(null);
+  
+  // Form navigation ref
+  const formRef = useRef(null);
 
   // Update form if initialData changes (for reuse in editing different patients)
   useEffect(() => {
@@ -237,16 +241,10 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
 
   const handleBack = () => setStep(s => s - 1);
 
-  // Prevent Enter key from submitting the form before step 5 or when not ready
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-      e.preventDefault();
-      if (step < 5) {
-        handleNext();
-      }
-      // If step === 5, don't do anything on Enter - user must click the button
-    }
-  };
+  // Setup keyboard navigation between fields (after handleNext is defined)
+  useFormNavigation(formRef, {
+    onNextStep: handleNext,
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -383,7 +381,7 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
       </div>
 
       {/* Form */}
-      <form className="pf-form" onSubmit={handleSubmit} onKeyDown={handleKeyDown} noValidate>
+      <form className="pf-form" ref={formRef} onSubmit={handleSubmit} noValidate>
         {/* Step 1 — Identity */}
         {step === 1 && (
           <div className="pf-section">
