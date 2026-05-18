@@ -47,7 +47,7 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
         .limit(5)
         .all()
     )
-    common_diagnoses = [d[0] for d in top_diagnoses if d[0]]
+    common_diagnoses = [{"name": d[0], "count": d[1]} for d in top_diagnoses if d[0]]
 
     # Weekly Activity (current week, filtered by date range)
     week_start = today - timedelta(days=today.weekday())

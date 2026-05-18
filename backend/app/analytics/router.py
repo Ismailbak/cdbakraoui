@@ -75,7 +75,7 @@ def get_patient_names(db, patient_ids):
 class AnalyticsSummary(BaseModel):
     total_patients: int
     avg_age: float
-    common_diagnoses: List[str]
+    common_diagnoses: List[dict]
     weekly_activity: List[dict]
     demographics: List[dict]
     activity_trends: List[dict]

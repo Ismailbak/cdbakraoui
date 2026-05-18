@@ -165,8 +165,8 @@ function AnalyticsPage() {
     yPosition += 8;
 
     if (commonDiagnoses.length > 0) {
-      const diagnosisData = commonDiagnoses.map((name, index) => [String(index + 1), name]);
-      yPosition = addTable(['#', 'Diagnostic'], diagnosisData, yPosition, [52, 182, 244]);
+      const diagnosisData = commonDiagnoses.map((diag, index) => [String(index + 1), diag.name, String(diag.count)]);
+      yPosition = addTable(['#', 'Diagnostic', 'Nombre'], diagnosisData, yPosition, [52, 182, 244]);
     }
 
     // ===== SECTION 2: TREATMENTS =====
@@ -446,7 +446,7 @@ function AnalyticsPage() {
                       <ResponsiveContainer width="100%" height={200}>
                         <PieChart>
                           <Pie
-                            data={commonDiagnoses.map((name, i) => ({ name, value: 1, color: diagnosisColors[i % diagnosisColors.length] }))}
+                            data={commonDiagnoses.map((diag, i) => ({ name: diag.name, value: diag.count, color: diagnosisColors[i % diagnosisColors.length] }))}
                             cx="50%"
                             cy="50%"
                             innerRadius={50}
@@ -462,10 +462,10 @@ function AnalyticsPage() {
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="pie-legend">
-                        {commonDiagnoses.map((name, index) => (
+                        {commonDiagnoses.map((diag, index) => (
                           <div key={index} className="pie-legend-item">
                             <span className="pie-dot" style={{ background: diagnosisColors[index % diagnosisColors.length] }}></span>
-                            <span className="pie-name">{name}</span>
+                            <span className="pie-name">{diag.name} ({diag.count})</span>
                           </div>
                         ))}
                       </div>
@@ -560,21 +560,28 @@ function AnalyticsPage() {
                     </div>
                     <div className="pie-chart-container">
                       <ResponsiveContainer width="100%" height={200}>
-                        <RadialBarChart
-                          cx="50%" cy="50%" 
-                          innerRadius="30%" outerRadius="100%" 
-                          barSize={12} 
-                          data={commonDiagnoses.map((name, i) => ({ name, value: 1, fill: diagnosisColors[i % diagnosisColors.length] }))}
-                        >
-                          <RadialBar minAngle={15} background clockWise dataKey="value" />
+                        <PieChart>
+                          <Pie
+                            data={commonDiagnoses.map((diag, i) => ({ name: diag.name, value: diag.count, color: diagnosisColors[i % diagnosisColors.length] }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {commonDiagnoses.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
+                            ))}
+                          </Pie>
                           <Tooltip />
-                        </RadialBarChart>
+                        </PieChart>
                       </ResponsiveContainer>
                       <div className="pie-legend">
-                        {commonDiagnoses.map((name, index) => (
+                        {commonDiagnoses.map((diag, index) => (
                           <div key={index} className="pie-legend-item">
                             <span className="pie-dot" style={{ background: diagnosisColors[index % diagnosisColors.length] }}></span>
-                            <span className="pie-name">{name}</span>
+                            <span className="pie-name">{diag.name} ({diag.count})</span>
                           </div>
                         ))}
                       </div>
