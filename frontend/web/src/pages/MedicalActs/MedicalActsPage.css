@@ -395,6 +395,12 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.medical-acts-page .modal-content::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-content.large {
