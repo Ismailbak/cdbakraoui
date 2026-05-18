@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  RadialBarChart, RadialBar, ComposedChart
 } from 'recharts';
 import { 
   FiTrendingUp, FiDownload, FiCalendar, FiUsers, FiDollarSign, 
@@ -411,7 +412,7 @@ function AnalyticsPage() {
                       <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
                     </div>
                     <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={activityTrendData}>
+                      <LineChart data={activityTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                         <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
                         <YAxis stroke="#9CA3AF" fontSize={12} />
@@ -423,12 +424,16 @@ function AnalyticsPage() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                           }} 
                         />
-                        <Bar 
+                        <Line 
+                          type="monotone"
                           dataKey="count" 
-                          fill="#8B5CF6"
+                          stroke="#8B5CF6"
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
                           name="Activité"
                         />
-                      </BarChart>
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
 
@@ -555,22 +560,15 @@ function AnalyticsPage() {
                     </div>
                     <div className="pie-chart-container">
                       <ResponsiveContainer width="100%" height={200}>
-                        <PieChart>
-                          <Pie
-                            data={commonDiagnoses.map((name, i) => ({ name, value: 1, color: diagnosisColors[i % diagnosisColors.length] }))}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            paddingAngle={3}
-                            dataKey="value"
-                          >
-                            {commonDiagnoses.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
-                            ))}
-                          </Pie>
+                        <RadialBarChart
+                          cx="50%" cy="50%" 
+                          innerRadius="30%" outerRadius="100%" 
+                          barSize={12} 
+                          data={commonDiagnoses.map((name, i) => ({ name, value: 1, fill: diagnosisColors[i % diagnosisColors.length] }))}
+                        >
+                          <RadialBar minAngle={15} background clockWise dataKey="value" />
                           <Tooltip />
-                        </PieChart>
+                        </RadialBarChart>
                       </ResponsiveContainer>
                       <div className="pie-legend">
                         {commonDiagnoses.map((name, index) => (
@@ -602,8 +600,8 @@ function AnalyticsPage() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                           }} 
                         />
-                        <Bar dataKey="male" fill="#3B82F6" radius={[0, 4, 4, 0]} name="Hommes" />
-                        <Bar dataKey="female" fill="#EC4899" radius={[0, 4, 4, 0]} name="Femmes" />
+                        <Bar dataKey="male" stackId="a" fill="#3B82F6" radius={[0, 0, 0, 0]} name="Hommes" />
+                        <Bar dataKey="female" stackId="a" fill="#EC4899" radius={[0, 4, 4, 0]} name="Femmes" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -620,7 +618,7 @@ function AnalyticsPage() {
                       <p className="chart-subtitle">Actes médicaux vs Rendez-vous</p>
                     </div>
                     <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={activityTrendData}>
+                      <ComposedChart data={activityTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                         <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
                         <YAxis stroke="#9CA3AF" fontSize={12} />
@@ -632,12 +630,9 @@ function AnalyticsPage() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                           }} 
                         />
-                        <Bar 
-                          dataKey="count" 
-                          fill="#8B5CF6"
-                          name="Activité"
-                        />
-                      </BarChart>
+                        <Bar dataKey="count" fill="#E5E7EB" barSize={30} name="Volume" />
+                        <Line type="monotone" dataKey="count" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Tendance" />
+                      </ComposedChart>
                     </ResponsiveContainer>
                   </div>
 
@@ -660,9 +655,9 @@ function AnalyticsPage() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                           }} 
                         />
-                        <Bar dataKey="consultations" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Consultations" />
-                        <Bar dataKey="suivis" fill="#10B981" radius={[4, 4, 0, 0]} name="Suivis" />
-                        <Bar dataKey="urgences" fill="#EF4444" radius={[4, 4, 0, 0]} name="Urgences" />
+                        <Bar dataKey="consultations" stackId="a" fill="#3B82F6" radius={[0, 0, 0, 0]} name="Consultations" />
+                        <Bar dataKey="suivis" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} name="Suivis" />
+                        <Bar dataKey="urgences" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} name="Urgences" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

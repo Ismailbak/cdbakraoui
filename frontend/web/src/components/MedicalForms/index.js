@@ -18,42 +18,42 @@ export const FORMS_METADATA = {
     name: 'FormCsRic',
     label: 'Rhumatismes Inflammatoires',
     description: 'Consultation pour arthrite inflammatoire chronique',
-    icon: '🔴',
+    icon: null,
     fields: ['CRP', 'ESR', 'DAS28', 'Marqueurs d\'inflammation']
   },
   form_cs_os: {
     name: 'FormCsOs',
     label: 'Ostéopathies Fragilisantes',
     description: 'Évaluation de la santé osseuse et du risque de fracture',
-    icon: '🦴',
+    icon: null,
     fields: ['DXA T-scores', 'FRAX', 'Vitamin D', 'Risque de chute']
   },
   form_cs_echo: {
     name: 'FormCsEcho',
     label: 'Échographie',
     description: 'Documentation d\'examen ultrasonore',
-    icon: '🔊',
+    icon: null,
     fields: ['Synovite', 'Effusion', 'Érosions', 'Doppler']
   },
   form_cs_geste: {
     name: 'FormCsGeste',
     label: 'Gestes Techniques',
     description: 'Procédures interventionnelles et injections',
-    icon: '💉',
+    icon: null,
     fields: ['Type de procédure', 'Guidage', 'Produits', 'Complications']
   },
   form_cs_seances: {
     name: 'FormCsSeances',
     label: 'Séances Thérapeutiques',
     description: 'Suivi de physiothérapie et rééducation',
-    icon: '⚡',
+    icon: null,
     fields: ['Type de séance', 'Douleur', 'Amélioration', 'Compliance']
   },
   form_cs_dxa: {
     name: 'FormCsDxa',
     label: 'Ostéodensitométrie (DXA)',
     description: 'Scan de densité minérale osseuse',
-    icon: '📊',
+    icon: null,
     fields: ['T-scores', 'Classification WHO', 'FRAX', 'VFA']
   }
 };

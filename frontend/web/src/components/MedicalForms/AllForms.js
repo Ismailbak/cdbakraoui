@@ -103,7 +103,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>🦴 Consultation Rhumatisme Dégénératif</h2>
+        <h2>Consultation Rhumatisme Dégénératif</h2>
         <div className="form-row" style={{ marginTop: '1rem', marginBottom: 0 }}>
           <div className="form-group">
             <label>Date de la consultation</label>
@@ -632,7 +632,7 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>🔴 Consultation RIC</h2>
+        <h2>Consultation RIC</h2>
         <p>Rhumatismes Inflammatoires Chroniques - Évaluation de l'activité</p>
       </div>
 
@@ -949,7 +949,7 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>🦴 Consultation Ostéopathies</h2>
+        <h2>Consultation Ostéopathies</h2>
         <p>Santé osseuse et évaluation du risque fracturaire (FRAX)</p>
       </div>
 
@@ -1305,7 +1305,7 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>🔊 Consultation Échographie</h2>
+        <h2>Consultation Échographie</h2>
         <p>Bilan d'imagerie ostéo-articulaire et musculaire</p>
       </div>
 
@@ -1626,7 +1626,7 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>💉 Consultation Gestes Techniques</h2>
+        <h2>Consultation Gestes Techniques</h2>
         <p>Documentation des procédures interventionnelles ostéo-articulaires</p>
       </div>
 
@@ -1972,7 +1972,7 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>⚡ Séances Thérapeutiques</h2>
+        <h2>Séances Thérapeutiques</h2>
         <p>Suivi de rééducation, physiothérapie et appareillage</p>
       </div>
 
@@ -2253,7 +2253,7 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>📊 Bilan Ostéodensitométrie (DXA)</h2>
+        <h2>Bilan Ostéodensitométrie (DXA)</h2>
         <p>Analyse de la densité minérale osseuse et classification WHO</p>
       </div>
 
@@ -2586,7 +2586,7 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
       if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
     }}>
       <div className="form-header">
-        <h2>🔥 Évaluation de la Douleur</h2>
+        <h2>Évaluation de la Douleur</h2>
         <p>Bilan multidimensionnel et impact sur la qualité de vie</p>
       </div>
 

@@ -664,8 +664,19 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
                       }
                       
                       return (
-                        <div key={key} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                          <strong>{label}:</strong> {displayValue}
+                        <div key={key} style={{ 
+                          backgroundColor: '#f9fafb',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '6px',
+                          borderLeft: '3px solid #06b6d4',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
+                            {label}
+                          </div>
+                          <div style={{ fontSize: '0.95rem', color: '#1f2937', fontWeight: '500' }}>
+                            {displayValue}
+                          </div>
                         </div>
                       );
                     })
@@ -677,22 +688,81 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
 
           {dynamicResponses && dynamicResponses.length > 0 && (
             <div className="detail-section form-data-section">
-              {dynamicResponses.map((response) => (
-                <div key={response.id}>
-                  <div className="detail-section-header">
-                    <h4><FiFileText /> {response.template_name}</h4>
-                  </div>
-                  <div className="form-data-grid">
-                    <div className="form-data-item">
-                      {Object.entries(response.response_data || {}).map(([key, value]) => (
-                        <div key={key} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                          <strong>{key}:</strong> {typeof value === 'boolean' ? (value ? 'Oui' : 'Non') : Array.isArray(value) ? value.join(', ') : String(value)}
-                        </div>
-                      ))}
+              {dynamicResponses.map((response) => {
+                // Unified labels object (same as clinical forms)
+                const labels = {
+                  form_date: 'Date',
+                  clinical_notes: 'Observations',
+                  crp_value: 'CRP',
+                  crp_date: 'Date CRP',
+                  esr_value: 'VS',
+                  esr_date: 'Date VS',
+                  das28_score: 'Score DAS28',
+                  morning_stiffness_duration: 'Raideur matinale (min)',
+                  affected_joints: 'Articulations affectées',
+                  fever_present: 'Fièvre',
+                  fatigue_level: 'Niveau fatigue',
+                  dmards_json: 'DMARDs',
+                  biologics_json: 'Biothérapies',
+                  dmardsJson: 'DMARDs',
+                  biologicsJson: 'Biothérapies',
+                  treatment_response: 'Réponse au traitement',
+                  dmards: 'DMARDs',
+                  biologics: 'Biothérapies',
+                  observations: 'Observations',
+                  tender_joint_count: 'Articulations douloureuses',
+                  swollen_joint_count: 'Articulations gonflées',
+                  pain_intensity_vas: 'EVA Douleur',
+                  sleep_quality: 'Qualité du sommeil',
+                  work_impact: 'Impact sur le travail',
+                  daily_activity_limitations: 'Limitations activités quotidiennes',
+                  anxiety_level: 'Niveau d\'anxiété',
+                  depression_screening: 'Dépistage dépression',
+                  catastrophizing_score: 'Score de catastrophisme',
+                  follow_up_plan: 'Plan de suivi',
+                };
+                
+                return (
+                  <div key={response.id}>
+                    <div className="detail-section-header">
+                      <h4><FiFileText /> {response.template_name}</h4>
+                    </div>
+                    <div className="form-data-grid">
+                      <div className="form-data-item">
+                        {Object.entries(response.response_data || {}).map(([key, value]) => {
+                          const label = labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                          let displayValue = value;
+                          
+                          if (Array.isArray(value)) {
+                            displayValue = value.map(item => 
+                              typeof item === 'object' ? JSON.stringify(item) : String(item)
+                            ).join(', ');
+                          } else if (typeof value === 'boolean') {
+                            displayValue = value ? 'Oui' : 'Non';
+                          }
+                          
+                          return (
+                            <div key={key} style={{ 
+                              backgroundColor: '#f9fafb',
+                              padding: '0.75rem 1rem',
+                              borderRadius: '6px',
+                              borderLeft: '3px solid #06b6d4',
+                              marginBottom: '0.75rem'
+                            }}>
+                              <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
+                                {label}
+                              </div>
+                              <div style={{ fontSize: '0.95rem', color: '#1f2937', fontWeight: '500' }}>
+                                {displayValue}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
