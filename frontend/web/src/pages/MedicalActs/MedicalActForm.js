@@ -5,6 +5,7 @@ import {
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
   FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3, FiCheckCircle
 } from 'react-icons/fi';
+import { useToast } from '../../components/common';
 import {
   getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
   getCareTypes, getActTypes, getFormTypes, linkFormToAct,
@@ -152,7 +153,7 @@ const EMPTY_FORM = {
  * Wrapper component to handle nested form submission
  * Prevents clinical form submission from bubbling to parent medical act form
  */
-function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_COMPONENT_MAP, FORM_CRUD_MAP }) {
+function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_COMPONENT_MAP, FORM_CRUD_MAP, toast }) {
   const handleNestedFormSubmit = (e) => {
     // The nested form already has its own onSubmit handler, so we just stop propagation
     // to prevent the submit event from bubbling to the parent form
@@ -198,7 +199,7 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
             }
             
             // Success feedback
-            alert('Données cliniques enregistrées avec succès. Vous pouvez continuer les étapes suivantes.');
+            toast.success('✓ Enregistré');
           } catch (err) {
             console.error('Error saving form:', err);
             let errorMsg = 'Erreur lors de l\'enregistrement du formulaire.';
@@ -211,7 +212,7 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
                 errorMsg = detail;
               }
             }
-            alert(errorMsg);
+            toast.error(errorMsg);
           }
         },
         initialData: {},
@@ -221,6 +222,7 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
 }
 
 function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
+  const toast = useToast();
   const [form, setForm] = useState(EMPTY_FORM);
   const [step, setStep] = useState(1);
   const [patients, setPatients] = useState([]);
@@ -881,7 +883,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                     onClick={() => {
                       // mark dynamic data saved locally (will be submitted with the act)
                       setDynamicSaved(true);
-                      alert('Réponses du formulaire personnalisés enregistrées localement. Elles seront envoyées lors de l\'enregistrement de l\'acte.');
+                      toast.info('Réponses enregistrées localement');
                     }}
                   >
                     Enregistrer les réponses
@@ -901,6 +903,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                 setForm={setForm}
                 FORM_COMPONENT_MAP={FORM_COMPONENT_MAP}
                 FORM_CRUD_MAP={FORM_CRUD_MAP}
+                toast={toast}
               />
             ) : form.careTypeId && formTypes.length === 0 ? (
               <div className="maf-form-note">
@@ -1133,7 +1136,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                   const name = document.getElementById('lab-name').value.trim();
                   const value = document.getElementById('lab-value').value.trim();
                   if (!name || !value) {
-                    alert('Veuillez entrer l\'analyse et la valeur');
+                    toast.warning('Veuillez entrer l\'analyse et la valeur');
                     return;
                   }
                   setForm(prev => ({

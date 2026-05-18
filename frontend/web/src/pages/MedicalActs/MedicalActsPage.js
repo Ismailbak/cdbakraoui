@@ -295,7 +295,7 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
             console.warn('No form_name in act form data or unknown form type:', actForm);
           }
 
-          setFormData(data ? { ...data, _formType: type } : null);
+          setFormData(data ? { ...data, _formType: type, _formLabel: actForm.form_label } : null);
         } else {
           setFormData(null);
         }
@@ -485,108 +485,192 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
           {formData && (
             <div className="detail-section form-data-section">
               <div className="detail-section-header">
-                <h4><FiFileText /> Données Cliniques ({formData._formType})</h4>
+                <h4><FiFileText /> {formData._formLabel || formData._formType}</h4>
               </div>
               <div className="form-data-grid">
-                {Object.entries(formData)
-                  .filter(([key, value]) => 
-                    !key.startsWith('_') && 
-                    !['id', 'patient_id', 'act_id', 'created_at', 'updated_at', 'patientId', 'doctorId'].includes(key) &&
-                    value !== null && value !== '' && value !== undefined
-                  )
-                  .map(([key, value]) => {
-                    // Mapping for human-readable labels
-                    const labels = {
-                      form_date: 'Date',
-                      clinical_notes: 'Observations',
-                      // RIC
-                      joint_swelling_count: 'Articulations gonflées',
-                      joint_tenderness_count: 'Articulations douloureuses',
-                      morning_stiffness: 'Raideur matinale',
-                      vas_pain: 'EVA Douleur',
-                      vas_patient_global: 'EVA Globale Patient',
-                      vas_physician_global: 'EVA Globale Médecin',
-                      crp: 'CRP (mg/L)',
-                      esr: 'VS (1ère heure)',
-                      das28_score: 'Score DAS28',
-                      // OS / DXA
-                      t_score_lumbar: 'T-Score Lombaire',
-                      t_score_hip: 'T-Score Hanche',
-                      frax_score: 'Score FRAX',
-                      who_classification: 'Classification OMS',
-                      t_score_femoral_neck: 'T-Score Col Fémoral',
-                      t_score_total_hip: 'T-Score Hanche Totale',
-                      previous_fracture: 'Antécédent de fracture',
-                      // ECHO
-                      joint_site: 'Articulation examinée',
-                      synovitis_grade: 'Grade synovite',
-                      doppler_signal: 'Signal Doppler',
-                      effusion_present: 'Épanchement',
-                      erosion_present: 'Érosion osseuse',
-                      // GESTE
-                      procedure_type: 'Geste effectué',
-                      product_used: 'Produit utilisé',
-                      target_joint: 'Articulation cible',
-                      volume_aspirated: 'Volume aspiré',
-                      // DOULEUR
-                      // DOULEUR
-                      pain_intensity_vas: 'EVA Douleur',
-                      pain_duration: 'Durée de la douleur',
-                      pain_character: 'Caractère de la douleur',
-                      onset_type: 'Type de début',
-                      initial_pain_date: 'Date de début',
-                      previous_treatments_json: 'Traitements antérieurs',
-                      pain_progression: 'Évolution de la douleur',
-                      aggravating_factors: 'Facteurs aggravants',
-                      relieving_factors: 'Facteurs soulageants',
-                      time_of_day_pattern: 'Rythme nycthéméral',
-                      functional_limitation_score: 'Score de limitation fonctionnelle',
-                      sleep_disturbance_present: 'Troubles du sommeil',
-                      sleep_quality: 'Qualité du sommeil',
-                      work_impact: 'Impact sur le travail',
-                      daily_activity_limitations: 'Limitations activités quotidiennes',
-                      analgesics_json: 'Analgésiques',
-                      nsaids_json: 'AINS',
-                      other_medications_json: 'Autres médicaments',
-                      tender_points_locations: 'Localisation points douloureux',
-                      range_of_motion_findings: 'Examen de la mobilité',
-                      neurological_exam_findings: 'Examen neurologique',
-                      anxiety_level: 'Niveau d\'anxiété',
-                      depression_screening: 'Dépistage dépression',
-                      catastrophizing_score: 'Score de catastrophisme',
-                      coping_mechanisms: 'Mécanismes de défense',
-                      recommended_interventions: 'Interventions recommandées',
-                      referrals_needed: 'Avis spécialisés nécessaires',
-                      follow_up_plan: 'Plan de suivi',
-                      // SEANCES
-                      session_number_in_series: 'N° de séance',
-                      session_duration: 'Durée (min)',
-                      therapist_name: 'Thérapeute',
-                      session_type: 'Type de séance',
-                      functional_improvement: 'Amélioration fonctionnelle',
-                      pain_before_session: 'Douleur avant',
-                      pain_after_session: 'Douleur après',
-                    };
-                    
-                    const label = labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    
-                    let displayValue = value;
-                    if (Array.isArray(value)) {
-                      displayValue = value.map(item => 
-                        typeof item === 'object' ? JSON.stringify(item) : String(item)
-                      ).join(', ');
-                    } else if (typeof value === 'boolean' || (typeof value === 'number' && (key.endsWith('_present') || key.endsWith('_done')))) {
-                      displayValue = value ? 'Oui' : 'Non';
-                    }
-                    
-                    return (
-                      <div className="form-data-item" key={key}>
-                        <label>{label}</label>
-                        <p>{displayValue}</p>
-                      </div>
-                    );
-                  })
-                }
+                <div className="form-data-item">
+                  {Object.entries(formData)
+                    .filter(([key, value]) => 
+                      !key.startsWith('_') && 
+                      !['id', 'patient_id', 'act_id', 'created_at', 'updated_at', 'patientId', 'doctorId'].includes(key) &&
+                      value !== null && value !== '' && value !== undefined
+                    )
+                    .map(([key, value]) => {
+                      // Mapping for human-readable labels
+                      const labels = {
+                        form_date: 'Date',
+                        clinical_notes: 'Observations',
+                        // RIC
+                        crp_value: 'CRP',
+                        crp_date: 'Date CRP',
+                        esr_value: 'VS',
+                        esr_date: 'Date VS',
+                        das28_score: 'Score DAS28',
+                        morning_stiffness_duration: 'Raideur matinale (min)',
+                        affected_joints: 'Articulations affectées',
+                        fever_present: 'Fièvre',
+                        fatigue_level: 'Niveau fatigue',
+                        dmards_json: 'DMARDs',
+                        biologics_json: 'Biothérapies',
+                        dmardsJson: 'DMARDs',
+                        biologicsJson: 'Biothérapies',
+                        treatment_response: 'Réponse au traitement',
+                        dmards: 'DMARDs',
+                        biologics: 'Biothérapies',
+                        observations: 'Observations',
+                        tender_joint_count: 'Articulations douloureuses',
+                        swollen_joint_count: 'Articulations gonflées',
+                        joint_swelling_count: 'Articulations gonflées',
+                        joint_tenderness_count: 'Articulations douloureuses',
+                        morning_stiffness: 'Raideur matinale',
+                        vas_pain: 'EVA Douleur',
+                        vas_patient_global: 'EVA Globale Patient',
+                        vas_physician_global: 'EVA Globale Médecin',
+                        crp: 'CRP (mg/L)',
+                        esr: 'VS (1ère heure)',
+                        // RD (Rhumatisme Dégénératif)
+                        current_treatment_none: 'Aucun traitement actuel',
+                        current_treatment_json: 'Traitements actuels',
+                        arthralgie_present: 'Arthralgies présentes',
+                        arthralgie_horaire: 'Horaire des arthralgies',
+                        arthralgie_duration: 'Durée des arthralgies',
+                        arthralgie_locations: 'Localisation des arthralgies',
+                        joint_swelling_present: 'Gonflement articulaire',
+                        joint_swelling_locations: 'Localisation du gonflement',
+                        rachialgie_present: 'Rachialgies présentes',
+                        rachialgie_horaire: 'Horaire des rachialgies',
+                        rachialgie_duration: 'Durée des rachialgies',
+                        rachialgie_locations: 'Localisation rachialgies',
+                        fessialgie_present: 'Fessalgies présentes',
+                        fessialgie_horaire: 'Horaire des fessalgies',
+                        fessialgie_duration: 'Durée des fessalgies',
+                        fessialgie_locations: 'Localisation fessalgies',
+                        enthesalgie_present: 'Enthésalgies présentes',
+                        enthesalgie_locations: 'Localisation enthésalgies',
+                        myalgie_present: 'Myalgies présentes',
+                        other_signs_text: 'Autres signes',
+                        articular_index: 'Index articulaire',
+                        synovial_index: 'Index synovial',
+                        clinical_examination_notes: 'Examen clinique',
+                        imaging_xray: 'Radiographies effectuées',
+                        imaging_xray_findings: 'Résultats radiographiques',
+                        imaging_ultrasound: 'Échographie effectuée',
+                        imaging_ultrasound_findings: 'Résultats échographiques',
+                        imaging_mri: 'IRM effectuée',
+                        imaging_mri_findings: 'Résultats IRM',
+                        diagnosis_osteoarthritis_json: 'Diagnostic arthrose',
+                        diagnosis_other_text: 'Autre diagnostic',
+                        treatment_decision: 'Décision thérapeutique',
+                        prescription: 'Prescription',
+                        additional_notes: 'Notes additionnelles',
+                        // OS / DXA
+                        t_score_lumbar: 'T-Score Lombaire',
+                        t_score_hip: 'T-Score Hanche',
+                        frax_score: 'Score FRAX',
+                        who_classification: 'Classification OMS',
+                        t_score_femoral_neck: 'T-Score Col Fémoral',
+                        t_score_total_hip: 'T-Score Hanche Totale',
+                        previous_fracture: 'Antécédent de fracture',
+                        fracture_type: 'Type de fracture',
+                        fracture_date: 'Date de fracture',
+                        bone_mineral_density: 'Densité minérale osseuse',
+                        osteoporosis_risk: 'Risque d\'ostéoporose',
+                        treatment_plan: 'Plan thérapeutique',
+                        bisphosphonates: 'Bisphosphonates',
+                        vitamin_d_status: 'Statut Vitamine D',
+                        calcium_intake: 'Apport calcique',
+                        // ECHO
+                        joint_site: 'Articulation examinée',
+                        synovitis_grade: 'Grade synovite',
+                        doppler_signal: 'Signal Doppler',
+                        effusion_present: 'Épanchement',
+                        erosion_present: 'Érosion osseuse',
+                        cartilage_thickness: 'Épaisseur du cartilage',
+                        echo_findings: 'Résultats échographiques',
+                        // GESTE (Infiltration/Injection)
+                        procedure_type: 'Geste effectué',
+                        product_used: 'Produit utilisé',
+                        target_joint: 'Articulation cible',
+                        volume_aspirated: 'Volume aspiré',
+                        volume_injected: 'Volume injecté',
+                        procedure_success: 'Succès du geste',
+                        immediate_response: 'Réponse immédiate',
+                        fluid_sample_sent: 'Prélèvement envoyé',
+                        complication_present: 'Complication présente',
+                        complication_description: 'Description complication',
+                        // SEANCES (Physiothérapie)
+                        session_number_in_series: 'N° de séance',
+                        session_duration: 'Durée (min)',
+                        therapist_name: 'Thérapeute',
+                        session_type: 'Type de séance',
+                        functional_improvement: 'Amélioration fonctionnelle',
+                        pain_before_session: 'Douleur avant',
+                        pain_after_session: 'Douleur après',
+                        exercises_prescribed: 'Exercices prescrits',
+                        patient_compliance: 'Adhérence du patient',
+                        home_program_given: 'Programme domicile donné',
+                        next_session_planned: 'Prochaine séance planifiée',
+                        // DXA (Ostéodensitométrie)
+                        dxa_date: 'Date DXA',
+                        lumbar_spine_t_score: 'T-Score Lombaire',
+                        total_hip_t_score: 'T-Score Hanche',
+                        femoral_neck_t_score: 'T-Score Col Fémoral',
+                        one_third_radius_t_score: 'T-Score 1/3 Distal Radius',
+                        forearm_t_score: 'T-Score Avant-bras',
+                        bmd_lumbar: 'DMO Lombaire',
+                        bmd_hip: 'DMO Hanche',
+                        z_score: 'Z-Score',
+                        fracture_risk_assessment: 'Évaluation risque fracture',
+                        // DOULEUR
+                        pain_intensity_vas: 'EVA Douleur',
+                        pain_duration: 'Durée de la douleur',
+                        pain_character: 'Caractère de la douleur',
+                        onset_type: 'Type de début',
+                        initial_pain_date: 'Date de début',
+                        previous_treatments_json: 'Traitements antérieurs',
+                        pain_progression: 'Évolution de la douleur',
+                        aggravating_factors: 'Facteurs aggravants',
+                        relieving_factors: 'Facteurs soulageants',
+                        time_of_day_pattern: 'Rythme nycthéméral',
+                        functional_limitation_score: 'Score de limitation fonctionnelle',
+                        sleep_disturbance_present: 'Troubles du sommeil',
+                        sleep_quality: 'Qualité du sommeil',
+                        work_impact: 'Impact sur le travail',
+                        daily_activity_limitations: 'Limitations activités quotidiennes',
+                        analgesics_json: 'Analgésiques',
+                        nsaids_json: 'AINS',
+                        other_medications_json: 'Autres médicaments',
+                        tender_points_locations: 'Localisation points douloureux',
+                        range_of_motion_findings: 'Examen de la mobilité',
+                        neurological_exam_findings: 'Examen neurologique',
+                        anxiety_level: 'Niveau d\'anxiété',
+                        depression_screening: 'Dépistage dépression',
+                        catastrophizing_score: 'Score de catastrophisme',
+                        coping_mechanisms: 'Mécanismes de défense',
+                        recommended_interventions: 'Interventions recommandées',
+                        referrals_needed: 'Avis spécialisés nécessaires',
+                        follow_up_plan: 'Plan de suivi',
+                      };
+                      
+                      const label = labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      
+                      let displayValue = value;
+                      if (Array.isArray(value)) {
+                        displayValue = value.map(item => 
+                          typeof item === 'object' ? JSON.stringify(item) : String(item)
+                        ).join(', ');
+                      } else if (typeof value === 'boolean' || (typeof value === 'number' && (key.endsWith('_present') || key.endsWith('_done')))) {
+                        displayValue = value ? 'Oui' : 'Non';
+                      }
+                      
+                      return (
+                        <div key={key} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                          <strong>{label}:</strong> {displayValue}
+                        </div>
+                      );
+                    })
+                  }
+                </div>
               </div>
             </div>
           )}

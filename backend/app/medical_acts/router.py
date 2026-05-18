@@ -42,6 +42,8 @@ class ActFormOut(BaseModel):
     act_id: int
     ref_form_type_id: int
     form_table_id: int
+    form_name: Optional[str] = None
+    form_label: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -246,21 +248,22 @@ def _enrich_acts(db: Session, rows: List[MedicalActModel]) -> List[dict]:
         if treat.drug_name and isinstance(treat.drug_name, str) and treat.drug_name.strip():
             treat_map.setdefault(treat.act_id, []).append(treat)
             
-    # One DB query for all relevant forms (JOIN with ref_form_types to get form_name)
+    # One DB query for all relevant forms (JOIN with ref_form_types to get form_name and form_label)
     forms = (
-        db.query(ActForm, RefFormType.form_name)
+        db.query(ActForm, RefFormType.form_name, RefFormType.form_label)
         .join(RefFormType, ActForm.ref_form_type_id == RefFormType.id)
         .filter(ActForm.act_id.in_(act_ids))
         .all()
     )
     form_map = {}
-    for f, form_name in forms:
+    for f, form_name, form_label in forms:
         form_map.setdefault(f.act_id, []).append({
             "id": f.id,
             "act_id": f.act_id,
             "ref_form_type_id": f.ref_form_type_id,
             "form_table_id": f.form_table_id,
-            "form_name": form_name
+            "form_name": form_name,
+            "form_label": form_label
         })
 
     return [_act_to_dict(

@@ -99,7 +99,9 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
   };
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>🦴 Consultation Rhumatisme Dégénératif</h2>
         <div className="form-row" style={{ marginTop: '1rem', marginBottom: 0 }}>
@@ -564,11 +566,11 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le formulaire
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -626,7 +628,9 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>🔴 Consultation RIC</h2>
         <p>Rhumatismes Inflammatoires Chroniques - Évaluation de l'activité</p>
@@ -880,11 +884,11 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le bilan RIC
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -941,7 +945,9 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>🦴 Consultation Ostéopathies</h2>
         <p>Santé osseuse et évaluation du risque fracturaire (FRAX)</p>
@@ -1235,11 +1241,11 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le bilan osseux
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -1295,7 +1301,9 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>🔊 Consultation Échographie</h2>
         <p>Bilan d'imagerie ostéo-articulaire et musculaire</p>
@@ -1554,11 +1562,11 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le compte-rendu Echo
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -1614,7 +1622,9 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>💉 Consultation Gestes Techniques</h2>
         <p>Documentation des procédures interventionnelles ostéo-articulaires</p>
@@ -1895,11 +1905,11 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Valider le geste technique
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -1958,7 +1968,9 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>⚡ Séances Thérapeutiques</h2>
         <p>Suivi de rééducation, physiothérapie et appareillage</p>
@@ -2179,11 +2191,11 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer la séance
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -2237,7 +2249,9 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>📊 Bilan Ostéodensitométrie (DXA)</h2>
         <p>Analyse de la densité minérale osseuse et classification WHO</p>
@@ -2490,11 +2504,11 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Valider le bilan DXA
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -2568,7 +2582,9 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
   useFormNavigation(formRef);
 
   return (
-    <form className="medical-form" ref={formRef} onSubmit={handleSubmit}>
+    <div className="medical-form" ref={formRef} onKeyDown={(e) => {
+      if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e);
+    }}>
       <div className="form-header">
         <h2>🔥 Évaluation de la Douleur</h2>
         <p>Bilan multidimensionnel et impact sur la qualité de vie</p>
@@ -2786,11 +2802,11 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
 
       {/* SUBMIT */}
       <div className="form-actions">
-        <button type="submit" className="btn-submit" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn-submit" onClick={handleSubmit}>
           <FiCheckCircle /> Enregistrer le bilan Douleur
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 
