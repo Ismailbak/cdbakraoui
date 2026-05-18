@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import {
   FiUser, FiCalendar, FiActivity, FiCheck, FiX,
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
@@ -667,35 +668,45 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               </div>
             </div>
 
-            {/* Patient List */}
+            {/* Patient List with Virtual Scrolling */}
             <div className="maf-patient-list">
               {isLoadingPatients ? (
                 <div className="maf-loading">Chargement des patients...</div>
               ) : filteredPatients.length === 0 ? (
                 <div className="maf-empty">Aucun patient trouvé</div>
               ) : (
-                filteredPatients.slice(0, 6).map(p => (
-                  <div
-                    key={p.id}
-                    className={`maf-patient-card ${form.patientId === p.id ? 'selected' : ''}`}
-                    onClick={() => selectPatient(p)}
-                  >
-                    <div className="maf-patient-avatar">
-                      {p.gender === 'Femme' ? '👩' : '👨'}
-                    </div>
-                    <div className="maf-patient-info">
-                      <span className="maf-patient-name">{p.first_name} {p.last_name}</span>
-                      <span className="maf-patient-meta">
-                        {p.ipp ? `IPP: ${p.ipp}` : 'Sans IPP'} • {p.age || '?'} ans
-                      </span>
-                    </div>
-                    {form.patientId === p.id && (
-                      <div className="maf-patient-check">
-                        <FiCheck />
+                <List
+                  height={350}
+                  itemCount={filteredPatients.length}
+                  itemSize={80}
+                  width="100%"
+                >
+                  {({ index, style }) => {
+                    const p = filteredPatients[index];
+                    return (
+                      <div
+                        style={style}
+                        className={`maf-patient-card ${form.patientId === p.id ? 'selected' : ''}`}
+                        onClick={() => selectPatient(p)}
+                      >
+                        <div className="maf-patient-avatar">
+                          {p.gender === 'Femme' ? '👩' : '👨'}
+                        </div>
+                        <div className="maf-patient-info">
+                          <span className="maf-patient-name">{p.first_name} {p.last_name}</span>
+                          <span className="maf-patient-meta">
+                            {p.ipp ? `IPP: ${p.ipp}` : 'Sans IPP'} • {p.age || '?'} ans
+                          </span>
+                        </div>
+                        {form.patientId === p.id && (
+                          <div className="maf-patient-check">
+                            <FiCheck />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))
+                    );
+                  }}
+                </List>
               )}
             </div>
             {errors.patientId && <span className="maf-error-msg"><FiAlertCircle />{errors.patientId}</span>}
