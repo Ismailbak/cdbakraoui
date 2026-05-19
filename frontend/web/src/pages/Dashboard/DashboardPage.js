@@ -70,9 +70,9 @@ function DashboardPage() {
           totalPatients: patientsSafe.length,
           todayAppointments: todayApps.length,
           medicalActs: actsSafe.length,
-          commonDiagnoses: (analytics?.common_diagnoses || []).slice(0, 5).map((name, i) => ({
-            name,
-            value: 20 - i * 3,
+          commonDiagnoses: (analytics?.common_diagnoses || []).slice(0, 5).map((diag, i) => ({
+            name: diag.name,
+            value: diag.count,
             color: diagnosisColors[i]
           })),
         });
