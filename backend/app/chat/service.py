@@ -143,6 +143,21 @@ def get_chat_history(
     return query.order_by(ChatMessage.created_at.desc()).offset(offset).limit(limit).all()
 
 
+def delete_chat_history_item(db: Session, message_id: int, user_id: int) -> bool:
+    """Delete one saved chat exchange owned by the current user."""
+    message = db.query(ChatMessage).filter(
+        ChatMessage.id == message_id,
+        ChatMessage.user_id == user_id
+    ).first()
+
+    if not message:
+        return False
+
+    db.delete(message)
+    db.commit()
+    return True
+
+
 # Chat Session Management Functions
 
 def create_chat_session(
@@ -203,6 +218,7 @@ def get_chat_session(db: Session, session_id: int) -> Optional[ChatSession]:
 def list_patient_chat_sessions(
     db: Session,
     patient_id: int,
+    user_id: int,
     limit: int = 50,
     offset: int = 0
 ) -> list:
@@ -212,6 +228,7 @@ def list_patient_chat_sessions(
     Args:
         db: Database session
         patient_id: Patient ID
+        user_id: User ID
         limit: Max number of sessions to return
         offset: Pagination offset
         
@@ -219,7 +236,8 @@ def list_patient_chat_sessions(
         List of ChatSession objects
     """
     return db.query(ChatSession).filter(
-        ChatSession.patient_id == patient_id
+        ChatSession.patient_id == patient_id,
+        ChatSession.created_by == user_id
     ).order_by(ChatSession.updated_at.desc()).offset(offset).limit(limit).all()
 
 

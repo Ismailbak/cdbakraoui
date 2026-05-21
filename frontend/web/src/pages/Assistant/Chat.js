@@ -1,18 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendChatMessage } from '../../api/api';
+import { deleteChatHistoryItem, getChatHistory, sendChatMessage } from '../../api/api';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import {
   FiActivity,
   FiAlertCircle,
   FiCalendar,
+  FiClock,
   FiCopy,
   FiFileText,
   FiLoader,
+  FiMessageSquare,
   FiMic,
   FiPaperclip,
+  FiPlus,
   FiRefreshCw,
   FiSend,
   FiTarget,
   FiTrash2,
+  FiUser,
   FiZap,
 } from 'react-icons/fi';
 import './Chat.css';
@@ -73,6 +78,11 @@ function Chat({ patientId, currentUser }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedMessageId, setCopiedMessageId] = useState(null);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [selectedHistoryId, setSelectedHistoryId] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   
   const messageEndRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -88,6 +98,30 @@ function Chat({ patientId, currentUser }) {
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadHistory = async () => {
+      try {
+        setHistoryLoading(true);
+        setHistoryError('');
+        const res = await getChatHistory(patientId, 30);
+        if (isMounted) setHistoryItems(res.data || []);
+      } catch (err) {
+        console.error('Failed to load chat history:', err);
+        if (isMounted) setHistoryError("Impossible de charger l'historique.");
+      } finally {
+        if (isMounted) setHistoryLoading(false);
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [patientId]);
 
   const handleCopyMessage = async (messageId, content) => {
     try {
@@ -144,6 +178,14 @@ function Chat({ patientId, currentUser }) {
       };
 
       setMessages(prev => [...prev, aiMsg]);
+      setHistoryItems(prev => [{
+        id: currentMsgId,
+        message: textToSend,
+        response: aiMsg.content,
+        tokens_used: aiMsg.tokens,
+        model_name: aiMsg.model,
+        created_at: userMsg.timestamp.toISOString(),
+      }, ...prev.filter(item => item.message !== textToSend).slice(0, 29)]);
     } catch (err) {
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
         console.log("Request aborted.");
@@ -182,6 +224,60 @@ function Chat({ patientId, currentUser }) {
     setInput('');
     setError('');
     setLoading(false);
+    setSelectedHistoryId(null);
+  };
+
+  const handleSelectHistory = (item) => {
+    const timestamp = new Date(item.created_at);
+    const safeTimestamp = isNaN(timestamp.getTime()) ? new Date() : timestamp;
+
+    setMessages([
+      {
+        id: `${item.id}-user`,
+        role: 'user',
+        content: item.message,
+        timestamp: safeTimestamp,
+      },
+      {
+        id: `${item.id}-assistant`,
+        role: 'assistant',
+        content: item.response,
+        tokens: item.tokens_used,
+        model: item.model_name || 'RhumatoAI',
+        timestamp: safeTimestamp,
+      },
+    ]);
+    setSelectedHistoryId(item.id);
+    setInput('');
+    setError('');
+  };
+
+  const requestDeleteHistory = (event, item) => {
+    event.stopPropagation();
+    setDeleteTarget(item);
+  };
+
+  const handleConfirmDeleteHistory = async () => {
+    if (!deleteTarget) return;
+
+    const target = deleteTarget;
+    const previousItems = historyItems;
+    setDeleteTarget(null);
+    setHistoryItems(prev => prev.filter(historyItem => historyItem.id !== target.id));
+
+    if (selectedHistoryId === target.id) {
+      handleNewChat();
+    }
+
+    if (typeof target.id === 'number') {
+      try {
+        await deleteChatHistoryItem(target.id);
+      } catch (err) {
+        console.error('Failed to delete chat history item:', err);
+        setHistoryItems(previousItems);
+        setHistoryError('Impossible de supprimer cette conversation.');
+      }
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -194,6 +290,12 @@ function Chat({ patientId, currentUser }) {
   const formatMessageTime = (timestamp) => {
     if (!timestamp || isNaN(timestamp.getTime())) return '';
     return `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
+  };
+
+  const formatHistoryDate = (dateValue) => {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
   };
 
   const doctorLabel = ((currentUser?.last_name || currentUser?.username) || 'En ligne');
@@ -212,20 +314,67 @@ function Chat({ patientId, currentUser }) {
           <span className="assistant-status-dot" aria-label="Assistant en ligne" />
         </div>
 
-        <p className="assistant-rail-label">Suggestions</p>
-        <div className="assistant-rail-actions">
-          {suggestions.map(({ icon: Icon, title, prompt }) => (
-            <button key={title} onClick={() => internalHandleSend(prompt)} disabled={loading}>
-              <Icon />
-              <span>{title}</span>
-            </button>
-          ))}
+        <button className="assistant-new-chat-btn" onClick={handleNewChat} disabled={loading}>
+          <FiPlus />
+          Nouvelle conversation
+        </button>
+
+        <div className="assistant-history-header">
+          <div>
+            <p className="assistant-rail-label">Mes conversations</p>
+            <span><FiUser /> {doctorLabel}</span>
+          </div>
         </div>
 
-        <button className="assistant-clear-btn" onClick={handleNewChat} disabled={loading && messages.length === 0}>
-          <FiTrash2 />
-          Effacer la conversation
-        </button>
+        <div className="assistant-history-list">
+          {historyLoading && (
+            <div className="assistant-history-state">
+              <FiLoader className="spinning" />
+              <span>Chargement...</span>
+            </div>
+          )}
+
+          {!historyLoading && historyError && (
+            <div className="assistant-history-state assistant-history-error">
+              <FiAlertCircle />
+              <span>{historyError}</span>
+            </div>
+          )}
+
+          {!historyLoading && !historyError && historyItems.length === 0 && (
+            <div className="assistant-history-empty">
+              <FiMessageSquare />
+              <span>Aucune conversation récente</span>
+            </div>
+          )}
+
+          {!historyLoading && !historyError && historyItems.map((item) => (
+            <div
+              key={item.id}
+              className={`assistant-history-row ${selectedHistoryId === item.id ? 'active' : ''}`}
+            >
+              <button
+                className="assistant-history-item"
+                onClick={() => handleSelectHistory(item)}
+                title={item.message}
+              >
+                <span className="assistant-history-title">{item.message}</span>
+                <span className="assistant-history-meta">
+                  <FiClock />
+                  {formatHistoryDate(item.created_at)}
+                </span>
+              </button>
+              <button
+                className="assistant-history-delete"
+                onClick={(event) => requestDeleteHistory(event, item)}
+                aria-label="Supprimer la conversation"
+                title="Supprimer"
+              >
+                <FiTrash2 />
+              </button>
+            </div>
+          ))}
+        </div>
       </aside>
 
       <section className="assistant-panel">
@@ -353,6 +502,14 @@ function Chat({ patientId, currentUser }) {
           <p><FiZap /> RhumatoAI peut faire des erreurs. Vérifiez les informations importantes.</p>
         </footer>
       </section>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Supprimer la conversation"
+        message="Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
+        onConfirm={handleConfirmDeleteHistory}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

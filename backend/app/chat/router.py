@@ -16,6 +16,7 @@ from app.core.database import get_db
 from app.chat.service import (
     get_chat_response, 
     get_chat_history,
+    delete_chat_history_item,
     create_chat_session,
     get_chat_session,
     list_patient_chat_sessions,
@@ -216,6 +217,27 @@ def chat_history(
         raise HTTPException(status_code=500, detail="Error fetching chat history")
 
 
+@router.delete("/history/{message_id}")
+def delete_history_item(
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm)
+):
+    """
+    Delete one chat history item owned by the current user.
+    """
+    try:
+        if not delete_chat_history_item(db=db, message_id=message_id, user_id=current_user.id):
+            raise HTTPException(status_code=404, detail="Chat history item not found")
+
+        return {"message": "Chat history item deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error(f"Delete history error for user {current_user.id}:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Error deleting chat history item")
+
+
 # Chat Session Management Endpoints
 
 @router.post("/sessions", response_model=ChatSessionResponse)
@@ -294,6 +316,7 @@ def list_patient_sessions(
         sessions = list_patient_chat_sessions(
             db=db,
             patient_id=patient_id,
+            user_id=current_user.id,
             limit=limit,
             offset=offset
         )

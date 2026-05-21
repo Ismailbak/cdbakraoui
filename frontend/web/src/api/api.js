@@ -132,6 +132,9 @@ export const getChatHistory = (patientId = null, limit = 50) => {
   return api.get(`/chat/history?${params.toString()}`);
 };
 
+export const deleteChatHistoryItem = (messageId) =>
+  api.delete(`/chat/history/${messageId}`);
+
 // Chat Sessions
 export const createChatSession = (patientId, title = null) =>
   api.post('/chat/sessions', { patient_id: patientId, title });
