@@ -3,8 +3,8 @@
 **Project:** RhumatoAI - AI-assisted Rheumatology Medical Assistant  
 **Client:** CHU Ibn Rochd (Casablanca)  
 **Timeline:** Feb 2026 – July 2026  
-**Status:** Active Development (Phase 1 Complete, Phase 2 Pending)  
-**Last Updated:** May 10, 2026
+**Status:** Active Development (Structured RAG default, semantic RAG feature-flagged)
+**Last Updated:** May 21, 2026
 
 ---
 
@@ -42,7 +42,7 @@ Provide a locally-deployed, GDPR-compliant AI assistant to support rheumatology 
 - **Role-Based Access:** Admin, Doctor, Department Head roles with fine-grained permissions.
 - **Safety-First AI:** Retrieval-Augmented Generation (RAG) with authorization guards and insufficient-data fallbacks.
 
-### Current Status (May 10, 2026)
+### Current Status (May 21, 2026)
 ✅ **Completed:**
 - Core database schema with all entity models
 - JWT-based authentication and role management
@@ -51,14 +51,15 @@ Provide a locally-deployed, GDPR-compliant AI assistant to support rheumatology 
 - Analytics and audit logging
 - PDF generation (dossiers, medical acts)
 - AI chat with Ollama backend (BioMistral/Gemma tested)
-- RAG Phase 1: Structured retrieval (keyword-based, no semantic search yet)
+- RAG Phase 1: Structured retrieval from patients, appointments, medical acts, and act results
+- RAG Phase 2 scaffolding: Qdrant/semantic retrieval code exists, but local runtime keeps it disabled with `RAG_SEMANTIC_ENABLED=false`
 - Web frontend: All major pages implemented
 - Mobile frontend: Core modules marked implemented
 
 ⚠️ **In Progress / Partial:**
 - File/document upload workflows (endpoints partial, UI incomplete)
 - Mobile UI polish (emoji → icons, color palette alignment)
-- RAG Phase 2: Semantic retrieval with Qdrant (planned May–June)
+- RAG Phase 2 validation: semantic retrieval requires explicit enablement, Qdrant availability, and embedding memory validation
 
 ❌ **Not Started:**
 - Mobile analytics charts (needs react-native-chart-kit integration)
@@ -93,17 +94,17 @@ Provide a locally-deployed, GDPR-compliant AI assistant to support rheumatology 
         SQLAlchemy ORM
                │
 ┌──────────────▼──────────────────────────────────────────────┐
-│           DATABASE LAYER (PostgreSQL)                       │
-│           Port 5432                                         │
+│           DATABASE LAYER (MySQL 8)                          │
+│           Port 3306                                         │
 ├──────────────────────────────────────────────────────────────┤
 │  Users │ Patients │ Appointments │ MedicalActs │ ActResults │
 │  Audits│ Chat Msgs│ Forms        │ Allergies   │ Notifications
 └────────────────────────────────────────────────────────────┘
                │
 ┌──────────────▼──────────────────────────────────────────────┐
-│     EXTERNAL SERVICES (Optional / Phase 2)                 │
+│     EXTERNAL SERVICES (Optional / Feature-Flagged)          │
 ├──────────────────────────────────────────────────────────────┤
-│  Ollama LLM (localhost:11434)  │  Qdrant Vector DB (Phase 2)
+│  Ollama LLM (localhost:11434)  │  Qdrant Vector DB (semantic RAG)
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,7 +114,7 @@ Provide a locally-deployed, GDPR-compliant AI assistant to support rheumatology 
 |-------|-----------|---------|
 | **Backend** | FastAPI 0.100+ | REST API framework |
 | | SQLAlchemy 2.0 | ORM |
-| | PostgreSQL 13+ | Primary database |
+| | MySQL 8 | Primary database |
 | | Alembic | Schema migrations |
 | | PyJWT | Authentication tokens |
 | | ReportLab | PDF generation |
@@ -1206,16 +1207,17 @@ backend:
   image: rhumatoai-backend
   ports: 8000
   environment:
-    DATABASE_URL=postgresql://user:pass@db:5432/rhumatoai
+    DATABASE_URL=mysql+pymysql://admin:changeme@db:3306/medical_ai
     OLLAMA_HOST=http://ollama:11434
+    RAG_SEMANTIC_ENABLED=false
 
 db:
-  image: postgres:13
-  ports: 5432
+  image: mysql:8
+  ports: 3306
   environment:
-    POSTGRES_DB=rhumatoai
-    POSTGRES_USER=user
-    POSTGRES_PASSWORD=pass
+    MYSQL_DATABASE=medical_ai
+    MYSQL_USER=admin
+    MYSQL_PASSWORD=changeme
 
 web:
   image: rhumatoai-web
@@ -1233,11 +1235,12 @@ docker-compose up -d
 
 **Backend:** `backend/app/core/config.py`
 ```python
-DATABASE_URL = "postgresql://user:pass@host:5432/db"
+DATABASE_URL = "mysql+pymysql://user:pass@host:3306/db"
 SECRET_KEY = "your-secret-key"
 CORS_ORIGINS = ["http://localhost:3000"]
 OLLAMA_HOST = "http://localhost:11434"
 OLLAMA_MODEL = "biomistral"  # or gemma4:e4b
+RAG_SEMANTIC_ENABLED = false
 ```
 
 **Web Frontend:** `frontend/web/.env`
@@ -1327,11 +1330,11 @@ python scripts/setup_admin.py
 - **File Upload:** Endpoints exist but UI incomplete on all surfaces
 - **Mobile Analytics:** Screen exists but no chart library integrated
 - **Mobile Admin Features:** Not implemented
-- **RAG Phase 2:** Semantic search with Qdrant planned but not yet deployed
+- **RAG Phase 2:** Semantic search with Qdrant is implemented behind `RAG_SEMANTIC_ENABLED`; keep disabled locally until embeddings and Qdrant indexing are validated
 
 ### Test Coverage
 
-- `test_rag_structured.py` and `test_rag_evaluation.py` import from legacy paths (`app.services`, `app.schemas`) which have been reorganized — tests need path corrections to run
+- RAG tests use the current `app.chat.rag` paths and cover structured retrieval plus semantic-disabled/hybrid behavior
 - No comprehensive integration tests for full user workflows
 
 ---
@@ -1442,7 +1445,7 @@ python scripts/setup_admin.py
 | Apr 24, 2026 | Backend forms system + RAG Phase 1 MVP |
 | Apr 28, 2026 | RAG Phase 1 complete + test suite (15 scenarios, 9.5/10 code review score) |
 | May 10, 2026 | System documentation; cleanup planning |
-| May–June 2026 | RAG Phase 2 (semantic search, Qdrant, embeddings) |
+| May 2026 | RAG Phase 2 scaffolding added (Qdrant, embeddings, ingestion), disabled locally by default |
 | July 2026 | Final testing, go-live preparation |
 
 ---
@@ -1456,5 +1459,5 @@ python scripts/setup_admin.py
 
 ---
 
-**Last Updated:** May 10, 2026  
-**Next Review:** Post-Phase 2 (June 2026)
+**Last Updated:** May 21, 2026
+**Next Review:** After semantic/Qdrant validation

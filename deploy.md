@@ -37,6 +37,9 @@ CORS_ORIGINS=http://rheuma.local,http://<VM-IP>
 OLLAMA_HOST=http://<ollama-host>:11434
 OLLAMA_MODEL=gemma4:e4b
 
+# Keep structured RAG as the default production path unless semantic/Qdrant is explicitly validated.
+RAG_SEMANTIC_ENABLED=false
+
 # Do not auto-create tables in production — use Alembic
 CREATE_TABLES_ON_STARTUP=false
 ```
@@ -278,6 +281,7 @@ mysql -h <mysql-host> -u <user> -p rhumatoai < /path/db-predeploy-YYYY-MM-DD.sql
 - [ ] `SECRET_KEY` and `DATABASE_URL` are not defaults
 - [ ] Admin password changed from any dev default
 - [ ] `CREATE_TABLES_ON_STARTUP=false` in production
+- [ ] `RAG_SEMANTIC_ENABLED=false` unless semantic/Qdrant ingestion has been tested on this VM
 - [ ] `alembic upgrade head` succeeded
 - [ ] Login works at `http://rheuma.local`
 - [ ] Chat health: `/health` shows `ai_assistant` when Ollama is up
@@ -289,4 +293,4 @@ mysql -h <mysql-host> -u <user> -p rhumatoai < /path/db-predeploy-YYYY-MM-DD.sql
 - Do not commit `.env` or `/etc/ia-medical/env` to git.
 - Mobile (Expo) is out of scope for this guide; point `REACT_APP_API_URL` at `http://<VM-IP>/api` on the device network.
 - Optional LAN HTTPS: use `mkcert` and add `ssl_certificate` directives to Nginx.
-- Heavy Python deps (`torch`, `transformers`) are in `requirements.txt` for RAG/embeddings; ensure sufficient RAM/disk on the VM.
+- Heavy Python deps (`torch`, `transformers`) are in `requirements.txt` for RAG/embeddings; keep semantic retrieval disabled until RAM/disk and Qdrant indexing are validated.

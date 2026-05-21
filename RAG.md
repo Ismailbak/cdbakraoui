@@ -13,6 +13,7 @@ This plan is based on the product decisions confirmed during discovery.
 - Citation UI: hidden by default, expandable.
 - Vector stack recommendation: MySQL + Qdrant.
 - Embeddings policy: local/open-source only.
+- Local runtime policy: structured RAG remains the default; semantic retrieval is disabled with `RAG_SEMANTIC_ENABLED=false` unless explicitly re-enabled.
 - Latency target: 2-5 seconds.
 - Logging scope (for now): question + answer.
 - Rollout: development-stage implementation, not production-ready yet.
@@ -51,8 +52,8 @@ Operational benefits:
    - mixed/ambiguous.
 3. Authorization guard checks user scope for any patient-bound retrieval.
 4. Retrieval pipeline runs:
-   - structured retrieval (Phase 1),
-   - semantic retrieval (Phase 2+).
+   - structured retrieval (default local path),
+   - semantic retrieval only when enabled (`RAG_SEMANTIC_ENABLED=true`).
 5. Prompt builder composes grounded context + source metadata.
 6. LLM adapter generates answer.
 7. Response policy validates confidence/evidence.
@@ -87,11 +88,11 @@ Exit criteria:
 Scope:
 
 - ✅ Patients, appointments, medical acts, act results.
-- ✅ No vector retrieval yet (Phase 2).
+- ✅ Structured retrieval is the local default; vector retrieval is feature-flagged off unless requested.
 
 Implementation:
 
-1. ✅ Chat orchestrator service layer (`rag_orchestrator.py`, `rag_chat_service.py`).
+1. ✅ Chat orchestrator service layer (`backend/app/chat/rag/orchestrator.py`, `backend/app/chat/rag/chat_service.py`).
 2. ✅ Query classifier (rule-first, lightweight) — `query_classifier.py` with regex patterns for IPP, age, gender.
 3. ✅ Structured retrievers per source — 4 async retrievers (PatientRetriever, AppointmentRetriever, MedicalActRetriever, ActResultRetriever).
 4. ✅ Deterministic prompt builder with evidence sections — `prompt_builder.py` VERSION="0.1" with system rules, context, evidence, query, answer policy.
@@ -101,9 +102,9 @@ Implementation:
 
 Exit criteria:
 
-- ✅ 15 representative questions answered with correct grounding (test_rag_evaluation.py: 15/15 passing).
+- ✅ Representative questions answered with correct grounding (`test_rag_evaluation.py` plus structured unit tests).
 - ✅ No fabricated structured facts in evaluation set (all retrievers ORM-based, no free-form SQL).
-- ✅ Full test suite: 28/28 tests passing (13 structured unit tests + 15 evaluation scenarios).
+- ✅ Current local backend suite passes; RAG-specific coverage includes structured retrieval and semantic-disabled/hybrid gating tests.
 
 **Key Implementation Details:**
 
@@ -114,23 +115,25 @@ Exit criteria:
 - Prompt Template: Versioned (v0.1), deterministic, repeatable
 - Authorization: Central guard before any retrieval (Phase 3: RBAC expansion planned)
 
-## Phase 2 - Semantic RAG with Qdrant (5-8 days) 📋 PLANNED
+## Phase 2 - Semantic RAG with Qdrant (5-8 days) ⚠️ IMPLEMENTED, DISABLED LOCALLY
 
-**Status**: READY TO START — Phase 1 unblocks Phase 2.
+**Status**: Backend scaffolding is present, but local runtime keeps semantic retrieval disabled because embedding model loading can exceed available memory. Do not re-enable unless explicitly requested.
 
 Scope:
 
 - Add unstructured retrieval from notes/doc-like text.
 - Local embeddings only (sentence-transformers/all-MiniLM-L6-v2).
+- Keep the structured pipeline active when `RAG_SEMANTIC_ENABLED=false`.
 
 Implementation:
 
-1. Deploy Qdrant as Docker service alongside MySQL.
-2. Add embeddings table in MySQL and ingestion jobs (orchestrate from backend).
-3. Add chunking strategy and metadata schema.
-4. Integrate Qdrant Python client in backend.
-5. Add hybrid retrieval (structured from MySQL + semantic top-k from Qdrant).
-6. Add ranking strategy (recency + similarity + type weighting).
+1. ✅ Qdrant service added to Docker Compose.
+2. ✅ RAG chunk metadata model and alignment migration added.
+3. ✅ Ingestion and embedding service helpers added.
+4. ✅ Qdrant Python client integration added.
+5. ✅ Hybrid retrieval path added behind `RAG_SEMANTIC_ENABLED`.
+6. ✅ Ranking/capping helper added for structured + semantic facts.
+7. ⚠️ Local semantic search remains disabled until memory and indexing are validated.
 
 Dependencies:
 
@@ -139,9 +142,10 @@ Dependencies:
 
 Exit criteria:
 
-- Semantic questions improve against baseline (measure via evaluation set expansion).
+- Semantic questions improve against baseline after embeddings are enabled and indexed.
 - Mean latency remains inside target band (2-5s) for dev usage.
 - Hybrid ranking doesn't degrade Phase 1 quality.
+- Structured-only behavior remains stable when semantic search is disabled.
 
 ## Phase 3 - Hardening and Evaluation (3-4 days) 📋 PLANNED
 
@@ -265,14 +269,14 @@ Source object example shape:
 ## 9) Backend Implementation Tasks (File-Level)
 
 1. Add orchestrator and retrieval modules
-   - backend/app/services/rag_orchestrator.py
-   - backend/app/services/retrievers/structured_retriever.py
-   - backend/app/services/retrievers/semantic_retriever.py (Phase 2)
-   - backend/app/services/retrievers/query_classifier.py
-   - backend/app/services/retrievers/prompt_builder.py
+   - backend/app/chat/rag/orchestrator.py
+   - backend/app/chat/rag/retrievers/structured_retriever.py
+   - backend/app/chat/rag/retrievers/semantic_retriever.py
+   - backend/app/chat/rag/retrievers/query_classifier.py
+   - backend/app/chat/rag/retrievers/prompt_builder.py
 
 2. Integrate in chat flow
-   - backend/app/services/chat_service.py
+   - backend/app/chat/rag/chat_service.py
    - Replace direct context assembly with orchestrator pipeline.
 
 3. Extend API schema
@@ -284,7 +288,7 @@ Source object example shape:
    - backend/migrations/versions/<new_rag_migration>.py
 
 5. Add config settings
-   - backend/app/config.py
+   - backend/app/core/config_rag.py
    - Retrieval top_k, confidence thresholds, mode toggles.
 
 6. Add tests
@@ -375,7 +379,7 @@ Week 2
 1. Qdrant deployment and basic ingestion setup.
 2. Hybrid retrieval first pass (MySQL + Qdrant).
 3. Evaluation suite and tuning.
-4. Dev demo + issue backlog for hardening.
+4. Keep local semantic retrieval disabled until explicitly testing embeddings.
 
 ---
 
@@ -384,8 +388,8 @@ Week 2
 The RAG implementation is considered done for development when:
 
 1. Structured queries are grounded and validated (MySQL).
-2. Semantic retrieval returns relevant chunks via Qdrant.
-3. Hybrid retrieval (structured + semantic) works end-to-end.
+2. Semantic retrieval returns relevant chunks via Qdrant when enabled and indexed.
+3. Hybrid retrieval (structured + semantic) works end-to-end behind the feature flag.
 4. Responses include citations and confidence/warnings.
 5. Authorization checks are enforced for all retrieval paths.
 6. Evaluation set meets agreed quality and latency thresholds.
@@ -416,11 +420,11 @@ After those contracts are merged, proceed directly to Phase 1 coding.
 - ✅ Prompt builder with VERSION="0.1" versioned templates
 - ✅ RAG orchestrator with authorization guards and confidence assessment
 - ✅ Grounded chat service integration layer
-- ✅ SourceCitationPanel React component with dark mode and accessibility
+- ✅ SourceCitationPanel React component moved to `frontend/web/src/components/common/`
 - ✅ GroundedChatResponse schema with sources[], confidence, warnings[], metadata
 - ✅ POST /chat/grounded API endpoint
 - ✅ Database tables (rag_chunk, rag_query_cache) with migrations
-- ✅ Comprehensive test suite: 28/28 tests passing (13 unit + 15 evaluation)
+- ✅ RAG-focused test suite covers structured retrieval plus hybrid/semantic gating
 
 **Key Metrics:**
 - Query classification accuracy: 100% (3/3 scenarios)
@@ -428,29 +432,29 @@ After those contracts are merged, proceed directly to Phase 1 coding.
 - Prompt building: 100% (3/3 versions)
 - Authorization enforcement: 100% (3/3 scenarios)
 - Evaluation scenarios: 100% (15/15 passing)
-- Overall test pass rate: 100% (28/28)
+- Overall local backend test pass rate: 100% on the current suite
 
 **Files Delivered:**
-- Backend services: `rag_orchestrator.py`, `rag_chat_service.py`
-- Retrievers: `query_classifier.py`, `structured_retriever.py`, `prompt_builder.py`
+- Backend services: `backend/app/chat/rag/orchestrator.py`, `backend/app/chat/rag/chat_service.py`
+- Retrievers: `query_classifier.py`, `structured_retriever.py`, `semantic_retriever.py`, `prompt_builder.py`
 - Schemas: `rag_response.py` (SourceReference, RAGMetadata, GroundedChatResponse)
 - Config: `config_rag.py` with Pydantic v2 ConfigDict
-- Tests: `test_rag_structured.py`, `test_rag_evaluation.py`
-- Frontend: `SourceCitationPanel.js`, `SourceCitationPanel.module.css`
-- Migrations: `004_create_rag_tables.py`
+- Tests: `test_rag_structured.py`, `test_rag_hybrid.py`, `test_rag_evaluation.py`
+- Frontend: `frontend/web/src/components/common/SourceCitationPanel.js`, `SourceCitationPanel.module.css`
+- Migrations: `004_create_rag_tables.py`, `005_align_rag_chunks_columns.py`
 - API updates: `chat.py` with `/chat/grounded` endpoint
 
-### Phase 2: 📋 READY TO START
+### Phase 2: ⚠️ IMPLEMENTED, DISABLED LOCALLY
 
-**Status:** Infrastructure tables migrated, embedding model selected, design validated.
+**Status:** Qdrant, ingestion, embeddings, chunk storage, and semantic retriever code are present. Local runtime keeps semantic retrieval off with `RAG_SEMANTIC_ENABLED=false`.
 
-**Blockers:** None — Phase 1 complete unblocks Phase 2 immediately.
+**Blockers:** Embedding model memory usage must be validated before enabling semantic retrieval in normal local development.
 
 **Next Steps:**
-1. Deploy Qdrant Docker service
-2. Integrate sentence-transformers embeddings (all-MiniLM-L6-v2)
-3. Implement hybrid retrieval combining structured + semantic
-4. Expand evaluation set to validate semantic improvements
+1. Keep structured RAG as the default.
+2. Enable semantic retrieval only when explicitly testing Qdrant/embeddings.
+3. Run ingestion (`backend/scripts/ingest_rag.py`) after Qdrant is available.
+4. Expand evaluation set to validate semantic improvements.
 
 ### Phase 3: 📋 QUEUED
 
