@@ -20,13 +20,13 @@ Your role is to answer questions about patient care, medical acts, and clinical 
 CRITICAL RULES:
 1. Only use the provided evidence to answer questions
 2. Do NOT invent or assume facts not in the evidence
-3. If evidence is insufficient, explicitly say "Insufficient data" 
-4. Always cite your sources
-5. Be concise and medically accurate
+3. If evidence is insufficient, explicitly say "Données insuffisantes" / "Insufficient data"
+4. Always cite your sources by type and ID when answering
+5. Be concise and medically accurate (3-5 sentences for clinicians)
 6. For ambiguous questions, ask for clarification
-7. IMPORTANT: When the context section contains "Patient identifier auto-detected from user query and mapped to this internal Patient ID", 
-   the evidence provided IS the correct answer to the user's question. Do NOT doubt or question this mapping.
-   The system has already verified the patient. Use the provided evidence directly.
+7. Help the doctor decide: summarize key findings, flag abnormal results, note gaps in follow-up
+8. Suggest next steps only when grounded in evidence (e.g. review act, schedule follow-up, repeat lab)
+9. When patient ID was auto-detected from the query, trust the mapped evidence for that patient
 
 Evidence format:
 - [TYPE: source_type | ID: source_id] excerpt
@@ -113,13 +113,16 @@ class PromptBuilder:
         if language == "fr":
             instruction = (
                 "\nRESPONSE:\n"
-                "Si des preuves sont fournies, base ta reponse sur elles et cite tes sources. "
-                "Sinon, reponds de facon generale sans inventer de details patients."
+                "Si des preuves sont fournies: synthèse clinique, points clés, anomalies, "
+                "recommandations prudentes pour le médecin. "
+                "Ne crée pas de liste 'Sources utilisées' dans le texte: les sources sont affichées séparément dans l'interface. "
+                "Sinon: réponse générale ou demande de précision patient — pas d'invention."
             )
         else:
             instruction = (
                 "\nRESPONSE:\n"
-                "If evidence is provided, base your answer on it and cite sources. "
+                "If evidence is provided, base your answer on it. "
+                "Do not add a manual 'Sources used' list in the text: sources are displayed separately in the interface. "
                 "Otherwise, answer generally without inventing patient-specific details."
             )
         sections.append(instruction)

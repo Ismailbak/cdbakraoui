@@ -1,373 +1,179 @@
 """
-RAG Orchestrator.
-Coordinates intent classification, retrieval, authorization, and prompt building.
-Central control point for the entire grounded retrieval pipeline.
+RAG Orchestrator — intent, patient scope, structured + semantic retrieval, prompt build.
 """
 
-from typing import Optional, Tuple
+import logging
+from typing import List, Optional, Tuple
+
 from app.core.schemas.rag_response import GroundedChatResponse, RAGMetadata, ChatRequest
 from app.chat.rag.retrievers.query_classifier import QueryClassifier, QueryIntent
-from app.chat.rag.retrievers.structured_retriever import StructuredRetrievalPipeline
+from app.chat.rag.retrievers.structured_retriever import StructuredRetrievalPipeline, RetrievedFact
 from app.chat.rag.retrievers.prompt_builder import PromptBuilder
+from app.chat.rag.retrievers.semantic_retriever import semantic_retrieve
+from app.chat.rag.patient_detection import detect_patient_from_query
+from app.chat.rag.fact_ranking import rank_and_cap_facts
+from app.chat.rag.ingestion import ingest_patient_records
+from app.chat.rag.rag_db import count_embedded_chunks, rag_chunks_table_ready
+from app.chat.rag.embedding_service import get_embedding_model
 from app.core.config_rag import rag_config
-from datetime import datetime
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class RAGOrchestrator:
-    """
-    Main orchestrator for RAG pipeline.
-    
-    Flow:
-    1. Classify query intent
-    2. Auto-detect patient if enabled and confident
-    3. Guard authorization
-    4. Retrieve structured facts
-    5. Build grounded prompt
-    6. (Later) Call LLM and validate response
-    """
-    
     def __init__(self, db_session, patient_service, llm_service=None):
-        """
-        Initialize orchestrator.
-        
-        Args:
-            db_session: SQLAlchemy database session
-            patient_service: Service for patient queries and authorization
-            llm_service: LLM adapter (optional, for full pipeline)
-        """
         self.db = db_session
         self.patient_service = patient_service
         self.llm_service = llm_service
-        
-        # Components
         self.classifier = QueryClassifier()
         self.retriever = StructuredRetrievalPipeline(db_session, patient_service)
         self.prompt_builder = PromptBuilder()
-    
+
     async def process_chat_request(
         self,
         request: ChatRequest,
-        user_id: int
+        user_id: int,
     ) -> Tuple[str, GroundedChatResponse, list, Optional[int]]:
-        """
-        Process a chat request end-to-end.
-        
-        Returns:
-            (grounded_prompt, response_object, warnings, detected_patient_id)
-        """
-        print("\n" + "="*80)
-        print(f"🚀 RAG_ORCHESTRATOR.process_chat_request START")
-        print(f"   Query: '{request.query}'")
-        print(f"   Patient ID from request: {request.patient_id}")
-        print("="*80)
-        
-        warnings = []
+        warnings: List[str] = []
         patient_id = request.patient_id
         detected_patient_id = None
-        
-        # Step 1: Classify intent
+        retrieval_mode = request.retrieval_mode or "auto"
+
         classification = self.classifier.classify(request.query)
-        print(f"📊 Classification: {classification.intent} (confidence={classification.confidence}, patient_confidence={classification.patient_confidence})")
+        logger.debug(
+            "RAG classify intent=%s patient_conf=%.2f",
+            classification.intent,
+            classification.patient_confidence,
+        )
 
-        # Step 1.5: Fallback to most recent patient session if no explicit context
-        if not patient_id and classification.intent != QueryIntent.GENERAL_MEDICAL:
-            try:
-                from app.models.chat_session import ChatSession
-                recent_session = (
-                    self.db.query(ChatSession)
-                    .filter(ChatSession.created_by == user_id)
-                    .order_by(ChatSession.updated_at.desc())
-                    .first()
-                )
-                if recent_session and recent_session.patient_id:
-                    patient_id = recent_session.patient_id
-                    print(f"✅ DEBUG: Using recent chat session patient_id={patient_id}")
-            except Exception as e:
-                logger.warning(f"Recent session lookup failed: {e}")
-        
-        # Step 2: Auto-detect patient if enabled and not explicitly provided
-        print(f"\n🔎 Step 2: Auto-detect check")
-        print(f"   patient_id={patient_id}, intent={classification.intent}, AUTO_DETECT_ENABLED={rag_config.AUTO_DETECT_ENABLED}")
-        
-        if (not patient_id and rag_config.AUTO_DETECT_ENABLED):
-            
-            print(f"   ✅ ENTERING IPP DETECTION BLOCK")
-            
-            # Try to extract IPP from query and lookup patient
-            import re
-            ipp_pattern = re.compile(
-                r"\b(?:ipp|score\s*ipp)\s*[:=]?\s*([A-Z]{2}\d{6,8}|\d{1,8})\b",
-                re.IGNORECASE
+        # Auto-detect only when not explicitly provided
+        if not patient_id and rag_config.AUTO_DETECT_ENABLED:
+            detected_id, detect_warnings = detect_patient_from_query(self.db, request.query)
+            warnings.extend(detect_warnings)
+            if detected_id:
+                patient_id = detected_id
+                detected_patient_id = detected_id
+
+        # Authorization
+        if patient_id:
+            denied_id = patient_id
+            authorized = await self.patient_service.user_can_access_patient(user_id, denied_id)
+            if not authorized:
+                logger.warning("User %s denied access to patient %s", user_id, denied_id)
+                warnings.append(f"Access denied to patient {denied_id}.")
+                patient_id = None
+        elif classification.intent == QueryIntent.PATIENT_SPECIFIC and classification.patient_confidence > 0:
+            warnings.append(
+                "Query appears patient-specific but no patient was identified. "
+                "Please specify the patient (IPP or select from the chart)."
             )
-            ipp_match = ipp_pattern.search(request.query)
-            
-            print(f"\n🔍 DEBUG: Query: '{request.query}'")
-            print(f"🔍 DEBUG: IPP match: {ipp_match.group() if ipp_match else 'NOT FOUND'}")
-            
-            if ipp_match:
-                # IPP detected - look it up in database
-                ipp_value = ipp_match.group(1)
-                from app.models.patient import Patient
-                print(f"🔍 DEBUG: Looking up patient with IPP='{ipp_value}'")
-                
-                db_patient = self.db.query(Patient).filter(Patient.ipp == ipp_value).first()
-                print(f"🔍 DEBUG: Database query result: {db_patient}")
-                
-                if db_patient:
-                    patient_id = db_patient.id
-                    detected_patient_id = patient_id
-                    print(f"✅ DEBUG: Auto-detected patient {patient_id} ({db_patient.first_name} {db_patient.last_name}) from IPP {ipp_value}")
+
+        use_structured = retrieval_mode in ("auto", "structured_only")
+        use_semantic = retrieval_mode in ("auto", "hybrid") and rag_config.SEMANTIC_ENABLED
+
+        retrieval_type = "none"
+        facts: List[RetrievedFact] = []
+        structured_facts: List[RetrievedFact] = []
+        semantic_facts: List[RetrievedFact] = []
+
+        if not (classification.intent == QueryIntent.GENERAL_MEDICAL and not patient_id):
+            if use_structured and patient_id:
+                structured_facts = await self.retriever.retrieve_with_authorization(
+                    query=request.query,
+                    patient_id=patient_id,
+                    user_id=user_id,
+                    top_k_per_source=rag_config.RETRIEVAL_TOP_K,
+                )
+                facts.extend(structured_facts)
+
+            if use_semantic and patient_id:
+                if not rag_chunks_table_ready(self.db):
+                    warnings.append(
+                        "Recherche sémantique indisponible: exécutez "
+                        "'alembic upgrade head' pour mettre à jour la table rag_chunks."
+                    )
+                elif get_embedding_model() is None:
+                    warnings.append(
+                        "Recherche sémantique indisponible: modèle d'embeddings non chargé "
+                        "(torch / sentence-transformers). La réponse utilise les données structurées."
+                    )
                 else:
-                    print(f"❌ DEBUG: IPP {ipp_value} not found in database")
-                    # Try alternative formats
-                    print(f"🔍 DEBUG: Trying alternative formats for IPP '{ipp_value}'...")
-                    db_patient_alt = self.db.query(Patient).filter(
-                        Patient.ipp.ilike(f"%{ipp_value}%")
-                    ).first()
-                    if db_patient_alt:
-                        print(f"✅ DEBUG: Found with partial match: IPP={db_patient_alt.ipp}, Patient={db_patient_alt.id}")
-                        patient_id = db_patient_alt.id
-                        detected_patient_id = patient_id
-                    else:
-                        # Normalize IPP (strip prefixes/zeros) as a last resort
-                        def normalize_ipp(value: str) -> str:
-                            if not value:
-                                return ""
-                            cleaned = re.sub(r"[^A-Za-z0-9]", "", value).lower()
-                            if cleaned.startswith("ipp"):
-                                cleaned = cleaned[3:]
-                            if cleaned.isdigit():
-                                cleaned = cleaned.lstrip("0") or "0"
-                            return cleaned
+                    try:
+                        if count_embedded_chunks(self.db, patient_id) == 0:
+                            ingest_patient_records(self.db, patient_id)
+                    except Exception as e:
+                        logger.warning("Lazy ingestion skipped: %s", e)
 
-                        normalized = normalize_ipp(ipp_value)
-                        candidates = self.db.query(Patient).filter(Patient.ipp.isnot(None)).all()
-                        matches = [p for p in candidates if normalize_ipp(p.ipp) == normalized]
+                    semantic_facts = await semantic_retrieve(
+                        request.query, patient_id=patient_id, top_k=rag_config.SEMANTIC_TOP_K
+                    )
+                    facts.extend(semantic_facts)
 
-                        if len(matches) == 1:
-                            db_patient_norm = matches[0]
-                            patient_id = db_patient_norm.id
-                            detected_patient_id = patient_id
-                            print(
-                                f"✅ DEBUG: Found with normalized IPP match: IPP={db_patient_norm.ipp}, Patient={db_patient_norm.id}"
-                            )
-                        elif len(matches) > 1:
-                            print(f"❌ DEBUG: Multiple patients matched normalized IPP '{normalized}'.")
-                            warnings.append("Multiple patients matched the provided IPP. Please clarify.")
-                        else:
-                            print(f"❌ DEBUG: Patient with IPP '{ipp_value}' not found in system.")
-                            warnings.append(f"Patient with IPP '{ipp_value}' not found in system.")
+            if structured_facts and semantic_facts:
+                retrieval_type = "hybrid"
+            elif structured_facts or semantic_facts:
+                retrieval_type = "structured" if structured_facts and not semantic_facts else (
+                    "hybrid" if semantic_facts else "none"
+                )
             else:
-                # Attempt name-based lookup when IPP is not present
-                from app.models.patient import Patient
+                retrieval_type = "structured" if patient_id else "none"
 
-                raw_tokens = [t for t in re.split(r"\s+", request.query.lower()) if t.isalpha()]
-                stopwords = {
-                    "what", "can", "you", "tell", "me", "about", "the", "patient", "patiente",
-                    "who", "is", "of", "a", "an", "in", "on", "for", "with",
-                    "hey", "bonjour", "salut", "svp", "please",
-                    "que", "peux", "tu", "dire", "moi", "sur", "le", "la", "du", "de"
-                }
-                tokens = [t for t in raw_tokens if t not in stopwords]
-
-                name_tokens = []
-                if "patient" in raw_tokens:
-                    idx = raw_tokens.index("patient")
-                    name_tokens = raw_tokens[idx + 1 : idx + 4]
-                elif "patiente" in raw_tokens:
-                    idx = raw_tokens.index("patiente")
-                    name_tokens = raw_tokens[idx + 1 : idx + 4]
-
-                if not name_tokens:
-                    name_tokens = tokens[-3:]
-
-                name_tokens = [t for t in name_tokens if t not in stopwords]
-                if name_tokens:
-                    print(f"🔍 DEBUG: Name lookup tokens: {name_tokens}")
-
-                    first_token = name_tokens[0]
-                    last_token = name_tokens[1] if len(name_tokens) > 1 else None
-
-                    if last_token:
-                        matches = (
-                            self.db.query(Patient)
-                            .filter(
-                                (Patient.first_name.ilike(f"%{first_token}%") & Patient.last_name.ilike(f"%{last_token}%"))
-                                | (Patient.first_name.ilike(f"%{last_token}%") & Patient.last_name.ilike(f"%{first_token}%"))
-                                | ((Patient.first_name + " " + Patient.last_name).ilike(f"%{first_token} {last_token}%"))
-                            )
-                            .all()
-                        )
-                    else:
-                        matches = (
-                            self.db.query(Patient)
-                            .filter(
-                                (Patient.first_name.ilike(f"%{first_token}%"))
-                                | (Patient.last_name.ilike(f"%{first_token}%"))
-                            )
-                            .all()
-                        )
-
-                    if len(matches) == 1:
-                        db_patient = matches[0]
-                        patient_id = db_patient.id
-                        detected_patient_id = patient_id
-                        print(
-                            f"✅ DEBUG: Auto-detected patient {patient_id} ({db_patient.first_name} {db_patient.last_name}) from name match"
-                        )
-                    elif len(matches) > 1:
-                        warnings.append("Multiple patients matched the provided name. Please specify IPP.")
-            
-            # If still no patient found, apply confidence threshold check
-            if (
-                not patient_id
-                and not ipp_match
-                and classification.intent == QueryIntent.PATIENT_SPECIFIC
-                and classification.patient_confidence >= rag_config.AUTO_DETECT_CONFIDENCE_THRESHOLD
-            ):
-                # Try alternative detection methods (placeholder for future)
-                patient_id, auto_detect_confidence = await self._auto_detect_patient(
-                    classification, user_id
-                )
-                detected_patient_id = patient_id
-            
-            # Check authorization
-            if patient_id:
-                authorized = await self.patient_service.user_can_access_patient(user_id, patient_id)
-                if not authorized:
-                    logger.warning(f"User {user_id} not authorized for patient {patient_id}")
-                    patient_id = None
-                    warnings.append(f"Access denied to patient {patient_id}.")
-            
-            if not patient_id and classification.patient_confidence > 0:
-                warnings.append(
-                    f"Query appears patient-specific but patient could not be auto-detected. "
-                    f"Please specify patient ID."
-                )
-        
-        # Step 3: Retrieve facts (with authorization guard)
-        retrieval_type = "structured"
-        facts = []
-
-        if classification.intent == QueryIntent.GENERAL_MEDICAL and not patient_id:
-            retrieval_type = "none"
-        else:
-            facts = await self.retriever.retrieve_with_authorization(
-                query=request.query,
-                patient_id=patient_id,
-                user_id=user_id,
-                top_k_per_source=rag_config.RETRIEVAL_TOP_K
-            )
+            facts = rank_and_cap_facts(facts)
 
             if not facts and rag_config.RETURN_INSUFFICIENT_DATA_WHEN_EMPTY:
                 warnings.append("No relevant medical records found for this query.")
-        
-        # Step 4: Build grounded prompt
+
+        language = request.language or "fr"
         grounded_prompt = self.prompt_builder.build_grounded_prompt(
             user_query=request.query,
             retrieved_facts=facts,
             patient_id=patient_id,
-            language=request.language or "en",
-            detected_from_ipp=detected_patient_id is not None
+            language=language,
+            detected_from_ipp=detected_patient_id is not None,
         )
-        
-        # Step 5: Determine confidence level
-        confidence = "medium" if retrieval_type == "none" else self._assess_confidence(len(facts))
-        
-        # Step 6: Build response object (without LLM answer yet - Phase 0 design)
+
+        if retrieval_type == "none":
+            confidence = "low"
+        else:
+            confidence = self._assess_confidence(len(facts))
+
         sources = self.prompt_builder.extract_sources_from_facts(facts)
-        
+        if not request.include_sources:
+            sources = []
+
         metadata = RAGMetadata(
             retrieval_type=retrieval_type,
             confidence=confidence,
-            tokens_used=len(grounded_prompt.split()),  # Rough estimate
-            language=request.language or "en",
-            model="pending"  # Will be filled by LLM service
+            tokens_used=len(grounded_prompt.split()),
+            language=language,
+            model="pending",
         )
-        
+
         response = GroundedChatResponse(
-            response="[Answer pending LLM generation]",  # Phase 0: placeholder
+            response="[Answer pending LLM generation]",
             sources=sources,
             warnings=warnings,
-            metadata=metadata
+            metadata=metadata,
         )
-        
+
         return grounded_prompt, response, warnings, detected_patient_id or patient_id
-    
-    async def _auto_detect_patient(self, classification, user_id: int) -> Tuple[Optional[int], float]:
-        """
-        Fallback auto-detect when IPP lookup doesn't succeed.
-        For future enhancement (name-based lookup, etc.).
-        
-        Returns:
-            (patient_id, confidence) or (None, 0)
-        """
-        # Placeholder for future enhancements like name-based lookup
-        return None, 0.0
-    
-    async def _lookup_patient_by_ipp(self, ipp_value: str) -> Optional[int]:
-        """
-        Look up patient ID by IPP code.
-        
-        Args:
-            ipp_value: IPP code (e.g., "15", "01", "FR123456")
-        
-        Returns:
-            patient_id or None if not found
-        """
-        from app.models.patient import Patient
-        try:
-            patient = self.db.query(Patient).filter(Patient.ipp == ipp_value).first()
-            if patient:
-                logger.info(f"Found patient {patient.id} with IPP {ipp_value}")
-                return patient.id
-            logger.warning(f"Patient with IPP {ipp_value} not found")
-            return None
-        except Exception as e:
-            logger.error(f"Error looking up patient by IPP {ipp_value}: {e}")
-            return None
-    
+
     def _assess_confidence(self, fact_count: int) -> str:
-        """
-        Assess answer confidence based on evidence availability.
-        
-        Args:
-            fact_count: Number of retrieved facts
-        
-        Returns:
-            "high" | "medium" | "low"
-        """
         if fact_count >= 3:
             return "high"
-        elif fact_count >= 1:
+        if fact_count >= 1:
             return "medium"
-        else:
-            return "low"
-    
+        return "low"
+
     async def validate_response_policy(self, response: GroundedChatResponse) -> list:
-        """
-        Validate response against safety policies.
-        
-        Returns:
-            List of policy violations (empty if compliant)
-        """
         violations = []
-        
         if response.metadata.retrieval_type == "none":
             return violations
-
-        # Policy 1: Require evidence for facts
         if rag_config.REQUIRE_EVIDENCE_FOR_FACTS:
             if response.metadata.confidence == "low" and not response.sources:
                 violations.append("Response low confidence but no sources provided")
-        
-        # Policy 2: Insufficient data fallback
         if rag_config.RETURN_INSUFFICIENT_DATA_WHEN_EMPTY:
             if not response.sources and response.metadata.confidence == "low":
                 if "[Answer pending" not in response.response:
-                    violations.append("Low confidence without explicit 'insufficient data' statement")
-        
+                    violations.append("Low confidence without explicit insufficient data statement")
         return violations

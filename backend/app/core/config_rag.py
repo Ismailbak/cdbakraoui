@@ -13,8 +13,11 @@ class RAGConfig(BaseSettings):
     
     # Retrieval settings
     RETRIEVAL_TOP_K: int = 5
+    MAX_TOTAL_FACTS: int = 12
     RETRIEVAL_TIMEOUT_SECONDS: int = 3
     CHUNK_MAX_TOKENS: int = 500
+    SEMANTIC_TOP_K: int = 5
+    SEMANTIC_ENABLED: bool = False
     
     # Confidence thresholds
     CONFIDENCE_HIGH_THRESHOLD: float = 0.8

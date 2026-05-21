@@ -4,7 +4,7 @@ Stores text chunks and embeddings for semantic retrieval (Phase 2).
 Used by Qdrant ingestion pipeline.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -50,7 +50,14 @@ class RAGChunk(Base):
         unique=True,
         comment="Qdrant point ID for vector lookup"
     )
-    
+    embedding_model = Column(
+        String(255),
+        nullable=True,
+        default="sentence-transformers/all-MiniLM-L6-v2",
+    )
+    is_embedded = Column(Boolean, nullable=False, default=False)
+    embedding_created_at = Column(DateTime, nullable=True)
+
     # Metadata
     language = Column(String(10), nullable=False, default="en")
     chunk_metadata = Column(

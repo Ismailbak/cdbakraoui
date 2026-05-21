@@ -33,26 +33,36 @@ def get_recent_activity(
     # Get latest 5 medical acts
     recent_acts = db.query(MedicalActModel).order_by(MedicalActModel.act_date.desc()).limit(5).all()
 
+    patient_ids = {
+        *[p.id for p in recent_patients],
+        *[a.patient_id for a in recent_appointments if a.patient_id],
+        *[m.patient_id for m in recent_acts if m.patient_id],
+    }
+    patient_names = get_patient_names(db, patient_ids) if patient_ids else {}
+
     activities = []
     for p in recent_patients:
+        patient_name = _patient_display_name(p)
         activities.append({
             "type": "patient",
-            "title": "Nouveau patient ajouté",
-            "subtitle": getattr(p, "name", None) or f"ID {p.id}",
+            "title": f"Nouveau Patient: {patient_name}",
+            "subtitle": f"IPP: {p.ipp or 'N/A'}",
             "time": _to_iso(getattr(p, "created_at", None))
         })
     for a in recent_appointments:
+        patient_name = patient_names.get(a.patient_id, "Patient")
         activities.append({
             "type": "appointment",
-            "title": "Rendez-vous confirmé",
-            "subtitle": f"Patient ID {a.patient_id} - {a.datetime_scheduled.strftime('%Y-%m-%d %H:%M') if a.datetime_scheduled else 'N/A'}",
+            "title": f"RDV: {patient_name}",
+            "subtitle": a.datetime_scheduled.strftime("%d/%m/%Y %H:%M") if a.datetime_scheduled else "Date non précisée",
             "time": _to_iso(getattr(a, "datetime_scheduled", None))
         })
     for m in recent_acts:
+        patient_name = patient_names.get(m.patient_id, "Patient")
         activities.append({
             "type": "medical_act",
-            "title": "Acte médical créé",
-            "subtitle": f"{m.act_type} (Patient ID {m.patient_id})",
+            "title": f"{m.act_type or 'Acte médical'}: {patient_name}",
+            "subtitle": m.description or m.report or m.notes or "Détails non spécifiés",
             "time": _to_iso(getattr(m, "act_date", None))
         })
 
@@ -66,9 +76,19 @@ def _to_iso(dt):
         return dt.isoformat()
     return str(dt) if dt else None
 
+def _patient_display_name(patient):
+    full_name = " ".join(
+        part for part in (patient.first_name, patient.last_name)
+        if part
+    ).strip()
+    return full_name or f"ID {patient.id}"
+
 def get_patient_names(db, patient_ids):
     patients = db.query(PatientModel.id, PatientModel.first_name, PatientModel.last_name).filter(PatientModel.id.in_(patient_ids)).all()
-    return {p.id: f"{p.first_name} {p.last_name}" for p in patients}
+    return {
+        p.id: " ".join(part for part in (p.first_name, p.last_name) if part).strip() or f"ID {p.id}"
+        for p in patients
+    }
 
 
 

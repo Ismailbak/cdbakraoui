@@ -175,13 +175,15 @@ class TestRAGOrchestrator:
         
         # Test: 0 facts = low confidence
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=[])
-        _, resp_0, _, _ = await orchestrator.process_chat_request(
-            ChatRequest(query="Test?", patient_id=1),
-            user_id=1
-        )
+        with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
+            sem.return_value = []
+            with patch("app.chat.rag.orchestrator.ingest_patient_records"):
+                _, resp_0, _, _ = await orchestrator.process_chat_request(
+                    ChatRequest(query="Test?", patient_id=1, retrieval_mode="structured_only"),
+                    user_id=1,
+                )
         assert resp_0.metadata.confidence == "low"
-        
-        # Test: 1-2 facts = medium confidence
+
         facts_med = [
             RetrievedFact(
                 source_type="patient", source_id=1,
@@ -189,19 +191,29 @@ class TestRAGOrchestrator:
             )
         ]
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_med)
-        _, resp_med, _, _ = await orchestrator.process_chat_request(
-            ChatRequest(query="Test?", patient_id=1),
-            user_id=1
-        )
+        with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
+            sem.return_value = []
+            with patch("app.chat.rag.orchestrator.ingest_patient_records"):
+                _, resp_med, _, _ = await orchestrator.process_chat_request(
+                    ChatRequest(query="Test?", patient_id=1, retrieval_mode="structured_only"),
+                    user_id=1,
+                )
         assert resp_med.metadata.confidence == "medium"
         
         # Test: 3+ facts = high confidence
-        facts_high = facts_med * 3
+        facts_high = [
+            RetrievedFact(source_type="patient", source_id=1, fact_text="a", snippet="fact-a"),
+            RetrievedFact(source_type="appointment", source_id=2, fact_text="b", snippet="fact-b"),
+            RetrievedFact(source_type="act_result", source_id=3, fact_text="c", snippet="fact-c"),
+        ]
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_high)
-        _, resp_high, _, _ = await orchestrator.process_chat_request(
-            ChatRequest(query="Test?", patient_id=1),
-            user_id=1
-        )
+        with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
+            sem.return_value = []
+            with patch("app.chat.rag.orchestrator.ingest_patient_records"):
+                _, resp_high, _, _ = await orchestrator.process_chat_request(
+                    ChatRequest(query="Test?", patient_id=1, retrieval_mode="structured_only"),
+                    user_id=1,
+                )
         assert resp_high.metadata.confidence == "high"
 
 

@@ -75,10 +75,13 @@ class GroundedChatResponse(BaseModel):
     model: str
     language: str
     retrieval_type: str = "structured"  # "structured" | "hybrid" | "none"
+    patient_id: Optional[int] = None
+    message_id: Optional[int] = None
 
 
 class ChatHistoryItem(BaseModel):
     id: int
+    patient_id: Optional[int] = None
     message: str
     response: str
     language: str
@@ -177,7 +180,9 @@ async def chat_grounded(
             tokens=result.get("tokens", 0),
             model=result.get("model", "biomistral"),
             language=result.get("language", "fr"),
-            retrieval_type=result.get("retrieval_type", "structured")
+            retrieval_type=result.get("retrieval_type", "structured"),
+            patient_id=result.get("patient_id"),
+            message_id=result.get("message_id"),
         )
     except PermissionError:
         raise HTTPException(status_code=403, detail="Access to this patient is not allowed")

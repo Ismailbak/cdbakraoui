@@ -18,6 +18,38 @@ from app.patients.service import PatientService
 logger = logging.getLogger(__name__)
 
 
+SOURCE_TAG_RE = r"(?:patient|appointment|medical_act|act_result|patient_note|act_note|pdf_extract|chat_summary)"
+
+
+def clean_grounded_response_text(text: str) -> str:
+    """Remove raw evidence markers or malformed manual source lists from LLM prose."""
+    if not text:
+        return ""
+
+    cleaned = text.strip()
+
+    # Evidence markers sometimes leak from the prompt.
+    cleaned = re.sub(r"\[TYPE:[^\]]+\]", "", cleaned)
+
+    # Remove manually generated source lists because the UI renders authoritative citations.
+    cleaned = re.sub(
+        rf"\s*\**Sources? (?:utilisées|used)\s*:\**\s*(?:\[{SOURCE_TAG_RE}\s*\|\s*(?:ID\s*:\s*)?\d*\]\s*,?\s*)+\.?",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # Remove inline citations such as [patient | ID: 22] or malformed [patient | ].
+    cleaned = re.sub(
+        rf"\s*\[{SOURCE_TAG_RE}\s*\|\s*(?:ID\s*:\s*)?\d*\]",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    return re.sub(r"\s{2,}", " ", cleaned).strip()
+
+
 async def get_grounded_chat_response(
     message: str,
     user_id: int,
@@ -97,11 +129,7 @@ async def get_grounded_chat_response(
         )
         
         # Update response with LLM output
-        response_text = llm_result.get("response", "").strip()
-        response_text = re.sub(r"\[TYPE:[^\]]+\]", "", response_text)
-        response_text = re.sub(r"\(\s*ID\s*:\s*\d+\s*\)", "", response_text)
-        response_text = re.sub(r"\bID\s*:\s*\d+\b", "", response_text)
-        response_text = re.sub(r"\s{2,}", " ", response_text).strip()
+        response_text = clean_grounded_response_text(llm_result.get("response", ""))
         rag_response.response = response_text
         rag_response.metadata.model = llm_result.get("model", "biomistral")
         rag_response.metadata.tokens_used = llm_result.get("tokens", 0)
@@ -110,10 +138,10 @@ async def get_grounded_chat_response(
         policy_violations = await orchestrator.validate_response_policy(rag_response)
         if policy_violations:
             logger.warning(f"Policy violations detected: {policy_violations}")
-            # Note: In Phase 1, we log but don't block responses with policy violations
-            # rag_response.warnings.extend(policy_violations)
+            rag_response.warnings.extend(policy_violations)
         
         # Store in database
+        message_id = None
         try:
             # Import chat_service for session management
             from app.chat.service import create_chat_session
@@ -154,6 +182,7 @@ async def get_grounded_chat_response(
             db.add(chat_msg)
             db.commit()
             db.refresh(chat_msg)
+            message_id = chat_msg.id
             logger.info(f"Chat message {chat_msg.id} stored for user {user_id}")
             
         except Exception as e:
@@ -168,7 +197,9 @@ async def get_grounded_chat_response(
             "tokens": rag_response.metadata.tokens_used,
             "model": rag_response.metadata.model,
             "language": language,
-            "retrieval_type": rag_response.metadata.retrieval_type
+            "retrieval_type": rag_response.metadata.retrieval_type,
+            "patient_id": final_patient_id,
+            "message_id": message_id,
         }
     
     except Exception as e:
