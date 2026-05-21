@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { deleteChatHistoryItem, getChatHistory, sendChatMessage } from '../../api/api';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { ConfirmDialog, SourceCitationPanel } from '../../components/common';
 import {
   FiActivity,
   FiAlertCircle,
@@ -72,6 +72,45 @@ const suggestions = [
   },
 ];
 
+const TITLE_STOP_WORDS = new Set([
+  'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'd', 'dans', 'sur', 'avec',
+  'pour', 'par', 'au', 'aux', 'en', 'et', 'ou', 'the', 'a', 'an', 'of', 'for',
+  'to', 'in', 'on', 'with', 'and', 'or', 'please', 'svp', 'stp',
+  'je', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils', 'elles', 'me', 'te', 'se',
+  'mon', 'ma', 'mes', 'ton', 'ta', 'tes', 'son', 'sa', 'ses', 'ce', 'cet', 'cette', 'ces',
+  'qui', 'que', 'quoi', 'dont', 'ou', 'y', 'est', 'sont', 'ai', 'as', 'avez', 'ont',
+  'voudrais', 'voudrait', 'peux', 'puis', 'faire', 'donner', 'dire', 'svp', 'stp',
+]);
+
+const formatConversationTitle = (text = '') => {
+  const fallback = 'Nouvelle discussion';
+  const cleaned = String(text).replace(/\s+/g, ' ').trim();
+  if (!cleaned) return fallback;
+
+  const words = cleaned
+    .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .filter((word) => {
+      const normalized = word.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return normalized.length > 1 && !TITLE_STOP_WORDS.has(normalized);
+    });
+
+  const selected = (words.length ? words : cleaned.split(/\s+/)).slice(0, 3);
+  if (!selected.length) return fallback;
+
+  let title = selected
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
+  if (title.length > 36) {
+    title = `${title.slice(0, 33).trim()}...`;
+  }
+
+  return title;
+};
+
 function Chat({ patientId, currentUser }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -87,6 +126,8 @@ function Chat({ patientId, currentUser }) {
   const messageEndRef = useRef(null);
   const abortControllerRef = useRef(null);
   const copyTimeoutRef = useRef(null);
+  const textareaRef = useRef(null);
+  const activePatientIdRef = useRef(patientId || null);
 
   useEffect(() => {
     return () => {
@@ -100,7 +141,16 @@ function Chat({ patientId, currentUser }) {
   }, [messages, loading]);
 
   useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+  }, [input]);
+
+  useEffect(() => {
     let isMounted = true;
+    activePatientIdRef.current = patientId || null;
 
     const loadHistory = async () => {
       try {
@@ -163,10 +213,15 @@ function Chat({ patientId, currentUser }) {
     try {
       const res = await sendChatMessage(
         textToSend,
-        patientId,
+        activePatientIdRef.current || patientId,
         'fr',
         { signal: abortControllerRef.current.signal }
       );
+
+      const resolvedPatientId = res?.data?.patient_id || activePatientIdRef.current || patientId || null;
+      if (resolvedPatientId) {
+        activePatientIdRef.current = resolvedPatientId;
+      }
 
       const aiMsg = {
         id: generateId(),
@@ -174,16 +229,23 @@ function Chat({ patientId, currentUser }) {
         content: res?.data?.response || "Le serveur n'a pas renvoyé de réponse valide.",
         tokens: res?.data?.tokens || res?.data?.metadata?.tokens || 0,
         model: res?.data?.model || res?.data?.metadata?.model || 'RhumatoAI',
+        sources: res?.data?.sources || [],
+        confidence: res?.data?.confidence || 'low',
+        warnings: res?.data?.warnings || [],
+        retrieval_type: res?.data?.retrieval_type || 'none',
+        patient_id: resolvedPatientId,
         timestamp: new Date()
       };
 
+      const storedHistoryId = Number(res?.data?.message_id) || currentMsgId;
       setMessages(prev => [...prev, aiMsg]);
       setHistoryItems(prev => [{
-        id: currentMsgId,
+        id: storedHistoryId,
         message: textToSend,
         response: aiMsg.content,
         tokens_used: aiMsg.tokens,
         model_name: aiMsg.model,
+        patient_id: resolvedPatientId,
         created_at: userMsg.timestamp.toISOString(),
       }, ...prev.filter(item => item.message !== textToSend).slice(0, 29)]);
     } catch (err) {
@@ -225,6 +287,7 @@ function Chat({ patientId, currentUser }) {
     setError('');
     setLoading(false);
     setSelectedHistoryId(null);
+    activePatientIdRef.current = patientId || null;
   };
 
   const handleSelectHistory = (item) => {
@@ -248,6 +311,7 @@ function Chat({ patientId, currentUser }) {
       },
     ]);
     setSelectedHistoryId(item.id);
+    activePatientIdRef.current = item.patient_id || patientId || null;
     setInput('');
     setError('');
   };
@@ -358,7 +422,7 @@ function Chat({ patientId, currentUser }) {
                 onClick={() => handleSelectHistory(item)}
                 title={item.message}
               >
-                <span className="assistant-history-title">{item.message}</span>
+                <span className="assistant-history-title">{formatConversationTitle(item.message)}</span>
                 <span className="assistant-history-meta">
                   <FiClock />
                   {formatHistoryDate(item.created_at)}
@@ -438,13 +502,22 @@ function Chat({ patientId, currentUser }) {
                     </button>
                   )}
                   {msg.role === 'assistant' && (
-                    <div className="assistant-message-tools">
-                      <span>{msg.model || 'RhumatoAI'}</span>
-                      {msg.tokens ? <span>{msg.tokens} tokens</span> : null}
-                      <button onClick={() => handleCopyMessage(msg.id, msg.content)}>
-                        <FiCopy /> {copiedMessageId === msg.id ? 'Copié' : 'Copier'}
-                      </button>
-                    </div>
+                    <>
+                      <SourceCitationPanel
+                        sources={msg.sources}
+                        confidence={msg.confidence}
+                        warnings={msg.warnings}
+                        retrieval_type={msg.retrieval_type}
+                        locale="fr"
+                      />
+                      <div className="assistant-message-tools">
+                        <span>{msg.model || 'RhumatoAI'}</span>
+                        {msg.tokens ? <span>{msg.tokens} tokens</span> : null}
+                        <button onClick={() => handleCopyMessage(msg.id, msg.content)}>
+                          <FiCopy /> {copiedMessageId === msg.id ? 'Copié' : 'Copier'}
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -478,6 +551,7 @@ function Chat({ patientId, currentUser }) {
               <FiPaperclip />
             </button>
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}

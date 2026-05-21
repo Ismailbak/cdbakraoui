@@ -107,9 +107,14 @@ function DashboardPage() {
 
         // 3. Robust Recent Activity: Merge, format and sort
         // API returns data in descending order (newest first), so slice(0, 5) gets the 5 most recent
+        const getPatientDisplayName = (patient) => {
+          const fullName = [patient.first_name, patient.last_name].filter(Boolean).join(' ').trim();
+          return patient.name || patient.patient_name || patient.patientName || fullName || 'Patient';
+        };
+
         const recentPatients = patientsSafe.slice(0, 5).map(p => ({
           type: 'patient',
-          title: `Nouveau Patient: ${p.name}`,
+          title: `Nouveau Patient: ${getPatientDisplayName(p)}`,
           subtitle: `IPP: ${p.ipp || 'N/A'}`,
           time: p.created_at || null,
           icon: '👤'

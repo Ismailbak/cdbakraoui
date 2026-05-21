@@ -7,7 +7,9 @@ function AssistantPage() {
 
   return (
     <Layout>
-      <Chat currentUser={user} />
+      <div className="assistant-page">
+        <Chat currentUser={user} />
+      </div>
     </Layout>
   );
 }
