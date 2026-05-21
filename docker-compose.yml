@@ -25,11 +25,13 @@ services:
       - "3306:3306"
 
   frontend-web:
-    build: ./frontend-web
+    build: ./frontend/web
     ports:
       - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
     volumes:
-      - ./frontend-web:/app
+      - ./frontend/web:/app
       - /app/node_modules
     depends_on:
       - backend

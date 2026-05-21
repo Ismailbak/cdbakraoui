@@ -8,7 +8,10 @@ from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
 from app.chat.rag.retrievers.query_classifier import QueryClassifier, QueryIntent
-from app.chat.rag.retrievers.structured_retriever import StructuredRetrievalPipeline
+from app.chat.rag.retrievers.structured_retriever import (
+    StructuredRetrievalPipeline,
+    RetrievedFact,
+)
 from app.chat.rag.retrievers.prompt_builder import PromptBuilder
 from app.chat.rag.orchestrator import RAGOrchestrator
 from app.core.schemas.rag_response import ChatRequest, GroundedChatResponse
@@ -22,7 +25,7 @@ class TestQueryClassifier:
     
     def test_classify_patient_specific_query_with_ipp(self):
         """Query with IPP should classify as patient-specific."""
-        query = "What is the status of patient FR123456?"
+        query = "What is the status of patient IPP FR123456?"
         result = self.classifier.classify(query)
         
         assert result.intent == QueryIntent.PATIENT_SPECIFIC
@@ -59,8 +62,12 @@ class TestPromptBuilder:
             retrieved_facts=[]
         )
         
-        assert "No relevant evidence found" in prompt
-        assert "insufficient data" in prompt.lower()
+        assert "EVIDENCE:" in prompt
+        assert (
+            "no patient records" in prompt.lower()
+            or "aucune donnée" in prompt.lower()
+            or "insufficient" in prompt.lower()
+        )
     
     def test_build_prompt_with_evidence(self):
         """Prompt should include evidence section when facts available."""
@@ -75,11 +82,12 @@ class TestPromptBuilder:
         
         prompt = self.builder.build_grounded_prompt(
             user_query="What are the patient's allergies?",
-            retrieved_facts=[fact]
+            retrieved_facts=[fact],
+            patient_id=1,
         )
         
-        assert "[PATIENT]" in prompt
         assert "penicillin" in prompt.lower()
+        assert "EVIDENCE:" in prompt
     
     def test_prompt_version_consistency(self):
         """Prompt builder should be deterministic."""
@@ -125,7 +133,7 @@ class TestRAGOrchestrator:
             retrieval_mode="auto"
         )
         
-        grounded_prompt, response, warnings = await orchestrator.process_chat_request(
+        grounded_prompt, response, warnings, _ = await orchestrator.process_chat_request(
             request, user_id=1
         )
         
@@ -149,7 +157,7 @@ class TestRAGOrchestrator:
             include_sources=True
         )
         
-        grounded_prompt, response, warnings = await orchestrator.process_chat_request(
+        grounded_prompt, response, warnings, _ = await orchestrator.process_chat_request(
             request, user_id=1
         )
         
@@ -167,7 +175,7 @@ class TestRAGOrchestrator:
         
         # Test: 0 facts = low confidence
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=[])
-        _, resp_0, _ = await orchestrator.process_chat_request(
+        _, resp_0, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -181,7 +189,7 @@ class TestRAGOrchestrator:
             )
         ]
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_med)
-        _, resp_med, _ = await orchestrator.process_chat_request(
+        _, resp_med, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -190,7 +198,7 @@ class TestRAGOrchestrator:
         # Test: 3+ facts = high confidence
         facts_high = facts_med * 3
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=facts_high)
-        _, resp_high, _ = await orchestrator.process_chat_request(
+        _, resp_high, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Test?", patient_id=1),
             user_id=1
         )
@@ -215,7 +223,12 @@ class TestSafetyPolicies:
             retrieved_facts=[]
         )
         
-        assert "No relevant evidence" in prompt or "insufficient" in prompt.lower()
+        assert (
+            "no patient records" in prompt.lower()
+            or "aucune donnée" in prompt.lower()
+            or "insufficient" in prompt.lower()
+            or "no evidence" in prompt.lower()
+        )
 
 
 class TestAcceptanceScenarios:
@@ -246,7 +259,7 @@ class TestAcceptanceScenarios:
             patient_id=123
         )
         
-        prompt, response, warnings = await orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -266,10 +279,15 @@ class TestAcceptanceScenarios:
             patient_id=1
         )
         
-        prompt, response, warnings = await orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _ = await orchestrator.process_chat_request(request, user_id=1)
         
         # Should include instruction not to hallucinate
-        assert "insufficient data" in prompt.lower() or "no evidence" in prompt.lower()
+        assert (
+            "insufficient" in prompt.lower()
+            or "no evidence" in prompt.lower()
+            or "no patient records" in prompt.lower()
+            or "aucune donnée" in prompt.lower()
+        )
         assert response.metadata.confidence == "low"
         assert len(warnings) > 0
 

@@ -8,12 +8,14 @@ venv/
 .venv/
 *.egg-info/
 dist/
-build/
+.pytest_cache/
 
 # Node
 node_modules/
 npm-debug.log
 yarn-error.log
+frontend/web/build/
+frontend/web/node_modules/.cache/
 
 # Expo
 .expo/
@@ -38,6 +40,7 @@ yarn-error.log
 # Data
 data/*
 !data/.gitkeep
+backend/data/uploads/
 
 # Docker
 *.log

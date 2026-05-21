@@ -5,7 +5,7 @@ and CRUD for form data tables.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from sqlalchemy.orm import Session
@@ -898,19 +898,28 @@ def delete_act_form(
 # ─── Dynamic Forms (Templates and Responses) ───
 
 class FormTemplateCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     title: str
-    schema_json: List[Dict[str, Any]]
+    form_schema: List[Dict[str, Any]] = Field(
+        ...,
+        validation_alias="schema_json",
+        serialization_alias="schema_json",
+    )
     is_active: bool = True
 
 class FormTemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
     id: int
     title: str
-    schema_json: List[Dict[str, Any]]
+    form_schema: List[Dict[str, Any]] = Field(
+        ...,
+        validation_alias="schema_json",
+        serialization_alias="schema_json",
+    )
     is_active: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class FormResponseCreate(BaseModel):
     act_id: int
@@ -965,7 +974,7 @@ def create_template(
 
     template = DynamicFormTemplate(
         title=data.title,
-        schema_json=data.schema_json,
+        schema_json=data.form_schema,
         is_active=data.is_active
     )
     db.add(template)
@@ -993,7 +1002,7 @@ def update_template(
         raise HTTPException(status_code=400, detail="A template with this title already exists")
 
     template.title = data.title
-    template.schema_json = data.schema_json
+    template.schema_json = data.form_schema
     template.is_active = data.is_active
     db.commit()
     db.refresh(template)

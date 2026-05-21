@@ -1,57 +1,81 @@
-Deploy guide — IA-medical (internal, Proxmox VM)
+# Deploy guide — IA-medical (on-prem Proxmox VM)
 
-Overview
-- This guide shows the minimal steps to deploy the app inside a Proxmox VM (Ubuntu 22.04). Internal-only: users access the app by VM IP or a local name (hosts file).
+Internal deployment for **backend (FastAPI)** + **web (React)** on Ubuntu 22.04, with **MySQL managed separately** and optional **Ollama** on the LAN for chat.
 
-Assumptions
-- You have SSH access to the VM as user `deploy` with sudo.
-- Repo is on GitHub and/or available to clone.
-- Database connection details (DATABASE_URL) are available.
-- You will take a Proxmox snapshot before deploy.
+## Overview
 
-Project-specific notes (read this once)
-- Backend defaults are not production-safe. Update these via environment variables:
-  - `DATABASE_URL` (do not use the default in `backend/app/core/config.py`)
-  - `SECRET_KEY` (default is `change-this-secret-key`)
-- Admin bootstrap script sets a default password (`admin123`) in `backend/scripts/setup_admin.py`. Change it after first login.
-- The repo includes heavy ML dependencies (torch/transformers/ollama). Ensure the VM has enough disk/RAM, and verify Ollama is reachable if chat features are required.
-- Web/mobile frontends expect an API base URL:
-  - Web: `REACT_APP_API_URL` (example: `http://<VM-IP>/api`)
-  - Mobile: `REACT_APP_API_URL` in `frontend/mobile/.env` for the device network
+| Component | How it runs |
+|-----------|-------------|
+| Web UI | Static files from `frontend/web/build`, served by Nginx |
+| API | Uvicorn on `127.0.0.1:8000` via systemd |
+| Uploads | FastAPI `/uploads` proxied by Nginx |
+| Database | External MySQL 8 (not installed by this guide) |
+| LLM | Ollama at `OLLAMA_HOST` (same VM or another LAN host) |
 
-Quick checklist (do in order)
-0. Pick a release
-- Tag the commit you want to deploy and use that tag on the VM.
-1. Snapshot the VM (safety)
+Clinic users open `http://rheuma.local` (or VM IP) after a hosts-file entry.
+
+## Assumptions
+
+- SSH as user `deploy` with sudo on the app VM.
+- MySQL is reachable from the VM (host, user, password, database name).
+- Git repo cloned at `/opt/ia-medical`.
+- Proxmox snapshot taken before deploy.
+- Chat features require Ollama reachable from the VM.
+
+## Production environment template
+
+Create `/etc/ia-medical/env` (mode `600`, root-owned):
 
 ```bash
-# run on Proxmox host or use UI
+APP_ENV=production
+DATABASE_URL=mysql+pymysql://ia_user:STRONG_PASSWORD@mysql-host:3306/rhumatoai
+SECRET_KEY=GENERATE_A_LONG_RANDOM_SECRET
+
+# Clinic browser origins (comma-separated)
+CORS_ORIGINS=http://rheuma.local,http://<VM-IP>
+
+OLLAMA_HOST=http://<ollama-host>:11434
+OLLAMA_MODEL=gemma4:e4b
+
+# Do not auto-create tables in production — use Alembic
+CREATE_TABLES_ON_STARTUP=false
+```
+
+Keep real `.env` files local/private. Do not commit them to git.
+
+## Quick checklist
+
+### 0. Pick a release
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+# On VM: git checkout v1.0.0
+```
+
+### 1. Snapshot VM
+
+```bash
 qm snapshot <VMID> pre-deploy-$(date +%F-%H%M)
 ```
 
-2. SSH to VM
+### 2. SSH and install packages
 
 ```bash
 ssh deploy@<VM-IP>
-```
-
-3. Update OS & install packages
-
-```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3-venv python3-pip nginx git ufw postgresql-client
+sudo apt install -y python3-venv python3-pip nginx git ufw mysql-client nodejs npm
 ```
 
-4. Firewall (basic)
+### 3. Firewall
 
 ```bash
 sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp    # optional
+sudo ufw allow 443/tcp   # optional HTTPS
 sudo ufw enable
 ```
 
-5. Place code, create venv, install deps
+### 4. Deploy application code
 
 ```bash
 sudo mkdir -p /opt/ia-medical
@@ -59,45 +83,79 @@ sudo chown deploy:deploy /opt/ia-medical
 cd /opt/ia-medical
 git clone <REPO-URL> .
 git checkout <release-tag>
-cd backend
+```
+
+### 5. Backend virtualenv and dependencies
+
+```bash
+cd /opt/ia-medical/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install -r requirements.txt
 ```
 
-6. Add production env (secrets)
-- Create `/etc/ia-medical/env` containing lines KEY=VALUE (DATABASE_URL, SECRET_KEY, SMTP creds).
-- Secure the file:
+### 6. Secrets file
+
 ```bash
 sudo mkdir -p /etc/ia-medical
-sudo nano /etc/ia-medical/env   # paste secrets
+sudo nano /etc/ia-medical/env
 sudo chown root:root /etc/ia-medical/env
 sudo chmod 600 /etc/ia-medical/env
 ```
 
-7. Backup DB (before migrations)
+### 7. Backup MySQL (before migrations)
 
 ```bash
-pg_dump -h <db-host> -U <db-user> -Fc <db-name> > /tmp/db-predeploy.dump
-# copy the dump to a safe place off the VM
+mysqldump -h <mysql-host> -u <user> -p rhumatoai > /tmp/db-predeploy-$(date +%F).sql
+# Copy dump off the VM
 ```
 
-8. Run DB migrations
+### 8. Run database migrations
 
 ```bash
-export $(grep -v '^#' /etc/ia-medical/env | xargs)
-source /opt/ia-medical/backend/.venv/bin/activate
+set -a && source /etc/ia-medical/env && set +a
 cd /opt/ia-medical/backend
+source .venv/bin/activate
 alembic upgrade head
 ```
 
-9. Create systemd service (run app)
-- Create `/etc/systemd/system/ia-medical.service` with content below (edit paths/user):
+### 9. Bootstrap admin (one time)
 
+```bash
+set -a && source /etc/ia-medical/env && set +a
+export ADMIN_PASSWORD='your-secure-admin-password'
+cd /opt/ia-medical/backend
+source .venv/bin/activate
+python scripts/setup_admin.py
 ```
+
+Default username: `admin@chu.ma`. Do not rely on dev default `admin123` in production.
+
+### 10. Build web frontend
+
+```bash
+cd /opt/ia-medical/frontend/web
+npm ci
+REACT_APP_API_URL=/api npm run build
+```
+
+Output: `frontend/web/build/` (Nginx `root`).
+
+### 11. Persist uploads directory
+
+```bash
+sudo mkdir -p /opt/ia-medical/backend/data/uploads
+sudo chown -R deploy:deploy /opt/ia-medical/backend/data
+```
+
+### 12. systemd service
+
+Create `/etc/systemd/system/ia-medical.service`:
+
+```ini
 [Unit]
-Description=IA Medical backend
+Description=IA Medical FastAPI backend
 After=network.target
 
 [Service]
@@ -113,76 +171,122 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 ```
 
-Then enable and start:
-
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now ia-medical
 sudo journalctl -u ia-medical -f
 ```
 
-10. Nginx reverse proxy (so users use port 80)
-- Create `/etc/nginx/sites-available/ia-medical` (server_name can be `rheuma.local`)
+### 13. Nginx (static web + API proxy)
+
+Create `/etc/nginx/sites-available/ia-medical`:
 
 ```nginx
 server {
-  listen 80;
-  server_name rheuma.local;
+    listen 80;
+    server_name rheuma.local;
 
-  location / {
-    proxy_pass http://127.0.0.1:8000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
+    root /opt/ia-medical/frontend/web/build;
+    index index.html;
+
+    # React SPA
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # FastAPI
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    # Profile pictures and medical-act uploads
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:8000/uploads/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Optional: direct health check without /api prefix
+    location = /health {
+        proxy_pass http://127.0.0.1:8000/health;
+    }
 }
 ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/ia-medical /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/ia-medical /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-11. Make clinic PCs reach the VM by name
-- Edit each client hosts file and add:
+### 14. Clinic PCs — hosts file
+
 ```
 <VM-IP>  rheuma.local
 ```
-(Windows: edit `C:\Windows\System32\drivers\etc\hosts` as admin)
 
-12. Smoke tests
-- On VM:
+Windows: `C:\Windows\System32\drivers\etc\hosts` (as Administrator).
+
+### 15. Smoke tests
+
+On VM:
+
 ```bash
-curl -I http://127.0.0.1:8000/health
+curl -s http://127.0.0.1:8000/health
+curl -I http://127.0.0.1/
 ```
-- From clinic PC (after hosts change):
+
+From a clinic PC:
+
 ```bash
 curl -I http://rheuma.local/
+curl -s http://rheuma.local/health
 ```
 
-13. Rollback (if needed)
-- Preferred: restore Proxmox snapshot from pre-deploy.
+Verify Ollama (if chat is required):
 
 ```bash
-# on Proxmox host
-qm rollback <VMID> pre-deploy-YYYY-MM-DD-HHMM
+curl -s "${OLLAMA_HOST}/api/tags"
 ```
 
-- Or quick code rollback:
+### 16. Rollback
+
+**Preferred:** Proxmox snapshot restore.
+
+**Code only:**
+
 ```bash
 cd /opt/ia-medical
 git checkout <previous-tag>
+cd frontend/web && REACT_APP_API_URL=/api npm run build
 sudo systemctl restart ia-medical
-```
-- DB restore (if needed):
-```bash
-pg_restore -h <db-host> -U <db-user> -d <db-name> /path/db-predeploy.dump
+sudo systemctl reload nginx
 ```
 
-Notes & tips
-- Do not commit secrets to git. Keep `/etc/ia-medical/env` private.
-- Keep the pre-deploy snapshot until you confirm stable operation.
-- If you want HTTPS inside LAN without warnings, use `mkcert` to create locally trusted certs and configure Nginx to use them.
-- If repo is private, use a deploy key or SSH remote for git clone.
-- After deploy, change the admin password immediately and store it securely.
+**Database restore:**
+
+```bash
+mysql -h <mysql-host> -u <user> -p rhumatoai < /path/db-predeploy-YYYY-MM-DD.sql
+```
+
+## Post-deploy checklist
+
+- [ ] `SECRET_KEY` and `DATABASE_URL` are not defaults
+- [ ] Admin password changed from any dev default
+- [ ] `CREATE_TABLES_ON_STARTUP=false` in production
+- [ ] `alembic upgrade head` succeeded
+- [ ] Login works at `http://rheuma.local`
+- [ ] Chat health: `/health` shows `ai_assistant` when Ollama is up
+- [ ] Uploads directory backed up with DB
+- [ ] Pre-deploy snapshot kept until stable
+
+## Notes
+
+- Do not commit `.env` or `/etc/ia-medical/env` to git.
+- Mobile (Expo) is out of scope for this guide; point `REACT_APP_API_URL` at `http://<VM-IP>/api` on the device network.
+- Optional LAN HTTPS: use `mkcert` and add `ssl_certificate` directives to Nginx.
+- Heavy Python deps (`torch`, `transformers`) are in `requirements.txt` for RAG/embeddings; ensure sufficient RAM/disk on the VM.

@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../../styles/theme';
 
-export default function Input({ label, error, containerStyle, icon: IconComponent, ...props }) {
+export default function Input({
+  label,
+  error,
+  containerStyle,
+  icon: IconComponent,
+  isValid = false,
+  onIconPress = null,
+  disabled = false,
+  ...props
+}) {
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputWrapper}>
+      <View
+        style={[
+          styles.inputWrapper,
+          focused && styles.inputWrapperFocused,
+          error && styles.inputWrapperError,
+          isValid && !error && styles.inputWrapperValid,
+          disabled && styles.inputWrapperDisabled,
+        ]}
+      >
         {IconComponent && (
           <View style={styles.iconContainer}>
             {IconComponent}
@@ -20,12 +38,31 @@ export default function Input({ label, error, containerStyle, icon: IconComponen
             IconComponent && styles.inputWithIcon,
             focused && styles.inputFocused,
             error && styles.inputError,
+            isValid && !error && styles.inputValid,
+            disabled && styles.inputDisabled,
           ]}
           placeholderTextColor={colors.textMutedLight}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          editable={!disabled}
           {...props}
         />
+        {/* Validation Icon */}
+        {isValid && !error && (
+          <View style={styles.validationIcon}>
+            <Feather name="check-circle" size={18} color={colors.success} />
+          </View>
+        )}
+        {/* Error Icon */}
+        {error && (
+          <TouchableOpacity
+            style={styles.validationIcon}
+            onPress={onIconPress}
+            disabled={!onIconPress}
+          >
+            <Feather name="alert-circle" size={18} color={colors.error} />
+          </TouchableOpacity>
+        )}
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -50,6 +87,22 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
   },
+  inputWrapperFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  inputWrapperError: {
+    borderColor: colors.error,
+    backgroundColor: colors.errorLight,
+  },
+  inputWrapperValid: {
+    borderColor: colors.success,
+    backgroundColor: colors.successLight,
+  },
+  inputWrapperDisabled: {
+    backgroundColor: colors.divider,
+    opacity: 0.6,
+  },
   input: {
     flex: 1,
     paddingVertical: 14,
@@ -60,14 +113,24 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.sm,
   },
   inputFocused: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
+    color: colors.textPrimary,
   },
   inputError: {
-    borderColor: colors.error,
+    color: colors.error,
+  },
+  inputValid: {
+    color: colors.success,
+  },
+  inputDisabled: {
+    color: colors.textMuted,
   },
   iconContainer: {
     marginRight: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  validationIcon: {
+    marginLeft: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },

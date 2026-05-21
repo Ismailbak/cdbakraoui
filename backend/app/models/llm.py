@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class LLMModel:
     def __init__(self,
-                 ollama_host: str = "http://10.13.19.180:11434",
+                 ollama_host: str = "http://localhost:11434",
                  model_name: str = "gemma4:e4b"):
         """
         Initialize LLM model connection to Ollama
@@ -135,8 +135,10 @@ class LLMModel:
                 "model": "error"
             }
 
-# Global singleton
+from app.core.config import settings
+
+# Global singleton (host/model from environment)
 llm = LLMModel(
-    ollama_host="http://10.13.19.180:11434",
-    model_name="gemma4:e4b"
+    ollama_host=settings.OLLAMA_HOST,
+    model_name=settings.OLLAMA_MODEL,
 )

@@ -5,7 +5,12 @@ import {
 } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import { SkeletonCard, useToast } from '../../components/common';
-import { changePassword, getUserActivity, uploadProfilePicture } from '../../api/api';
+import {
+  changePassword,
+  getUserActivity,
+  uploadProfilePicture,
+  getUploadsUrl,
+} from '../../api/api';
 import './ProfilePage.css';
 
 function ProfilePage() {
@@ -42,12 +47,7 @@ function ProfilePage() {
         
         // Set profile picture if exists
         if (user.profile_picture) {
-          // Convert file path to URL
-          // Path is stored as "data/uploads/profiles/user_7.jpg"
-          // We need to serve it from the static mount point "/uploads/profiles/user_7.jpg"
-          const imagePath = user.profile_picture.replace(/\\/g, '/').replace('data/', '');
-          const imageUrl = `http://localhost:8000/${imagePath}`;
-          setProfilePicture(imageUrl);
+          setProfilePicture(getUploadsUrl(user.profile_picture));
         }
         
         // Fetch user activity

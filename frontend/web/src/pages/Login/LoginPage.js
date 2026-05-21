@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiActivity, FiAlertCircle } from 'react-icons/fi';
-import { login } from '../../api/api';
+import { login, getCurrentUser } from '../../api/api';
 import './LoginPage.css';
 
 function LoginPage() {
@@ -20,11 +20,8 @@ function LoginPage() {
     try {
       const res = await login(email, password);
       localStorage.setItem('token', res.data.access_token);
-      // Fetch user info after login
-      const userRes = await fetch('http://localhost:8000/api/auth/me', {
-        headers: { Authorization: `Bearer ${res.data.access_token}` }
-      });
-      const userData = await userRes.json();
+      const userRes = await getCurrentUser();
+      const userData = userRes.data;
       // Ensure user object includes first_name, last_name, specialty
       const userProfile = userData.user || userData;
       const enrichedUser = {

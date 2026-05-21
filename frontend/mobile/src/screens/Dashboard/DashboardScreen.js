@@ -6,6 +6,10 @@ import { useNavigation } from '@react-navigation/native';
 import { getAnalyticsSummary } from '../../api/api';
 import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
 import Card from '../../components/common/Card';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
+import EmptyState from '../../components/common/EmptyState';
+import Badge from '../../components/common/Badge';
+import { hapticFeedback } from '../../utils/haptics';
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
@@ -14,8 +18,14 @@ export default function DashboardScreen() {
 
   const fetchData = () => {
     getAnalyticsSummary()
-      .then((res) => setSummary(res.data))
-      .catch(() => {})
+      .then((res) => {
+        setSummary(res.data);
+        hapticFeedback.success();
+      })
+      .catch((err) => {
+        hapticFeedback.error();
+        console.log('Error fetching analytics:', err);
+      })
       .finally(() => setRefreshing(false));
   };
 
@@ -92,15 +102,15 @@ export default function DashboardScreen() {
                 <View style={styles.listCard}>
                   {summary.common_diagnoses.slice(0, 5).map((d, i) => (
                     <View key={String(i)} style={[styles.listItem, i < summary.common_diagnoses.length - 1 && styles.listItemBorder]}>
-                      <View style={[styles.badge, { backgroundColor: colors.actesLight }]}>
-                        <Text style={[styles.badgeText, { color: colors.actes }]}>{i + 1}</Text>
-                      </View>
-                      <Text style={styles.listItemText}>{String(d)}</Text>
+                      <Badge label={String(i + 1)} variant="actes" size="small" />
+                      <Text style={styles.listItemText}>{d.name || String(d)}</Text>
                     </View>
                   ))}
                 </View>
               </View>
-            ) : null}
+            ) : (
+              <EmptyState icon="inbox" title="Pas de diagnostics" description="Aucun diagnostic enregistré pour le moment" />
+            )}
 
             {/* Treatments Section */}
             {summary.treatments && summary.treatments.length > 0 ? (
@@ -110,25 +120,32 @@ export default function DashboardScreen() {
                   <Text style={styles.sectionTitle}>Traitements Populaires</Text>
                 </View>
                 <View style={styles.listCard}>
-                  {summary.treatments.slice(0, 5).map((t, i) => (
-                    <View key={String(i)} style={[styles.treatmentItem, i < summary.treatments.length - 1 && styles.listItemBorder]}>
-                      <View style={styles.treatmentName}>
-                        <Text style={styles.treatmentLabel}>{String(t.name)}</Text>
-                        <View style={styles.barContainer}>
-                          <View style={[styles.bar, { width: `${t.percentage}%`, backgroundColor: colors.appointmentSuccess }]} />
+                  {summary.treatments.slice(0, 5).map((t, i) => {
+                    // Calculate percentage based on count (normalize to 100% scale)
+                    const maxCount = Math.max(...summary.treatments.map(x => x.count || 0), 1);
+                    const percentage = Math.round((t.count || 0) / maxCount * 100);
+                    return (
+                      <View key={String(i)} style={[styles.treatmentItem, i < summary.treatments.length - 1 && styles.listItemBorder]}>
+                        <View style={styles.treatmentName}>
+                          <Text style={styles.treatmentLabel}>{t.treatment || String(t)}</Text>
+                          <View style={styles.barContainer}>
+                            <View style={[styles.bar, { width: `${percentage}%`, backgroundColor: colors.appointmentSuccess }]} />
+                          </View>
                         </View>
+                        <Text style={styles.percentage}>{percentage}%</Text>
                       </View>
-                      <Text style={styles.percentage}>{t.percentage}%</Text>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
-            ) : null}
+            ) : (
+              <EmptyState icon="package" title="Pas de traitements" description="Aucun traitement enregistré pour le moment" />
+            )}
           </>
         ) : (
           <View style={styles.loadingContainer}>
-            <Feather name="loader" size={32} color={colors.primary} />
-            <Text style={styles.loadingText}>Chargement...</Text>
+            <SkeletonLoader height={80} count={3} style={{ marginBottom: spacing.lg }} />
+            <SkeletonLoader height={40} count={5} />
           </View>
         )}
       </ScrollView>

@@ -1,41 +1,60 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.auth.router import router as auth_router
-from app.patients.router import router as patients_router
-from app.appointments.router import router as appointments_router
-from app.medical_acts.router import router as medical_acts_router
+
 from app.act_results.router import router as act_results_router
-from app.forms.router import router as forms_router
-from app.chat.router import router as chat_router
 from app.analytics.router import router as analytics_router
-from app.notifications.router import router as notifications_router
-from app.core.database import engine, Base
-from app.models import user, patient, appointment, medical_act, act_result, notification, audit  # noqa: F401 - register models
-from app.models.chat_message import ChatMessage  # noqa: F401 - register model
-from app.models.chat_session import ChatSession  # noqa: F401 - register model
-from app.models.form_system import RefCareType, RefActType, RefFormType, ActForm, FormCsRd  # noqa: F401 - register form models
-from app.models.additional_forms import FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur  # noqa: F401 - register additional forms
+from app.appointments.router import router as appointments_router
+from app.auth.router import router as auth_router
+from app.chat.router import router as chat_router
+from app.core.config import settings
+from app.core.database import Base, engine
+from app.core.utils.rate_limiting import setup_rate_limiting
+from app.forms.router import router as forms_router
+from app.medical_acts.router import router as medical_acts_router
+from app.models import (  # noqa: F401 - register models
+    act_result,
+    appointment,
+    audit,
+    medical_act,
+    notification,
+    patient,
+    user,
+)
+from app.models.additional_forms import (  # noqa: F401
+    FormCsDouleur,
+    FormCsDxa,
+    FormCsEcho,
+    FormCsGeste,
+    FormCsOs,
+    FormCsRic,
+    FormCsSeances,
+)
+from app.models.chat_message import ChatMessage  # noqa: F401
+from app.models.chat_session import ChatSession  # noqa: F401
+from app.models.form_system import ActForm, FormCsRd, RefActType, RefCareType, RefFormType  # noqa: F401
 from app.models.llm import llm
-from app.core.utils.rate_limiting import setup_rate_limiting, get_rate_limiter
-from pathlib import Path
+from app.notifications.router import router as notifications_router
+from app.patients.router import router as patients_router
 
 app = FastAPI(
     title="Medical AI Assistant",
     description="Local AI for Rheumatology EHR",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:19006"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Setup rate limiting
-limiter = setup_rate_limiting(app)
+setup_rate_limiting(app)
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(patients_router, prefix="/api/patients", tags=["patients"])
@@ -57,25 +76,35 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 def on_startup():
     import logging
     import threading
+
     log = logging.getLogger("uvicorn.error")
     try:
-        Base.metadata.create_all(bind=engine)
-        log.info("Database tables created or already exist.")
-        
-        # Run LLM health check in background — don't block startup
+        if settings.create_tables_on_startup:
+            Base.metadata.create_all(bind=engine)
+            log.info("Database tables created or already exist (create_all).")
+        else:
+            log.info(
+                "Skipping create_all on startup (production). "
+                "Run: alembic upgrade head"
+            )
+
         def _check_llm():
-            log.info("Checking AI Assistant (BioMistral via Ollama) in background...")
+            log.info("Checking AI Assistant (Ollama) in background...")
             if llm.load():
-                log.info(f"✅ AI Assistant ready: {llm.model_name}")
+                log.info("AI Assistant ready: %s", llm.model_name)
             else:
-                log.warning("⚠️ Ollama not responding at startup. Chat will still attempt connections on demand.")
-        
+                log.warning(
+                    "Ollama not responding at startup (%s). "
+                    "Chat will still attempt connections on demand.",
+                    settings.OLLAMA_HOST,
+                )
+
         threading.Thread(target=_check_llm, daemon=True).start()
-            
+
     except Exception as e:
         log.error(
             "Startup error: %s. "
-            "Check that MySQL is running and DATABASE_URL in .env is correct (user, password, host, database name).",
+            "Check that MySQL is running and DATABASE_URL is correct.",
             e,
         )
 
@@ -84,10 +113,11 @@ def on_startup():
 def root():
     return {"message": "Medical AI Assistant API"}
 
+
 @app.get("/health")
 def health():
     return {
         "status": "ok",
-        "ai_assistant": "ready" if llm.is_available else "unavailable"
+        "environment": settings.APP_ENV,
+        "ai_assistant": "ready" if llm.is_available else "unavailable",
     }
-

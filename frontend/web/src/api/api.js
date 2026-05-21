@@ -1,6 +1,28 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+/** API base: dev uses FastAPI directly; production uses Nginx same-origin /api. */
+export const API_URL =
+  process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'development' ? 'http://localhost:8000/api' : '/api');
+
+/** Origin for static assets (/uploads) — empty string = same origin as the web app */
+export const getBackendOrigin = () => {
+  if (API_URL.startsWith('http://') || API_URL.startsWith('https://')) {
+    return API_URL.replace(/\/api\/?$/, '');
+  }
+  return '';
+};
+
+/** Build URL for profile/uploads paths stored as data/uploads/... */
+export const getUploadsUrl = (storedPath) => {
+  if (!storedPath) return null;
+  const path = storedPath.replace(/\\/g, '/').replace(/^data\//, '');
+  const origin = getBackendOrigin();
+  if (origin) {
+    return `${origin}/${path}`;
+  }
+  return `/${path}`;
+};
 
 const api = axios.create({
   baseURL: API_URL,
