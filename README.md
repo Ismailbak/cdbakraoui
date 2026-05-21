@@ -90,7 +90,7 @@
 - **Theme**: Centralized design system (colors, typography, spacing)
 
 ### Infrastructure
-- **Orchestration**: Docker Compose (3 services: backend, db, frontend)
+- **Orchestration**: Docker Compose (backend, db, optional Qdrant, frontend)
 - **Deployment**: Local / On-Premise only (GDPR data sovereignty)
 - **Networking**: Internal LAN only (database port 3306 not exposed to public internet)
 
@@ -123,7 +123,7 @@ Add screenshots for credibility and quick scanning:
   - Deterministic prompts with evidence sections and citations
   - General medical mode when no patient context exists
   - Clean user-facing responses (no internal IDs)
-- **RAG (Semantic, Phase 2)**: Planned — Qdrant for notes, PDFs, and free-text fields
+- **RAG (Semantic, Phase 2)**: Implemented behind a feature flag, disabled locally by default (`RAG_SEMANTIC_ENABLED=false`) because embedding model loading can be memory-heavy. Keep using structured RAG unless semantic search is explicitly re-enabled.
 
 ### Deployment & Infrastructure
 - **Proxmox VM Deployment**: Complete application stack being deployed on dedicated Proxmox virtual machine with resources provisioned for LLM inference engine.
@@ -168,10 +168,10 @@ Add screenshots for credibility and quick scanning:
 **Why**: Mobile needs native feel (Bottom Tab Nav, AsyncStorage), web needs full browser APIs.  
 **Tradeoff**: Business logic duplicated (auth, API calls). Fix: Extract to shared TS library (future).
 
-### 7. **No Vector DB (Yet)**
-**Decision**: Structured RAG is live; semantic retrieval is not.  
-**Why**: Early scale is manageable with structured data; keep latency low.  
-**Tradeoff**: Fuzzy search across unstructured notes and PDFs is limited until Phase 2.
+### 7. **Structured RAG First, Semantic RAG Optional**
+**Decision**: Structured RAG is the default path; semantic/Qdrant retrieval is available but disabled locally.
+**Why**: Current clinical questions are served reliably from MySQL records while avoiding local embedding memory pressure.
+**Tradeoff**: Fuzzy search across unstructured notes and PDFs remains limited until semantic search is deliberately enabled and indexed.
 
 ---
 
@@ -238,7 +238,7 @@ Add screenshots for credibility and quick scanning:
 |-----|---------|-----|----------|
 | **50 users** | ⚠️ LLM queue | Add async queue + streaming | Q3 2026 |
 | **200 patients** | ✅ Fine | None (DB scales) | N/A |
-| **10,000 patients** | ❌ Search slow | Add vector DB + semantic search | Post-July 2026 |
+| **10,000 patients** | ❌ Search slow | Enable/index Qdrant semantic search | Post-July 2026 |
 
 ---
 
@@ -281,7 +281,8 @@ docker exec -it backend python setup_admin.py
 | Medical Acts (+ PDF) | ✅ Implemented | April 10, 2026 |
 | Auth (JWT + roles) | ✅ Implemented | — |
 | Audit Logging | ✅ Implemented | — |
-| Chat (LLM integrated) | ✅ Implemented | April 10, 2026 |
+| Chat (LLM + structured RAG) | ✅ Implemented | May 21, 2026 |
+| Grounded chat (sources, IPP detect) | ✅ Implemented | May 21, 2026 |
 | Analytics | ✅ Implemented | April 10, 2026 |
 | Notifications | ✅ Implemented (P2P + Broadcast) | April 10, 2026 |
 | Web UI | ✅ Production Ready | April 10, 2026 |
@@ -294,10 +295,10 @@ docker exec -it backend python setup_admin.py
 
 ## 🔧 Known Limitations & Future Improvements
 
-- **RAG Phase 2** (Planned): Semantic retrieval for notes, PDFs, and free-text fields.
+- **RAG Phase 2** (Available, disabled locally): Semantic retrieval code, Qdrant integration, ingestion helpers, and chunk metadata exist, but local runtime defaults to `RAG_SEMANTIC_ENABLED=false`.
 - **LLM Model Selection** (In Progress): Ongoing comparison of BioMistral vs Gemma.
 - **No multi-agent reasoning** (single LLM instance; async queue planned for Q3 2026)
-- **No vector search** (semantic patient lookup planned post-July 2026)
+- **No active vector search locally** (structured RAG remains the default until semantic search is requested)
 - **No background job queue** (async tasks planned for scaling phase)
 
 ---
@@ -315,8 +316,9 @@ docker exec -it backend python setup_admin.py
 
 ## 🧪 Testing
 
-- **Backend**: pytest suite with structured RAG and evaluation tests
-- **Coverage**: unit + integration-style RAG evaluation (28/28 passing in current suite)
+- **Backend**: pytest suite with structured RAG, hybrid gating, and evaluation tests
+- **Coverage**: `42 passed` locally; RAG tests cover structured retrieval, hybrid gating, and semantic-disabled behavior
+- **Web**: `npm run build` succeeds after assistant/dashboard updates
 
 ---
 
@@ -325,7 +327,9 @@ docker exec -it backend python setup_admin.py
 
 - **Feb–Apr 2026**: Core CRUD, auth, analytics, PDF generation
 - **Apr–May 2026**: RAG Phase 1 (structured retrieval, grounded prompts)
-- **Planned**: RAG Phase 2 (semantic retrieval with Qdrant)
+- **May 2026**: RAG Phase 2 scaffolding (Qdrant, ingestion, embeddings) added but disabled locally by default
+- **May 21, 2026**: Assistant chat UX (scrollable history, short titles, auto-growing composer), patient context carryover for follow-ups, dashboard activity name fix
+
 ---
 
 *Developed Feb–July 2026 | CHU Ibn Rochd, Casablanca*  
