@@ -21,7 +21,7 @@ These are listed in [`.gitignore`](../.gitignore). Delete locally anytime; they 
 | Path | Notes |
 |------|--------|
 | `file.md` | Hand-maintained inventory; paths partly stale vs current `backend/app/*` layout |
-| `SYSTEM.md` | Long reference; some PostgreSQL/Docker examples outdated |
+| `SYSTEM.md` | Long reference; verify against current code before operational use |
 | `frontend/web/src/pages/Appointments/AppointmentList.js` | Not imported by router; may be dead code |
 | `frontend/web/src/pages/MedicalActs/MedicalActList.js` | Not imported by router; may be dead code |
 | `frontend/web/src/assets/images/*-removebg-preview.png` | Marketing/tech logos; unused in active routes |
