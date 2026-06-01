@@ -2,7 +2,7 @@
 # FastAPI router for all /medical-acts endpoints.
 # Handles CRUD for medical acts, per-patient queries, documents, and stats.
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, field_validator
 from typing import List, Optional, Union
@@ -11,6 +11,7 @@ from decimal import Decimal
 import os
 import shutil
 import uuid
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 queries
 
 from app.core.database import get_db
@@ -33,8 +34,8 @@ router = APIRouter()
 class ActDocumentOut(BaseModel):
     id: int
     act_id: int
-    filename: str
-    file_path: str
+    filename: Optional[str] = None
+    file_path: Optional[str] = None
     mime_type: Optional[str] = None
 
 class ActFormOut(BaseModel):
@@ -313,10 +314,14 @@ def get_act_types(current_user: User = Depends(get_current_user_orm)):
 
 @router.get("/", response_model=List[MedicalActOut])
 def get_medical_acts(
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
     patient_id: Optional[int] = Query(None),
     act_type: Optional[str] = Query(None),
+    q: Optional[str] = Query(None, description="Search patient, IPP, ID, description, report, notes"),
+    limit: Optional[int] = Query(None, ge=1, le=5000),
+    offset: int = Query(0, ge=0),
 ):
     """
     Returns all medical acts, optionally filtered by patient_id and/or act_type.
@@ -327,8 +332,30 @@ def get_medical_acts(
         query = query.filter(MedicalActModel.patient_id == patient_id)
     if act_type:
         query = query.filter(MedicalActModel.act_type == act_type)
+    if q:
+        term = f"%{q.strip()}%"
+        query = query.outerjoin(PatientModel, PatientModel.id == MedicalActModel.patient_id).filter(
+            or_(
+                cast(MedicalActModel.id, String).like(term),
+                cast(MedicalActModel.patient_id, String).like(term),
+                MedicalActModel.description.like(term),
+                MedicalActModel.report.like(term),
+                MedicalActModel.notes.like(term),
+                PatientModel.first_name.like(term),
+                PatientModel.last_name.like(term),
+                PatientModel.ipp.like(term),
+            )
+        )
 
-    rows = query.order_by(MedicalActModel.act_date.desc()).all()
+    total = query.count()
+    response.headers["X-Total-Count"] = str(total)
+
+    query = query.order_by(MedicalActModel.act_date.desc(), MedicalActModel.id.desc())
+    if offset:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+    rows = query.all()
     # FIX: use batch enrichment instead of one DB query per act
     return _enrich_acts(db, rows)
 
