@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fi';
 import { useToast } from '../../components/common';
 import {
-  getPatients, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
+  getPatients, getPatient, createMedicalAct, updateMedicalAct, getDoctors, createActResult,
   getCareTypes, getActTypes, getFormTypes, linkFormToAct,
   createFormCsRd, updateFormCsRd,
   createFormCsRic, updateFormCsRic,
@@ -327,10 +327,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   }, [initialData, isEdit]);
 
   useEffect(() => {
-    if (step === 1) {
-      loadPatients();
-    }
-  }, [step]);
+    if (step !== 1) return undefined;
+    const timer = setTimeout(() => {
+      loadPatients(searchQuery);
+    }, searchQuery.trim() ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [step, searchQuery]);
 
   useEffect(() => {
     loadDoctors();
@@ -370,11 +372,23 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     setDynamicSaved(false);
   }, [selectedDynamicTemplate]);
 
-  const loadPatients = async () => {
+  const loadPatients = async (query = '') => {
     setIsLoadingPatients(true);
     try {
-      const res = await getPatients();
-      setPatients(res.data || []);
+      const params = { limit: 50 };
+      const q = query.trim();
+      if (q) params.q = q;
+      const res = await getPatients(params);
+      let list = res.data || [];
+      if (form.patientId && !list.some((p) => p.id === form.patientId)) {
+        try {
+          const selected = await getPatient(form.patientId);
+          if (selected.data) list = [selected.data, ...list];
+        } catch {
+          // Ignore missing selected patient; validation will catch empty selections.
+        }
+      }
+      setPatients(list);
     } catch (err) {
       console.error("Error loading patients:", err);
     } finally {
@@ -483,10 +497,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     }
   };
 
-  const filteredPatients = patients.filter(p =>
-    `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.ipp && p.ipp.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredPatients = patients;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
