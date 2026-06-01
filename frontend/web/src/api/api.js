@@ -55,7 +55,7 @@ export const login = (username, password) =>
 export const getCurrentUser = () => api.get('/auth/me');
 
 // Patients
-export const getPatients = () => api.get('/patients/');
+export const getPatients = (params = {}) => api.get('/patients/', { params });
 export const getPatient = (id) => api.get(`/patients/${id}`);
 export const createPatient = (data) => api.post('/patients/', data);
 export const updatePatient = (id, data) => api.put(`/patients/${id}`, data);
@@ -69,7 +69,7 @@ export const updatePatientAllergy = (patientId, allergyId, data) => api.put(`/pa
 export const deletePatientAllergy = (patientId, allergyId) => api.delete(`/patients/${patientId}/allergies/${allergyId}`);
 
 // Appointments
-export const getAppointments = () => api.get('/appointments/');
+export const getAppointments = (params = {}) => api.get('/appointments/', { params });
 export const getAppointment = (id) => api.get(`/appointments/${id}`);
 export const createAppointment = (data) => api.post('/appointments/', data);
 export const updateAppointment = (id, data) => api.put(`/appointments/${id}`, data);
@@ -78,7 +78,7 @@ export const getTodayAppointments = () => api.get('/appointments/today');
 export const getPatientAppointments = (patientId) => api.get(`/appointments/patient/${patientId}`);
 
 // Medical Acts
-export const getMedicalActs = () => api.get('/medical-acts/');
+export const getMedicalActs = (params = {}) => api.get('/medical-acts/', { params });
 export const getMedicalAct = (id) => api.get(`/medical-acts/${id}`);
 export const createMedicalAct = (data) => api.post('/medical-acts/', data);
 export const updateMedicalAct = (id, data) => api.put(`/medical-acts/${id}`, data);
@@ -159,6 +159,7 @@ export const getSessionMessages = (sessionId, limit = 100, offset = 0) =>
 
 // Analytics & Notifications
 export const getAnalyticsSummary = (dateRange = '6months') => api.get('/analytics/summary', { params: { date_range: dateRange } });
+export const getDashboardSummary = () => api.get('/analytics/dashboard-summary');
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
 
 // User Profile & Security
