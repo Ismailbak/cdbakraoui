@@ -54,6 +54,7 @@ function AnalyticsPage() {
 
   const totalPatients = summary?.total_patients ?? 0;
   const avgAge = summary?.avg_age ?? 0;
+  const avgAgeLabel = avgAge ? `${Number(avgAge).toFixed(1)} ans` : '-';
   const commonDiagnoses = summary?.common_diagnoses ?? [];
 
   // Data now comes directly from the backend summary
@@ -367,7 +368,7 @@ function AnalyticsPage() {
                   <FiFileText />
                 </div>
                 <div className="summary-info">
-                  <span className="summary-value">{avgAge}</span>
+                  <span className="summary-value">{avgAgeLabel}</span>
                   <span className="summary-label">Âge moyen</span>
                 </div>
               </div>
