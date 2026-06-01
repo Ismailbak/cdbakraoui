@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from datetime import datetime, date
@@ -123,6 +123,7 @@ def _patient_to_dict(patient: PatientModel) -> dict:
 
 @router.get("/", response_model=List[Patient])
 def get_patients(
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
     q: Optional[str] = Query(None, description="Search by first_name, last_name, IPP, or phone"),
@@ -131,6 +132,8 @@ def get_patients(
     last_name: Optional[str] = Query(None),
     phone: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None, ge=1, le=1000, description="Max rows to return. Omit for all (legacy behavior)."),
+    offset: int = Query(0, ge=0, description="Number of rows to skip (for pagination)."),
 ):
     query = db.query(PatientModel)
     if q:
@@ -154,7 +157,17 @@ def get_patients(
         query = query.filter(PatientModel.phone.ilike(f"%{phone}%"))
     if status:
         query = query.filter(PatientModel.status == status)
-    patients = query.order_by(PatientModel.id.desc()).all()
+
+    total = query.count()
+    response.headers["X-Total-Count"] = str(total)
+
+    query = query.order_by(PatientModel.id.desc())
+    if offset:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+
+    patients = query.all()
     return [_patient_to_dict(p) for p in patients]
 
 
