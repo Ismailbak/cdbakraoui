@@ -3,7 +3,7 @@ import { FiCalendar, FiClock, FiUser, FiPlus, FiChevronLeft, FiChevronRight, FiC
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonListItem, useToast } from '../../components/common';
-import { getAppointments, getPatients, updateAppointment, deleteAppointment } from '../../api/api';
+import { getAppointments, getTodayAppointments, createAppointment, updateAppointment, deleteAppointment } from '../../api/api';
 import AppointmentForm from './AppointmentForm';
 import './AppointmentsPage.css';
 
@@ -21,7 +21,11 @@ function mapApiAppointmentToUi(apt) {
     time: timeStr,
     datetime_scheduled: apt.datetime_scheduled,
     duration: 30,
-    status: apt.status === 'scheduled' ? 'pending' : apt.status === 'cancelled' ? 'cancelled' : 'confirmed',
+    status:
+      apt.status === 'scheduled' ? 'pending'
+      : apt.status === 'cancelled' ? 'cancelled'
+      : apt.status === 'completed' || apt.status === 'confirmed' ? 'confirmed'
+      : 'pending',
     notes: apt.reason || '',
   };
 }
@@ -55,6 +59,27 @@ const generateCalendarDays = (year, month) => {
   return days;
 };
 
+const getMonthRange = (d) => {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { from, to };
+};
+
+const getWeekRange = () => {
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  return {
+    from: weekStart.toISOString().slice(0, 10),
+    to: weekEnd.toISOString().slice(0, 10),
+  };
+};
+
 const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
@@ -82,28 +107,14 @@ function AppointmentsPage() {
     return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
   const [appointments, setAppointments] = useState([]);
-  const [patientsData, setPatientsData] = useState([]);
+  const [stats, setStats] = useState({ today: 0, week: 0, confirmedMonth: 0, pending: 0 });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Stats calculations
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
-  const weekEndStr = weekEnd.toISOString().slice(0, 10);
-  const month = new Date().getMonth();
-  const year = new Date().getFullYear();
-  const isSameMonth = (dateStr) => {
-    const d = new Date(dateStr);
-    return d.getMonth() === month && d.getFullYear() === year;
-  };
-  const rdvToday = appointments.filter(a => a.date === todayStr).length;
-  const rdvWeek = appointments.filter(a => a.date >= weekStartStr && a.date <= weekEndStr).length;
-  const confirmedThisMonth = appointments.filter(a => a.status === 'confirmed' && isSameMonth(a.date)).length;
-  const pending = appointments.filter(a => a.status === 'pending').length;
+  const rdvToday = stats.today;
+  const rdvWeek = stats.week;
+  const confirmedThisMonth = stats.confirmedMonth;
+  const pending = stats.pending;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
@@ -131,32 +142,39 @@ function AppointmentsPage() {
     });
   };
 
-  const loadAppointments = async () => {
-    try {
-      const res = await getAppointments();
-      setAppointments((res.data || []).map(mapApiAppointmentToUi));
-    } catch {
-      toast.error('Impossible de charger les rendez-vous');
-    }
+  const reloadAppointments = async () => {
+    const { from, to } = getMonthRange(currentDate);
+    const week = getWeekRange();
+    const [monthRes, todayRes, weekRes] = await Promise.all([
+      getAppointments({ from_date: from, to_date: to }),
+      getTodayAppointments(),
+      getAppointments({ from_date: week.from, to_date: week.to }),
+    ]);
+    const monthRows = (monthRes.data || []).map(mapApiAppointmentToUi);
+    setAppointments(monthRows);
+    setStats({
+      today: (todayRes.data || []).length,
+      week: (weekRes.data || []).length,
+      confirmedMonth: monthRows.filter((a) => a.status === 'confirmed').length,
+      pending: monthRows.filter((a) => a.status === 'pending').length,
+    });
   };
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      setIsLoading(true);
       try {
-        const [aptRes, patRes] = await Promise.all([getAppointments(), getPatients()]);
-        if (cancelled) return;
-        setAppointments((aptRes.data || []).map(mapApiAppointmentToUi));
-        setPatientsData(patRes.data || []);
+        await reloadAppointments();
       } catch {
-        if (!cancelled) toast.error('Impossible de charger les données');
+        if (!cancelled) toast.error('Impossible de charger les rendez-vous');
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentDate]);
 
   const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
 
@@ -250,7 +268,6 @@ function AppointmentsPage() {
       toast.error('Veuillez remplir patient, date et heure');
       return;
     }
-    const patient = patientsData.find(p => p.id === parseInt(addFormData.patientId, 10));
     try {
       // Combine date and time into ISO datetime string
       const [hours, minutes] = addFormData.time.split(':');
@@ -263,12 +280,14 @@ function AppointmentsPage() {
         status: 'scheduled',
       });
       const created = mapApiAppointmentToUi(res.data);
-      created.patientName = patient ? patient.name : '-';
-      created.patientPhone = patient ? (patient.phone || '') : '';
-      setAppointments([...appointments, created]);
+      if (created.date.startsWith(getMonthRange(currentDate).from.slice(0, 7))) {
+        setAppointments((prev) => [...prev, created].sort((a, b) => (a.time > b.time ? 1 : -1)));
+      } else {
+        await reloadAppointments();
+      }
       setShowAddModal(false);
       resetAddForm();
-      toast.success(patient ? `Rendez-vous créé pour ${patient.name}` : 'Rendez-vous créé');
+      toast.success(created.patientName ? `Rendez-vous créé pour ${created.patientName}` : 'Rendez-vous créé');
     } catch {
       toast.error('Erreur lors de la création du rendez-vous');
     }
@@ -404,11 +423,11 @@ function AppointmentsPage() {
                 <div className="calendar-quick-stats">
                   <div className="quick-stat">
                     <span className="stat-dot confirmed"></span>
-                    <span>4 Confirmés</span>
+                    <span>{confirmedThisMonth} Confirmés</span>
                   </div>
                   <div className="quick-stat">
                     <span className="stat-dot pending"></span>
-                    <span>2 En attente</span>
+                    <span>{pending} En attente</span>
                   </div>
                 </div>
               </div>
@@ -537,8 +556,8 @@ function AppointmentsPage() {
                       <AppointmentForm
                         defaultDate={insightsModal.date}
                         lockDate={true}
-                        onSuccess={() => { 
-                          loadAppointments(); 
+                        onSuccess={async () => { 
+                          await reloadAppointments(); 
                           toast.success('Rendez-vous créé avec succès'); 
                           setInsightsModal({ open: false, date: null, appointments: [], showForm: false });
                         }}
@@ -596,7 +615,7 @@ function AppointmentsPage() {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <AppointmentForm
                 defaultDate={selectedDate.toISOString().split('T')[0]}
-                onSuccess={() => { loadAppointments(); toast.success('Rendez-vous créé avec succès'); }}
+                onSuccess={async () => { await reloadAppointments(); toast.success('Rendez-vous créé avec succès'); }}
                 onClose={() => { setShowAddModal(false); resetAddForm(); }}
               />
             </div>
@@ -614,7 +633,7 @@ function AppointmentsPage() {
                 defaultNotes={editingAppointment.notes}
                 isEditing={true}
                 appointmentId={editingAppointment.id}
-                onSuccess={() => { loadAppointments(); setShowEditModal(false); setEditingAppointment(null); toast.success('Rendez-vous modifié avec succès'); }}
+                onSuccess={async () => { await reloadAppointments(); setShowEditModal(false); setEditingAppointment(null); toast.success('Rendez-vous modifié avec succès'); }}
                 onClose={() => { setShowEditModal(false); setEditingAppointment(null); }}
               />
             </div>
