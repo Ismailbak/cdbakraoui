@@ -1,18 +1,48 @@
-from typing import List, Dict
-from sqlalchemy.orm import Session
-from sqlalchemy import func, extract, desc, cast, Float, case, Date
-from app.models.patient import Patient
-from app.models.medical_act import MedicalAct, ActTreatment
-from app.models.appointment import Appointment
-from datetime import datetime, timedelta
+from typing import List, Dict, Optional
+from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
+
+from sqlalchemy import desc, func
+from sqlalchemy.orm import Session
+
+from app.models.appointment import Appointment
+from app.models.medical_act import ActDiagnosis, ActTreatment, MedicalAct
+from app.models.patient import Patient
+
+
+def get_top_act_diagnoses(
+    db: Session,
+    start_date: Optional[date] = None,
+    limit: int = 5,
+) -> List[dict]:
+    """Top diagnosis labels from act_diagnoses (CHUIR import stores diagnoses per act, not on patients)."""
+    q = (
+        db.query(ActDiagnosis.diagnosis_label, func.count(ActDiagnosis.id))
+        .join(MedicalAct, MedicalAct.id == ActDiagnosis.act_id)
+        .filter(ActDiagnosis.diagnosis_label.isnot(None))
+        .filter(func.trim(ActDiagnosis.diagnosis_label) != "")
+    )
+    if start_date is not None:
+        q = q.filter(MedicalAct.act_date >= start_date)
+    rows = (
+        q.group_by(ActDiagnosis.diagnosis_label)
+        .order_by(desc(func.count(ActDiagnosis.id)))
+        .limit(limit)
+        .all()
+    )
+    return [{"name": label, "count": count} for label, count in rows if label and str(label).strip()]
 
 def calculate_age(date_of_birth):
     """Calculate age from date of birth."""
     if not date_of_birth:
         return None
     today = datetime.now().date()
-    return today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    # Legacy imports contain placeholder/corrupt birth dates; exclude impossible ages
+    # from averages and demographic buckets instead of skewing analytics.
+    if age < 0 or age > 120:
+        return None
+    return age
 
 def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
     """Calculates top-level summary statistics directly from the database."""
@@ -31,23 +61,22 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
     
     total_patients = db.query(func.count(Patient.id)).scalar() or 0
     
-    # Calculate average age from all patients with date_of_birth (within date range)
-    patients_with_dob = db.query(Patient).filter(Patient.date_of_birth.isnot(None)).all()
-    avg_age = 0.0
-    if patients_with_dob:
-        ages = [calculate_age(p.date_of_birth) for p in patients_with_dob if calculate_age(p.date_of_birth) is not None]
-        avg_age = sum(ages) / len(ages) if ages else 0.0
-    
-    # Top 5 diagnoses (from medical acts within date range)
-    top_diagnoses = (
-        db.query(Patient.primary_diagnosis, func.count(Patient.primary_diagnosis))
-        .filter(Patient.primary_diagnosis != "", Patient.primary_diagnosis.isnot(None))
-        .group_by(Patient.primary_diagnosis)
-        .order_by(desc(func.count(Patient.primary_diagnosis)))
-        .limit(5)
+    # Pull the small fields needed for demographics once, then reuse them.
+    patients_with_dob = (
+        db.query(Patient.date_of_birth, Patient.gender)
+        .filter(Patient.date_of_birth.isnot(None))
         .all()
     )
-    common_diagnoses = [{"name": d[0], "count": d[1]} for d in top_diagnoses if d[0]]
+    avg_age = 0.0
+    if patients_with_dob:
+        ages = []
+        for p in patients_with_dob:
+            age = calculate_age(p.date_of_birth)
+            if age is not None:
+                ages.append(age)
+        avg_age = sum(ages) / len(ages) if ages else 0.0
+    
+    common_diagnoses = get_top_act_diagnoses(db, start_date=start_date, limit=5)
 
     # Weekly Activity (current week, filtered by date range)
     week_start = today - timedelta(days=today.weekday())
@@ -92,15 +121,21 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
         {"label": "31-45", "min": 31, "max": 45},
         {"label": "46-60", "min": 46, "max": 60},
         {"label": "61-75", "min": 61, "max": 75},
-        {"label": "75+", "min": 76, "max": 150},
+        {"label": "75+", "min": 76, "max": 120},
     ]
-    demographics = []
-    for group in age_groups:
-        # Get patients with date_of_birth and calculate age in Python
-        patients_in_range = db.query(Patient).filter(Patient.date_of_birth.isnot(None)).all()
-        males = sum(1 for p in patients_in_range if calculate_age(p.date_of_birth) and group["min"] <= calculate_age(p.date_of_birth) <= group["max"] and p.gender and p.gender.lower() in ["homme", "m"])
-        females = sum(1 for p in patients_in_range if calculate_age(p.date_of_birth) and group["min"] <= calculate_age(p.date_of_birth) <= group["max"] and p.gender and p.gender.lower() in ["femme", "f"])
-        demographics.append({"age": group["label"], "male": males, "female": females})
+    demographics = [{"age": group["label"], "male": 0, "female": 0} for group in age_groups]
+    for patient in patients_with_dob:
+        age = calculate_age(patient.date_of_birth)
+        if age is None:
+            continue
+        gender = (patient.gender or "").lower()
+        for idx, group in enumerate(age_groups):
+            if group["min"] <= age <= group["max"]:
+                if gender in ["homme", "m"]:
+                    demographics[idx]["male"] += 1
+                elif gender in ["femme", "f"]:
+                    demographics[idx]["female"] += 1
+                break
 
     # Monthly Trends (within date range)
     months_fr = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
@@ -148,12 +183,15 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
             week_date = today - timedelta(weeks=week_num)
             week_start_dt = week_date - timedelta(days=week_date.weekday())
             week_end_dt = week_start_dt + timedelta(days=6)
+            period_label = f"S-{week_start_dt.strftime('%d/%m')}"
         # For now, compute a simple activity count for the period using appointments
         try:
+            appt_start = month_start if period_type == 'month' else datetime.combine(week_start_dt, datetime.min.time())
+            appt_end = month_end if period_type == 'month' else datetime.combine(week_end_dt, datetime.max.time())
             period_count = (
                 db.query(func.count(Appointment.id))
-                .filter(Appointment.datetime_scheduled >= (month_start if period_type == 'month' else week_start_dt),
-                        Appointment.datetime_scheduled <= (month_end if period_type == 'month' else week_end_dt))
+                .filter(Appointment.datetime_scheduled >= appt_start,
+                        Appointment.datetime_scheduled <= appt_end)
                 .scalar() or 0
             )
         except Exception:
