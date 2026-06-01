@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiChevronLeft, FiCheck, FiX,
   FiAlertCircle, FiPlus, FiSearch
 } from 'react-icons/fi';
-import { createAppointment, getPatients, updateAppointment } from '../../api/api';
+import { createAppointment, getPatients, getPatient, updateAppointment } from '../../api/api';
 import './AppointmentForm.css';
 
 const TIME_SLOTS = [
@@ -78,15 +78,38 @@ function AppointmentForm({
   const [loadingPats, setLoadingPats] = useState(true);
 
   useEffect(() => {
-    getPatients()
-      .then(r => setPatients(r.data || []))
-      .catch(() => { })
-      .finally(() => setLoadingPats(false));
-  }, []);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoadingPats(true);
+      try {
+        const params = { limit: 20 };
+        const q = patSearch.trim();
+        if (q) params.q = q;
+        const res = await getPatients(params);
+        if (cancelled) return;
+        let list = res.data || [];
+        if (defaultPatientId && !list.some((p) => p.id === defaultPatientId)) {
+          try {
+            const one = await getPatient(defaultPatientId);
+            if (!cancelled && one.data) list = [one.data, ...list];
+          } catch {
+            /* selected patient may have been removed */
+          }
+        }
+        if (!cancelled) setPatients(list);
+      } catch {
+        if (!cancelled) setPatients([]);
+      } finally {
+        if (!cancelled) setLoadingPats(false);
+      }
+    }, patSearch.trim() ? 300 : 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [patSearch, defaultPatientId]);
 
-  const filteredPatients = patients.filter(p =>
-    !patSearch || `${p.first_name} ${p.last_name}`.toLowerCase().includes(patSearch.toLowerCase())
-  );
+  const filteredPatients = patients;
 
   const selectedPatient = patients.find(p => p.id === parseInt(form.patientId, 10));
 
