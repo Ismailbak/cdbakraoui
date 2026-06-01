@@ -71,10 +71,17 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated }) => {
       <div className="modal-content notification-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="header-title-group">
-            <FiSend className="header-icon" />
-            <h2>Nouvelle Notification</h2>
+            <div className="header-icon">
+              <FiSend />
+            </div>
+            <div>
+              <h2 id="notif-modal-title">Nouvelle Notification</h2>
+              <p>Diffusez rapidement une information au staff médical.</p>
+            </div>
           </div>
-          <button className="modal-close" onClick={onClose}><FiX /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer la fenêtre">
+            <FiX />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="notification-form" aria-labelledby="notif-modal-title">
