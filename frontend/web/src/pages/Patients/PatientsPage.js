@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTrash2, FiEye, FiPhone, FiMail, FiCalendar, FiX, FiAlertTriangle } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
-import { getPatients, getAppointments, updatePatient, deletePatient } from '../../api/api';
+import { getPatients, getTodayAppointments, createPatient, updatePatient, deletePatient } from '../../api/api';
 import PatientForm from './PatientForm';
 import './PatientsPage.css';
 
@@ -58,8 +58,12 @@ function PatientsPage() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [totalPatientCount, setTotalPatientCount] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const todayAppointmentsRef = useRef(null);
   const toast = useToast();
-  const totalPatients = Array.isArray(patients) ? patients.length : 0;
+  const itemsPerPage = 15;
+  const totalPatients = totalPatientCount;
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const newThisMonth = Array.isArray(patients) ? patients.filter(p => {
@@ -120,50 +124,80 @@ function PatientsPage() {
 
   const loadPatients = async () => {
     try {
-      const [patientsRes, appointmentsRes] = await Promise.all([
-        getPatients(),
-        getAppointments()
-      ]);
-      const appointments = appointmentsRes.data || [];
-      setPatients((patientsRes.data || []).map(p => mapApiPatientToUi(p, appointments)));
+      setIsLoading(true);
+      const patientsRes = await getPatients({
+        limit: itemsPerPage,
+        offset: (currentPage - 1) * itemsPerPage,
+        q: debouncedSearch.trim() || undefined,
+        status: selectedFilter === 'Tous' ? undefined : selectedFilter,
+      });
+      setTotalPatientCount(Number(patientsRes.headers['x-total-count'] || patientsRes.data?.length || 0));
+      const rows = patientsRes.data || [];
+      setPatients(rows.map((p) => mapApiPatientToUi(p, [])));
+      setIsLoading(false);
+
+      // Enrich with today's appointments in background (fetch once per session)
+      if (todayAppointmentsRef.current === null) {
+        try {
+          const appointmentsRes = await getTodayAppointments();
+          todayAppointmentsRef.current = appointmentsRes.data || [];
+        } catch {
+          todayAppointmentsRef.current = [];
+        }
+      }
+      setPatients(rows.map((p) => mapApiPatientToUi(p, todayAppointmentsRef.current || [])));
     } catch {
       toast.error('Impossible de charger les patients');
-    } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPatients();
-  }, []);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const filteredPatients = patients.filter(patient => {
-    const term = searchTerm.toLowerCase().trim();
-    const matchesSearch = !term ||
-      (patient.ipp && patient.ipp.toLowerCase().includes(term)) ||
-      (patient.first_name && patient.first_name.toLowerCase().includes(term)) ||
-      (patient.last_name && patient.last_name.toLowerCase().includes(term)) ||
-      (patient.phone && patient.phone.replace(/\s/g, '').includes(term.replace(/\s/g, ''))) ||
-      (patient.primary_diagnosis && patient.primary_diagnosis.toLowerCase().includes(term)) ||
-      (patient.city && patient.city.toLowerCase().includes(term));
-    const matchesFilter = selectedFilter === 'Tous' || patient.status === selectedFilter;
-    return matchesSearch && matchesFilter;
-  });
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedFilter]);
+
+  useEffect(() => {
+    loadPatients();
+  }, [currentPage, debouncedSearch, selectedFilter]);
 
   // Pagination logic
-  const itemsPerPage = 15;
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  const totalPages = Math.ceil(totalPatientCount / itemsPerPage);
   
   // Reset to page 1 if current page exceeds total pages
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(1);
     }
-  }, [filteredPatients, currentPage, totalPages]);
+  }, [currentPage, totalPages]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+  const paginatedPatients = patients;
+  const getPaginationItems = () => {
+    const visiblePages = new Set([1, totalPages]);
+    const windowSize = 2;
+
+    for (let page = currentPage - windowSize; page <= currentPage + windowSize; page += 1) {
+      if (page >= 1 && page <= totalPages) {
+        visiblePages.add(page);
+      }
+    }
+
+    const pages = Array.from(visiblePages).sort((a, b) => a - b);
+    return pages.reduce((items, page, index) => {
+      if (index > 0 && page - pages[index - 1] > 1) {
+        items.push(`ellipsis-${pages[index - 1]}-${page}`);
+      }
+      items.push(page);
+      return items;
+    }, []);
+  };
+  const paginationItems = getPaginationItems();
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -375,7 +409,7 @@ function PatientsPage() {
         <div className="patients-table-card">
           <div className="table-header">
             <h3>Liste des Patients</h3>
-            <span className="patient-count">{filteredPatients.length} patients</span>
+            <span className="patient-count">{totalPatientCount} patients</span>
           </div>
 
           <div className="table-wrapper">
@@ -461,7 +495,9 @@ function PatientsPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="table-pagination">
-              <span className="pagination-info">Affichage {startIndex + 1}-{Math.min(endIndex, filteredPatients.length)} sur {filteredPatients.length}</span>
+              <span className="pagination-info">
+                Affichage {totalPatientCount === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, totalPatientCount)} sur {totalPatientCount}
+              </span>
               <div className="pagination-buttons">
                 <button 
                   className="pagination-btn" 
@@ -472,14 +508,18 @@ function PatientsPage() {
                   ←
                 </button>
                 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
+                {paginationItems.map(item => (
+                  typeof item === 'number' ? (
+                    <button
+                      key={item}
+                      className={`pagination-btn ${currentPage === item ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(item)}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span key={item} className="pagination-ellipsis">...</span>
+                  )
                 ))}
                 
                 <button 
