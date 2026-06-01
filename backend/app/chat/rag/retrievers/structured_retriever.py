@@ -33,8 +33,18 @@ def _truncate(text: Optional[str], max_len: int = 280) -> str:
     return text[: max_len - 3].rstrip() + "..."
 
 
-def _query_hints(query: str) -> set:
+def _query_hints(query: str) -> dict:
     q = query.lower()
+    case_overview = any(
+        k in q
+        for k in (
+            "resume", "résume", "resumer", "résumer", "synthese", "synthèse",
+            "cas", "dossier", "situation", "bilan", "overview", "summarize",
+            "describe", "decrire", "décrire", "presenter", "présenter",
+            "qui est", "tell me about", "parle-moi", "parle moi",
+            "vue d'ensemble", "historique complet",
+        )
+    )
     return {
         "appointment": any(k in q for k in ("rdv", "rendez", "appointment", "visite", "suivi", "planifier")),
         "upcoming": any(k in q for k in ("prochain", "upcoming", "futur", "planif")),
@@ -44,6 +54,7 @@ def _query_hints(query: str) -> set:
         "treatment": any(k in q for k in ("traitement", "medicament", "médicament", "prescri", "therap")),
         "diagnosis": any(k in q for k in ("diagnostic", "diagnos", "maladie", "patholog")),
         "act": any(k in q for k in ("acte", "consultation", "hospital", "rapport")),
+        "case_overview": case_overview,
     }
 
 
@@ -299,16 +310,25 @@ class StructuredRetrievalPipeline:
 
         facts: List[RetrievedFact] = []
         hints = _query_hints(query)
+        top_k = top_k_per_source
+        if hints.get("case_overview"):
+            top_k = max(top_k_per_source, 8)
 
-        facts.extend(await self.patient_retriever.retrieve(query, patient_id, top_k_per_source))
+        facts.extend(await self.patient_retriever.retrieve(query, patient_id, top_k))
 
-        if hints.get("appointment") or not hints.get("lab"):
-            facts.extend(await self.appointment_retriever.retrieve(query, patient_id, top_k_per_source))
+        if hints.get("case_overview") or hints.get("appointment") or not hints.get("lab"):
+            facts.extend(await self.appointment_retriever.retrieve(query, patient_id, top_k))
 
-        if hints.get("act") or hints.get("treatment") or hints.get("diagnosis") or not hints.get("lab"):
-            facts.extend(await self.medical_act_retriever.retrieve(query, patient_id, top_k_per_source))
+        if (
+            hints.get("case_overview")
+            or hints.get("act")
+            or hints.get("treatment")
+            or hints.get("diagnosis")
+            or not hints.get("lab")
+        ):
+            facts.extend(await self.medical_act_retriever.retrieve(query, patient_id, top_k))
 
-        if hints.get("lab") or hints.get("abnormal") or True:
-            facts.extend(await self.act_result_retriever.retrieve(query, patient_id, top_k_per_source))
+        if hints.get("case_overview") or hints.get("lab") or hints.get("abnormal") or True:
+            facts.extend(await self.act_result_retriever.retrieve(query, patient_id, top_k))
 
         return facts

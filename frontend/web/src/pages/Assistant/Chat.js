@@ -234,6 +234,7 @@ function Chat({ patientId, currentUser }) {
         warnings: res?.data?.warnings || [],
         retrieval_type: res?.data?.retrieval_type || 'none',
         patient_id: resolvedPatientId,
+        patient_name: res?.data?.patient_name || null,
         timestamp: new Date()
       };
 
@@ -500,6 +501,17 @@ function Chat({ patientId, currentUser }) {
                     <button className="assistant-retry-btn" onClick={() => handleRetryFailed(msg.failedPrompt, msg.id)}>
                       <FiRefreshCw /> Réessayer
                     </button>
+                  )}
+                  {msg.role === 'assistant' && (msg.patient_name || msg.patient_id) && (
+                    <div className="assistant-patient-context" title="Patient identifié pour cette réponse">
+                      <FiUser />
+                      <span>{msg.patient_name || `Patient #${msg.patient_id}`}</span>
+                      {msg.sources?.length > 0 && (
+                        <span className="assistant-patient-context-meta">
+                          {msg.sources.length} source{msg.sources.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   )}
                   {msg.role === 'assistant' && (
                     <>

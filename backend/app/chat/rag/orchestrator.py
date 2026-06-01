@@ -16,6 +16,7 @@ from app.chat.rag.ingestion import ingest_patient_records
 from app.chat.rag.rag_db import count_embedded_chunks, rag_chunks_table_ready
 from app.chat.rag.embedding_service import get_embedding_model
 from app.core.config_rag import rag_config
+from app.models.patient import Patient
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,11 @@ class RAGOrchestrator:
         self,
         request: ChatRequest,
         user_id: int,
-    ) -> Tuple[str, GroundedChatResponse, list, Optional[int]]:
+    ) -> Tuple[str, GroundedChatResponse, list, Optional[int], Optional[str]]:
         warnings: List[str] = []
         patient_id = request.patient_id
         detected_patient_id = None
+        patient_display_name: Optional[str] = None
         retrieval_mode = request.retrieval_mode or "auto"
 
         classification = self.classifier.classify(request.query)
@@ -48,11 +50,14 @@ class RAGOrchestrator:
 
         # Auto-detect only when not explicitly provided
         if not patient_id and rag_config.AUTO_DETECT_ENABLED:
-            detected_id, detect_warnings = detect_patient_from_query(self.db, request.query)
+            detected_id, detect_warnings, detected_name = detect_patient_from_query(
+                self.db, request.query
+            )
             warnings.extend(detect_warnings)
             if detected_id:
                 patient_id = detected_id
                 detected_patient_id = detected_id
+                patient_display_name = detected_name
 
         # Authorization
         if patient_id:
@@ -64,9 +69,16 @@ class RAGOrchestrator:
                 patient_id = None
         elif classification.intent == QueryIntent.PATIENT_SPECIFIC and classification.patient_confidence > 0:
             warnings.append(
-                "Query appears patient-specific but no patient was identified. "
-                "Please specify the patient (IPP or select from the chart)."
+                "Requête liée à un patient, mais aucun patient n'a été identifié. "
+                "Précisez le nom ou l'IPP, ou sélectionnez le patient dans le dossier."
             )
+
+        if patient_id and not patient_display_name:
+            patient_row = self.db.query(Patient).filter(Patient.id == patient_id).first()
+            if patient_row:
+                patient_display_name = (
+                    f"{patient_row.first_name} {patient_row.last_name}".strip()
+                )
 
         use_structured = retrieval_mode in ("auto", "structured_only")
         use_semantic = retrieval_mode in ("auto", "hybrid") and rag_config.SEMANTIC_ENABLED
@@ -120,8 +132,13 @@ class RAGOrchestrator:
 
             facts = rank_and_cap_facts(facts)
 
-            if not facts and rag_config.RETURN_INSUFFICIENT_DATA_WHEN_EMPTY:
-                warnings.append("No relevant medical records found for this query.")
+            if not facts and patient_id:
+                label = patient_display_name or f"patient #{patient_id}"
+                warnings.append(
+                    f"Dossier de {label} ouvert, mais peu de données structurées pour cette question."
+                )
+            elif not facts and rag_config.RETURN_INSUFFICIENT_DATA_WHEN_EMPTY:
+                warnings.append("Aucune donnée médicale pertinente trouvée pour cette requête.")
 
         language = request.language or "fr"
         grounded_prompt = self.prompt_builder.build_grounded_prompt(
@@ -130,6 +147,7 @@ class RAGOrchestrator:
             patient_id=patient_id,
             language=language,
             detected_from_ipp=detected_patient_id is not None,
+            patient_display_name=patient_display_name,
         )
 
         if retrieval_type == "none":
@@ -156,7 +174,13 @@ class RAGOrchestrator:
             metadata=metadata,
         )
 
-        return grounded_prompt, response, warnings, detected_patient_id or patient_id
+        return (
+            grounded_prompt,
+            response,
+            warnings,
+            detected_patient_id or patient_id,
+            patient_display_name,
+        )
 
     def _assess_confidence(self, fact_count: int) -> str:
         if fact_count >= 3:

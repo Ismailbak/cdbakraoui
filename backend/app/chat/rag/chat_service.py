@@ -95,12 +95,16 @@ async def get_grounded_chat_response(
         )
         
         # Process through orchestrator (returns detected patient id as 4th value)
-        grounded_prompt, rag_response, warnings, detected_patient_id = await orchestrator.process_chat_request(
-            rag_request, user_id=user_id
-        )
+        (
+            grounded_prompt,
+            rag_response,
+            warnings,
+            detected_patient_id,
+            detected_patient_name,
+        ) = await orchestrator.process_chat_request(rag_request, user_id=user_id)
 
-        # Determine final patient id: prefer explicit function arg, otherwise use detected id
         final_patient_id = patient_id or detected_patient_id
+        final_patient_name = detected_patient_name
         
         logger.info(
             f"RAG orchestration complete: {len(rag_response.sources)} sources, "
@@ -110,16 +114,41 @@ async def get_grounded_chat_response(
         
         # Build system message based on language
         system_messages = {
-            "fr": "Tu es un assistant médical IA spécialisé en médecine générale et rhumatologie. Sois EXTRÊMEMENT CONCIS et direct. Limite tes réponses à 3 ou 4 phrases maximum. Ne donne pas de longues introductions ou conclusions.",
-            "en": "You are a medical AI assistant specialized in general medicine and rheumatology. Be EXTREMELY CONCISE and direct. Limit your answers to 3 or 4 sentences maximum. Do not provide long introductions or conclusions.",
-            "ar": "أنت مساعد ذكاء اصطناعي طبي متخصص في الطب العام وأمراض الروماتيزم. كن موجزاً ومباشراً جداً. اقتصر في إجاباتك على 3 أو 4 جمل كحد أقصى. لا تقدم مقدمات أو استنتاجات طويلة."
+            "fr": (
+                "Tu es un assistant médical (rhumatologie / médecine générale). "
+                "Réponds en français, de façon claire et naturelle, comme un collègue clinicien. "
+                "Si un dossier patient est fourni dans le prompt: fais une synthèse directe "
+                "(identité, diagnostic, actes, résultats, suivi) sans demander de joindre des documents. "
+                "Ne invente aucune donnée. Pas de liste « Sources utilisées » dans le texte."
+            ),
+            "en": (
+                "You are a medical assistant (rheumatology / general medicine). "
+                "Answer clearly and naturally, like a clinician briefing a colleague. "
+                "When patient chart data is in the prompt, summarize directly — never ask to upload records. "
+                "Do not invent facts. No manual 'Sources used' list in the text."
+            ),
+            "ar": (
+                "أنت مساعد طبي. أجب بوضوح وبشكل طبيعي. "
+                "عند توفر بيانات المريض، لخّص مباشرة دون طلب إرفاق ملفات. لا تخترع معلومات."
+            ),
         }
-        
+
         system_msg = system_messages.get(language, system_messages["fr"])
-        
-        # If confidence is low, add safety guidance to LLM
-        if rag_response.metadata.confidence == "low":
-            system_msg += "\n\nWARNING: Limited evidence available for this query. Be cautious and explicitly state uncertainty."
+
+        if final_patient_id and rag_response.metadata.confidence == "low":
+            name = final_patient_name or f"patient #{final_patient_id}"
+            if language == "fr":
+                system_msg += (
+                    f"\n\nLe patient {name} est identifié mais les preuves sont limitées. "
+                    "Indiquez ce qui manque dans le dossier sans demander de fichiers."
+                )
+            else:
+                system_msg += (
+                    f"\n\nPatient {name} is in scope but evidence is limited. "
+                    "State what is missing without asking for uploads."
+                )
+        elif rag_response.metadata.confidence == "low":
+            system_msg += "\n\nLimited evidence — state uncertainty clearly."
         
         # Call LLM with grounded prompt
         llm_result = llm.generate(
@@ -199,6 +228,7 @@ async def get_grounded_chat_response(
             "language": language,
             "retrieval_type": rag_response.metadata.retrieval_type,
             "patient_id": final_patient_id,
+            "patient_name": final_patient_name,
             "message_id": message_id,
         }
     

@@ -498,6 +498,26 @@
   white-space: pre-wrap;
 }
 
+.assistant-patient-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.assistant-patient-context-meta {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 11px;
+}
+
 .assistant-message-tools {
   display: flex;
   align-items: center;

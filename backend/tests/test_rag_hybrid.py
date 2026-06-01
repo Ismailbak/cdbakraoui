@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
-from app.chat.rag.patient_detection import detect_patient_from_query
+from app.chat.rag.patient_detection import detect_patient_from_query, _extract_name_pairs
 from app.chat.rag.fact_ranking import rank_and_cap_facts
 from app.chat.rag.chat_service import clean_grounded_response_text
 from app.chat.rag.retrievers.structured_retriever import RetrievedFact
@@ -20,7 +20,7 @@ class TestPatientDetection:
         patient.ipp = "FR123456"
         db.query.return_value.filter.return_value.first.return_value = patient
 
-        pid, warnings = detect_patient_from_query(db, "Patient IPP FR123456 status?")
+        pid, warnings, _ = detect_patient_from_query(db, "Patient IPP FR123456 status?")
         assert pid == 7
         assert not warnings
 
@@ -32,9 +32,16 @@ class TestPatientDetection:
         with patch("app.chat.rag.patient_detection.rag_config") as cfg:
             cfg.AUTO_DETECT_ENABLED = True
             cfg.AUTO_DETECT_REQUIRE_EXACT_MATCH = True
-            pid, warnings = detect_patient_from_query(db, "IPP 99999")
+            pid, warnings, _ = detect_patient_from_query(db, "IPP 99999")
         assert pid is None
         assert any("not found" in w.lower() for w in warnings)
+
+    def test_extracts_name_pair_from_natural_language_request(self):
+        pairs = _extract_name_pairs(
+            "Veuillez fournir les dossiers médicaux de Layla Laksiri pour décrire son cas."
+        )
+
+        assert ("layla", "laksiri") in pairs
 
 
 class TestFactRanking:
@@ -108,7 +115,7 @@ class TestRetrievalMode:
         with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
             sem.return_value = []
             with patch("app.chat.rag.orchestrator.ingest_patient_records"):
-                _, response, _, _ = await orchestrator.process_chat_request(
+                _, response, _, _, _ = await orchestrator.process_chat_request(
                     ChatRequest(
                         query="Allergies du patient?",
                         patient_id=1,
@@ -129,7 +136,7 @@ class TestRetrievalMode:
         orchestrator = RAGOrchestrator(db_session, patient_service)
         orchestrator.retriever.retrieve_with_authorization = AsyncMock(return_value=[])
 
-        _, response, warnings, _ = await orchestrator.process_chat_request(
+        _, response, warnings, _, _ = await orchestrator.process_chat_request(
             ChatRequest(query="Medications?", patient_id=42),
             user_id=1,
         )

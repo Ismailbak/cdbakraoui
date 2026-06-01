@@ -133,7 +133,7 @@ class TestRAGOrchestrator:
             retrieval_mode="auto"
         )
         
-        grounded_prompt, response, warnings, _ = await orchestrator.process_chat_request(
+        grounded_prompt, response, warnings, _, _ = await orchestrator.process_chat_request(
             request, user_id=1
         )
         
@@ -157,11 +157,14 @@ class TestRAGOrchestrator:
             include_sources=True
         )
         
-        grounded_prompt, response, warnings, _ = await orchestrator.process_chat_request(
+        grounded_prompt, response, warnings, _, _ = await orchestrator.process_chat_request(
             request, user_id=1
         )
         
-        assert "No relevant medical records" in " ".join(warnings)
+        assert any(
+            phrase in " ".join(warnings).lower()
+            for phrase in ("données", "records", "dossier")
+        )
         assert response.metadata.confidence == "low"
     
     @pytest.mark.asyncio
@@ -178,7 +181,7 @@ class TestRAGOrchestrator:
         with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
             sem.return_value = []
             with patch("app.chat.rag.orchestrator.ingest_patient_records"):
-                _, resp_0, _, _ = await orchestrator.process_chat_request(
+                _, resp_0, _, _, _ = await orchestrator.process_chat_request(
                     ChatRequest(query="Test?", patient_id=1, retrieval_mode="structured_only"),
                     user_id=1,
                 )
@@ -194,7 +197,7 @@ class TestRAGOrchestrator:
         with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
             sem.return_value = []
             with patch("app.chat.rag.orchestrator.ingest_patient_records"):
-                _, resp_med, _, _ = await orchestrator.process_chat_request(
+                _, resp_med, _, _, _ = await orchestrator.process_chat_request(
                     ChatRequest(query="Test?", patient_id=1, retrieval_mode="structured_only"),
                     user_id=1,
                 )
@@ -210,7 +213,7 @@ class TestRAGOrchestrator:
         with patch("app.chat.rag.orchestrator.semantic_retrieve", new_callable=AsyncMock) as sem:
             sem.return_value = []
             with patch("app.chat.rag.orchestrator.ingest_patient_records"):
-                _, resp_high, _, _ = await orchestrator.process_chat_request(
+                _, resp_high, _, _, _ = await orchestrator.process_chat_request(
                     ChatRequest(query="Test?", patient_id=1, retrieval_mode="structured_only"),
                     user_id=1,
                 )
@@ -271,7 +274,7 @@ class TestAcceptanceScenarios:
             patient_id=123
         )
         
-        prompt, response, warnings, _ = await orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _, _ = await orchestrator.process_chat_request(request, user_id=1)
         
         assert len(response.sources) == 1
         assert response.metadata.confidence == "medium"
@@ -291,7 +294,7 @@ class TestAcceptanceScenarios:
             patient_id=1
         )
         
-        prompt, response, warnings, _ = await orchestrator.process_chat_request(request, user_id=1)
+        prompt, response, warnings, _, _ = await orchestrator.process_chat_request(request, user_id=1)
         
         # Should include instruction not to hallucinate
         assert (

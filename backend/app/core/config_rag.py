@@ -13,7 +13,7 @@ class RAGConfig(BaseSettings):
     
     # Retrieval settings
     RETRIEVAL_TOP_K: int = 5
-    MAX_TOTAL_FACTS: int = 12
+    MAX_TOTAL_FACTS: int = 16
     RETRIEVAL_TIMEOUT_SECONDS: int = 3
     CHUNK_MAX_TOKENS: int = 500
     SEMANTIC_TOP_K: int = 5

@@ -76,6 +76,7 @@ class GroundedChatResponse(BaseModel):
     language: str
     retrieval_type: str = "structured"  # "structured" | "hybrid" | "none"
     patient_id: Optional[int] = None
+    patient_name: Optional[str] = None
     message_id: Optional[int] = None
 
 
@@ -182,6 +183,7 @@ async def chat_grounded(
             language=result.get("language", "fr"),
             retrieval_type=result.get("retrieval_type", "structured"),
             patient_id=result.get("patient_id"),
+            patient_name=result.get("patient_name"),
             message_id=result.get("message_id"),
         )
     except PermissionError:
