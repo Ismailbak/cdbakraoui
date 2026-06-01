@@ -378,13 +378,15 @@
 
 .pagination-buttons {
   display: flex;
-  gap: 15px;
+  gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .pagination-btn {
-  min-width: 44px;
-  height: 44px;
+  min-width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid #E5E7EB;
   border-radius: 8px;
@@ -398,6 +400,17 @@
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+
+.pagination-ellipsis {
+  min-width: 24px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .pagination-btn:hover:not(:disabled):not(.active) {
@@ -421,11 +434,11 @@
 
 /* Add spacing around nav buttons (Précédent/Suivant) */
 .pagination-buttons button:first-child {
-  margin-right: 8px;
+  margin-right: 4px;
 }
 
 .pagination-buttons button:last-child {
-  margin-left: 8px;
+  margin-left: 4px;
 }
 
 /* Modal */
