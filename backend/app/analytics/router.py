@@ -8,7 +8,7 @@ from sqlalchemy import func, cast, Date, text
 from app.core.database import get_db, engine
 from app.models.patient import Patient as PatientModel
 from app.models.appointment import Appointment as AppointmentModel
-from app.models.medical_act import MedicalAct as MedicalActModel
+from app.models.medical_act import MedicalAct as MedicalActModel, ActDiagnosis as ActDiagnosisModel
 from app.models.audit import AuditLog
 from app.models.notification import Notification as NotificationModel
 from app.models.user import User
@@ -111,6 +111,62 @@ def get_summary(
 ):
     stats = analytics_service.get_summary_stats(db, date_range=date_range)
     return stats
+
+
+@router.get("/dashboard-summary")
+def get_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker(["admin", "doctor", "department_head"])),
+):
+    today = datetime.now().date()
+    week_start = today - timedelta(days=6)
+
+    total_patients = db.query(func.count(PatientModel.id)).scalar() or 0
+    medical_acts = db.query(func.count(MedicalActModel.id)).scalar() or 0
+    today_appointments = (
+        db.query(func.count(AppointmentModel.id))
+        .filter(cast(AppointmentModel.datetime_scheduled, Date) == today)
+        .scalar() or 0
+    )
+
+    common_diagnoses = analytics_service.get_top_act_diagnoses(db, start_date=None, limit=5)
+    diagnosis_records = db.query(func.count(ActDiagnosisModel.id)).scalar() or 0
+
+    appointment_day = cast(AppointmentModel.datetime_scheduled, Date)
+    appointment_rows = (
+        db.query(appointment_day.label("day"), func.count(AppointmentModel.id))
+        .filter(cast(AppointmentModel.datetime_scheduled, Date) >= week_start)
+        .group_by(appointment_day)
+        .all()
+    )
+    act_rows = (
+        db.query(MedicalActModel.act_date.label("day"), func.count(MedicalActModel.id))
+        .filter(MedicalActModel.act_date >= week_start)
+        .group_by(MedicalActModel.act_date)
+        .all()
+    )
+    appointments_by_day = {row[0]: row[1] for row in appointment_rows}
+    acts_by_day = {row[0]: row[1] for row in act_rows}
+
+    weekly_trend = []
+    days_fr = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        weekly_trend.append({
+            "date": day.isoformat(),
+            "name": days_fr[day.weekday()],
+            "rdv": appointments_by_day.get(day, 0),
+            "actes": acts_by_day.get(day, 0),
+        })
+
+    return {
+        "total_patients": total_patients,
+        "today_appointments": today_appointments,
+        "medical_acts": medical_acts,
+        "common_diagnoses": common_diagnoses,
+        "diagnosis_records": diagnosis_records,
+        "weekly_trend": weekly_trend,
+    }
 
 
 @router.get("/trends")
