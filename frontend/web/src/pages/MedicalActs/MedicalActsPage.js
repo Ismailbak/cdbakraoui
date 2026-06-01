@@ -11,7 +11,7 @@ import {
 } from 'react-icons/fi';
 
 import { 
-  getMedicalActs, deleteMedicalAct, getPatients, createMedicalAct, getDoctors, getPatientResults, 
+  getMedicalActs, deleteMedicalAct, createMedicalAct, getDoctors, getPatientResults, 
   getActForms, getFormCsRd, getFormCsRic, getFormCsOs, getFormCsEcho, 
   getFormCsGeste, getFormCsSeances, getFormCsDxa, getFormCsDouleur, getDynamicResponsesForAct 
 } from '../../api/api';
@@ -76,35 +76,32 @@ const medicalActsService = {
     return response.data;
   },
 
-  /** Fetches all medical acts and maps backend snake_case fields to camelCase. */
-  async getActs() {
-    const response = await getMedicalActs();
-    return response.data.map(act => ({
-      id: act.id,
-      patientName: act.patient_name || '',
-      patientId: act.patient_id,
-      type: act.act_type,
-      category: act.category || '',
-      date: act.act_date,
-      description: act.description || '',
-      status: act.status,
-      amount: act.amount || '',
-      doctor: act.doctor_id || '',
-      // assigned_staff_ids is stored as a JSON string in the backend
-      assignedStaff: act.assigned_staff_ids ? JSON.parse(act.assigned_staff_ids) : [],
-      notes: act.notes || '',
-      report: act.report || '',
-      documents: act.documents || [],
-      diagnoses: act.diagnoses || [],
-      treatments: act.treatments || [],
-      forms: act.forms || [],
-    }));
-  },
-
-  /** Fetches the patient list for the dropdown in the form. */
-  async getPatients() {
-    const response = await getPatients();
-    return response.data;
+  /** Fetches one page of medical acts and maps backend snake_case fields to camelCase. */
+  async getActs(params = {}) {
+    const response = await getMedicalActs(params);
+    return {
+      rows: response.data.map(act => ({
+        id: act.id,
+        patientName: act.patient_name || '',
+        patientId: act.patient_id,
+        type: act.act_type,
+        category: act.category || '',
+        date: act.act_date,
+        description: act.description || '',
+        status: act.status,
+        amount: act.amount || '',
+        doctor: act.doctor_id || '',
+        // assigned_staff_ids is stored as a JSON string in older responses.
+        assignedStaff: act.assigned_staff_ids ? JSON.parse(act.assigned_staff_ids) : [],
+        notes: act.notes || '',
+        report: act.report || '',
+        documents: act.documents || [],
+        diagnoses: act.diagnoses || [],
+        treatments: act.treatments || [],
+        forms: act.forms || [],
+      })),
+      total: Number(response.headers['x-total-count'] || response.data.length),
+    };
   },
 
   /** Returns available staff for assignment. Extend when endpoint is ready. */
@@ -147,6 +144,18 @@ const getCategoryColor = (category) => CATEGORY_COLOR_MAP[category] ?? 'default'
 
 /** Returns a human-readable label for act status. */
 const statusLabel = (status) => (status === 'completed' ? 'Terminé' : 'En cours');
+
+const getVisiblePages = (currentPage, totalPages) => {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pages = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  if (start > 2) pages.push('start-ellipsis');
+  for (let page = start; page <= end; page += 1) pages.push(page);
+  if (end < totalPages - 1) pages.push('end-ellipsis');
+  pages.push(totalPages);
+  return pages;
+};
 
 // ─── ActCard ──────────────────────────────────────────────────────────────────
 // Displays a summary card for a single medical act.
@@ -830,13 +839,13 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
 // ─── MedicalActsPage ──────────────────────────────────────────────────────────
 
 function MedicalActsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [stats, setStats] = useState(null);
-  const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [staffOptions, setStaffOptions] = useState([]);
   const [acts, setActs] = useState([]);
+  const [totalActs, setTotalActs] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('Tous');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -850,58 +859,66 @@ function MedicalActsPage() {
 
   const loadActs = useCallback(async () => {
     try {
-      const data = await medicalActsService.getActs();
-      setActs(data);
+      const params = {
+        limit: ITEMS_PER_PAGE,
+        offset: (currentPage - 1) * ITEMS_PER_PAGE,
+      };
+      if (selectedType !== 'Tous') params.act_type = selectedType;
+      if (debouncedSearchTerm.trim()) params.q = debouncedSearchTerm.trim();
+      const data = await medicalActsService.getActs(params);
+      setActs(data.rows);
+      setTotalActs(data.total);
     } catch (err) {
       setError(err.message ?? 'Erreur inconnue');
     }
-  }, []);
+  }, [currentPage, debouncedSearchTerm, selectedType]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     const init = async () => {
-      setIsLoading(true);
       setError(null);
       try {
-        const [statsData, patientsData, staffData, doctorsData] = await Promise.all([
+        const [statsData, doctorsData] = await Promise.all([
           medicalActsService.getStats(),
-          medicalActsService.getPatients(),
-          medicalActsService.getStaff(),
           getDoctors(),
         ]);
         setStats(statsData);
-        setPatients(patientsData);
-        setStaffOptions(staffData);
         setDoctors(doctorsData.data || []);
-        await loadActs();
       } catch (err) {
         setError(err.message ?? 'Erreur inconnue');
-      } finally {
-        setIsLoading(false);
       }
     };
     init();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await loadActs();
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [loadActs]);
 
-  const filteredActs = acts.filter((act) => {
-    const matchesType = selectedType === 'Tous' || act.type === selectedType;
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      !term ||
-      (act.patientName && act.patientName.toLowerCase().includes(term)) ||
-      (act.description && act.description.toLowerCase().includes(term)) ||
-      String(act.patientId).toLowerCase().includes(term);
-    return matchesType && matchesSearch;
-  });
-
   // Pagination calculations
-  const totalPages = Math.ceil(filteredActs.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedActs = filteredActs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalActs / ITEMS_PER_PAGE);
+  const paginatedActs = acts;
+  const visiblePages = getVisiblePages(currentPage, totalPages);
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedType, searchTerm]);
+  }, [selectedType, debouncedSearchTerm]);
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, actId: null });
 
@@ -1019,7 +1036,7 @@ function MedicalActsPage() {
             [1, 2, 3, 4].map((n) => (
               <div key={n} className="act-card skeleton-act-card"><SkeletonCard /></div>
             ))
-          ) : filteredActs.length === 0 ? (
+          ) : acts.length === 0 ? (
             <p className="empty-state">Aucun acte médical trouvé.</p>
           ) : (
             paginatedActs.map((act) => (
@@ -1035,7 +1052,7 @@ function MedicalActsPage() {
         </div>
 
         {/* Pagination Controls */}
-        {filteredActs.length > ITEMS_PER_PAGE && (
+        {totalPages > 1 && (
           <div className="pagination-container">
             <button
               className="pagination-btn prev-btn"
@@ -1045,14 +1062,18 @@ function MedicalActsPage() {
               ←
             </button>
             <div className="pagination-pages">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i + 1}
-                  className={`pagination-page ${currentPage === i + 1 ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
+              {visiblePages.map((page) => (
+                typeof page === 'number' ? (
+                  <button
+                    key={page}
+                    className={`pagination-page ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ) : (
+                  <span key={page} className="pagination-ellipsis">...</span>
+                )
               ))}
             </div>
             <button
