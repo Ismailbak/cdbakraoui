@@ -82,6 +82,7 @@ const getWeekRange = () => {
 
 const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const APPOINTMENTS_PER_PAGE = 7;
 
 function AppointmentsPage() {
   // State for selected day insights modal
@@ -120,6 +121,7 @@ function AppointmentsPage() {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [isLoading, setIsLoading] = useState(true);
+  const [appointmentsPage, setAppointmentsPage] = useState(1);
   const toast = useToast();
 
   const [addFormData, setAddFormData] = useState({
@@ -192,6 +194,22 @@ function AppointmentsPage() {
   };
 
   const selectedDateAppointments = getAppointmentsForDate(selectedDate);
+  const appointmentPageCount = Math.ceil(selectedDateAppointments.length / APPOINTMENTS_PER_PAGE);
+  const shouldPaginateAppointments = selectedDateAppointments.length > APPOINTMENTS_PER_PAGE;
+  const paginatedDateAppointments = selectedDateAppointments.slice(
+    (appointmentsPage - 1) * APPOINTMENTS_PER_PAGE,
+    appointmentsPage * APPOINTMENTS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setAppointmentsPage(1);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (appointmentPageCount > 0 && appointmentsPage > appointmentPageCount) {
+      setAppointmentsPage(appointmentPageCount);
+    }
+  }, [appointmentPageCount, appointmentsPage]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -452,7 +470,7 @@ function AppointmentsPage() {
                       </button>
                     </div>
                   ) : (
-                    selectedDateAppointments.map(appointment => (
+                    paginatedDateAppointments.map(appointment => (
                       <div key={appointment.id} className="appointment-item">
                         <div className="appointment-time">
                           <span className="time">{appointment.time}</span>
@@ -490,6 +508,46 @@ function AppointmentsPage() {
                     ))
                   )}
                 </div>
+                {shouldPaginateAppointments && (
+                  <div className="table-pagination">
+                    <span className="pagination-info">
+                      {(appointmentsPage - 1) * APPOINTMENTS_PER_PAGE + 1}
+                      -
+                      {Math.min(appointmentsPage * APPOINTMENTS_PER_PAGE, selectedDateAppointments.length)}
+                      {' '}sur {selectedDateAppointments.length}
+                    </span>
+                    <div className="pagination-buttons">
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={() => setAppointmentsPage((page) => Math.max(1, page - 1))}
+                        disabled={appointmentsPage === 1}
+                        title="Page précédente"
+                      >
+                        ←
+                      </button>
+                      {Array.from({ length: appointmentPageCount }, (_, index) => index + 1).map(page => (
+                        <button
+                          key={page}
+                          type="button"
+                          className={`pagination-btn ${appointmentsPage === page ? 'active' : ''}`}
+                          onClick={() => setAppointmentsPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={() => setAppointmentsPage((page) => Math.min(appointmentPageCount, page + 1))}
+                        disabled={appointmentsPage === appointmentPageCount}
+                        title="Page suivante"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </>

@@ -123,6 +123,12 @@ def get_dashboard_summary(
 
     total_patients = db.query(func.count(PatientModel.id)).scalar() or 0
     medical_acts = db.query(func.count(MedicalActModel.id)).scalar() or 0
+    consultations = (
+        db.query(func.count(MedicalActModel.id))
+        .filter(MedicalActModel.act_type == "Consultation")
+        .scalar()
+        or 0
+    )
     today_appointments = (
         db.query(func.count(AppointmentModel.id))
         .filter(cast(AppointmentModel.datetime_scheduled, Date) == today)
@@ -163,6 +169,7 @@ def get_dashboard_summary(
         "total_patients": total_patients,
         "today_appointments": today_appointments,
         "medical_acts": medical_acts,
+        "consultations": consultations,
         "common_diagnoses": common_diagnoses,
         "diagnosis_records": diagnosis_records,
         "weekly_trend": weekly_trend,

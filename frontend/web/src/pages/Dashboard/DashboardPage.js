@@ -41,6 +41,7 @@ function DashboardPage() {
     totalPatients: 0,
     todayAppointments: 0,
     medicalActs: 0,
+    consultations: 0,
     diagnosisRecords: 0,
     commonDiagnoses: [],
   });
@@ -67,6 +68,7 @@ function DashboardPage() {
           totalPatients: dashboard?.total_patients || 0,
           todayAppointments: dashboard?.today_appointments || 0,
           medicalActs: dashboard?.medical_acts || 0,
+          consultations: dashboard?.consultations || 0,
           diagnosisRecords: dashboard?.diagnosis_records || 0,
           commonDiagnoses: (dashboard?.common_diagnoses || []).slice(0, 5).map((diag, i) => ({
             name: diag.name,
@@ -187,7 +189,7 @@ function DashboardPage() {
                 icon={<FiActivity />}
                 label="Consultations"
                 percentage="Total"
-                value={`${stats.medicalActs} actes`}
+                value={`${stats.consultations} consultations`}
                 color="yellow"
               />
               <StatCard

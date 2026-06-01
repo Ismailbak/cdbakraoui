@@ -566,6 +566,67 @@
   gap: 15px;
 }
 
+/* Pagination */
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pagination-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.pagination-btn:hover:not(:disabled):not(.active) {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+  color: #111827;
+}
+
+.pagination-btn.active {
+  background: linear-gradient(135deg, #0D9488 0%, #06B6D4 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: #9CA3AF;
+}
+
 /* No Appointments */
 .no-appointments {
   text-align: center;
@@ -946,6 +1007,16 @@
   .appointment-actions {
     flex-direction: row;
     justify-content: flex-end;
+  }
+
+  .table-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pagination-buttons {
+    justify-content: space-between;
   }
   
   .form-row {
