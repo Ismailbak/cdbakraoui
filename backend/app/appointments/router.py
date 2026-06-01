@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, date, time
 
 from app.core.database import get_db
 from app.models.appointment import Appointment as AppointmentModel
@@ -43,20 +43,67 @@ def _appointment_with_patient_name(db: Session, row: AppointmentModel) -> dict:
     }
 
 
+def _appointments_to_dicts(db: Session, rows: List[AppointmentModel]) -> List[dict]:
+    """Build appointment dicts with patient names using ONE batched query (avoids N+1)."""
+    patient_ids = {r.patient_id for r in rows if r.patient_id is not None}
+    name_by_id = {}
+    if patient_ids:
+        for p in db.query(PatientModel).filter(PatientModel.id.in_(patient_ids)).all():
+            name_by_id[p.id] = f"{p.first_name} {p.last_name}"
+    return [
+        {
+            "id": r.id,
+            "patient_id": r.patient_id,
+            "patient_name": name_by_id.get(r.patient_id),
+            "datetime_scheduled": r.datetime_scheduled.isoformat() if r.datetime_scheduled else None,
+            "reason": r.reason,
+            "status": r.status,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+
+def _parse_date_param(value: str) -> date:
+    return date.fromisoformat(value[:10])
+
+
 @router.get("/", response_model=List[Appointment])
-def get_appointments(db: Session = Depends(get_db)):
-    rows = db.query(AppointmentModel).order_by(AppointmentModel.datetime_scheduled.desc()).all()
-    return [_appointment_with_patient_name(db, r) for r in rows]
+def get_appointments(
+    response: Response,
+    db: Session = Depends(get_db),
+    from_date: Optional[str] = Query(None, description="Inclusive start date (YYYY-MM-DD)"),
+    to_date: Optional[str] = Query(None, description="Inclusive end date (YYYY-MM-DD)"),
+    limit: Optional[int] = Query(None, ge=1, le=5000),
+    offset: int = Query(0, ge=0),
+):
+    query = db.query(AppointmentModel)
+    if from_date:
+        start_dt = datetime.combine(_parse_date_param(from_date), time.min)
+        query = query.filter(AppointmentModel.datetime_scheduled >= start_dt)
+    if to_date:
+        end_dt = datetime.combine(_parse_date_param(to_date), time.max)
+        query = query.filter(AppointmentModel.datetime_scheduled <= end_dt)
+
+    total = query.count()
+    response.headers["X-Total-Count"] = str(total)
+
+    query = query.order_by(AppointmentModel.datetime_scheduled.desc())
+    if offset:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+    return _appointments_to_dicts(db, query.all())
 
 
 @router.get("/today", response_model=List[Appointment])
 def get_today_appointments(db: Session = Depends(get_db)):
     today = datetime.now().date()
     rows = db.query(AppointmentModel).filter(
-        AppointmentModel.datetime_scheduled >= datetime.combine(today, datetime.min.time()),
-        AppointmentModel.datetime_scheduled < datetime.combine(today, datetime.max.time())
+        AppointmentModel.datetime_scheduled >= datetime.combine(today, time.min),
+        AppointmentModel.datetime_scheduled <= datetime.combine(today, time.max),
     ).order_by(AppointmentModel.datetime_scheduled).all()
-    return [_appointment_with_patient_name(db, r) for r in rows]
+    return _appointments_to_dicts(db, rows)
 
 
 @router.get("/patient/{patient_id}", response_model=List[Appointment])
