@@ -4,10 +4,16 @@ import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart, FiArrowRight } fr
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
-import { getPatients, getAppointments, getTodayAppointments, getMedicalActs, getAnalyticsSummary, getRecentActivity } from '../../api/api';
+import { getDashboardSummary, getRecentActivity } from '../../api/api';
 import './DashboardPage.css';
 
 const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
+const activityIcons = {
+  patient: '👤',
+  appointment: '📅',
+  medical_act: '📋',
+  medical: '📋',
+};
 
 function timeAgo(isoString) {
   if (!isoString) return 'Date inconnue';
@@ -31,7 +37,13 @@ function DashboardPage() {
       ? `Dr. ${user.last_name || user.lastName}`
       : user.username || user.name || user.email || 'Docteur';
   const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({ totalPatients: 0, todayAppointments: 0, medicalActs: 0, commonDiagnoses: [] });
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    todayAppointments: 0,
+    medicalActs: 0,
+    diagnosisRecords: 0,
+    commonDiagnoses: [],
+  });
   const [activity, setActivity] = useState([]);
 
   const [trendData, setTrendData] = useState([]);
@@ -41,110 +53,33 @@ function DashboardPage() {
     async function load() {
       setIsLoading(true);
       try {
-        // Individual fetchers with catches to prevent total failure
-        const fetchPatients = getPatients().then(r => r.data).catch(e => { console.error("Patients Load Error:", e); return []; });
-        const fetchAppointments = getAppointments().then(r => r.data).catch(e => { console.error("Apps Load Error:", e); return []; });
-        const fetchActs = getMedicalActs().then(r => r.data).catch(e => { console.error("Acts Load Error:", e); return []; });
-        const fetchAnalytics = getAnalyticsSummary().then(r => r.data).catch(e => { console.error("Analytics Load Error:", e); return {}; });
+        // Keep the dashboard light: fetch aggregate data instead of full tables.
+        const fetchDashboard = getDashboardSummary().then(r => r.data).catch(e => { console.error("Dashboard Summary Load Error:", e); return {}; });
         const fetchRecentActivity = getRecentActivity().then(r => r.data?.activities).catch(e => { console.error("Activity Load Error:", e); return []; });
 
-        const [patients, appointmentsData, acts, analytics, remoteActivity] = await Promise.all([
-          fetchPatients, fetchAppointments, fetchActs, fetchAnalytics, fetchRecentActivity
+        const [dashboard, remoteActivity] = await Promise.all([
+          fetchDashboard, fetchRecentActivity
         ]);
 
         if (cancelled) return;
 
-        // Ensure we are working with arrays
-        const patientsSafe = Array.isArray(patients) ? patients : [];
-        const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
-        const actsSafe = Array.isArray(acts) ? acts : [];
-
-        console.log('Sample Appointment:', appointments[0]);
-        console.log('Sample Act:', actsSafe[0]);
-
-        // 1. Calculate Stats
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todayApps = appointments.filter(a => a.date === todayStr);
-
         setStats({
-          totalPatients: patientsSafe.length,
-          todayAppointments: todayApps.length,
-          medicalActs: actsSafe.length,
-          commonDiagnoses: (analytics?.common_diagnoses || []).slice(0, 5).map((diag, i) => ({
+          totalPatients: dashboard?.total_patients || 0,
+          todayAppointments: dashboard?.today_appointments || 0,
+          medicalActs: dashboard?.medical_acts || 0,
+          diagnosisRecords: dashboard?.diagnosis_records || 0,
+          commonDiagnoses: (dashboard?.common_diagnoses || []).slice(0, 5).map((diag, i) => ({
             name: diag.name,
             value: diag.count,
             color: diagnosisColors[i]
           })),
         });
 
-        // 2. Generate 7-Day Trend
-        const last7Days = [...Array(7)].map((_, i) => {
-          const d = new Date();
-          d.setDate(d.getDate() - (6 - i));
-          return d.toISOString().split('T')[0];
-        });
-
-        console.log('Appointments Data:', appointments);
-        console.log('Acts Data:', actsSafe);
-        console.log('Last 7 Days:', last7Days);
-
-        const newTrend = last7Days.map(date => {
-          const dayDate = new Date(date);
-          const dayName = dayDate.toLocaleDateString('fr-FR', { weekday: 'short' });
-          const rdvCount = appointments.filter(a => {
-            const appointmentDate = a.datetime_scheduled.split('T')[0]; // Extract date part
-            return appointmentDate === date;
-          }).length;
-          const actesCount = actsSafe.filter(a => a.act_date === date).length; // Use correct field
-
-          return {
-            name: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-            rdv: rdvCount,
-            actes: actesCount
-          };
-        });
-        setTrendData(newTrend);
-
-        // 3. Robust Recent Activity: Merge, format and sort
-        // API returns data in descending order (newest first), so slice(0, 5) gets the 5 most recent
-        const getPatientDisplayName = (patient) => {
-          const fullName = [patient.first_name, patient.last_name].filter(Boolean).join(' ').trim();
-          return patient.name || patient.patient_name || patient.patientName || fullName || 'Patient';
-        };
-
-        const recentPatients = patientsSafe.slice(0, 5).map(p => ({
-          type: 'patient',
-          title: `Nouveau Patient: ${getPatientDisplayName(p)}`,
-          subtitle: `IPP: ${p.ipp || 'N/A'}`,
-          time: p.created_at || null,
-          icon: '👤'
-        }));
-
-        const recentActsData = actsSafe.slice(0, 5).map(a => ({
-          type: 'medical',
-          title: `${a.act_type}: ${a.patient_name || a.patientName || 'Patient'}`,
-          subtitle: a.diagnosis || 'Détails non spécifiés',
-          time: a.created_at || (a.date ? `${a.date}T12:00:00` : null),
-          icon: '📋'
-        }));
-
-        const recentAppsData = appointments.slice(0, 5).map(app => ({
-          type: 'appointment',
-          title: `RDV: ${app.patient_name || app.patientName || 'Patient'}`,
-          subtitle: app.datetime_scheduled 
-            ? new Date(app.datetime_scheduled).toLocaleString('fr-FR')
-            : (app.time || '') + (app.date ? ` - ${app.date}` : ''),
-          time: app.created_at || app.datetime_scheduled || (app.date && app.time ? `${app.date}T${app.time}` : app.date ? `${app.date}T12:00:00` : null),
-          icon: '📅'
-        }));
-
-        const mergedActivity = [...recentPatients, ...recentActsData, ...recentAppsData]
-          .filter(item => item.time && !isNaN(new Date(item.time).getTime()))
-          .sort((a, b) => new Date(b.time) - new Date(a.time))
-          .slice(0, 4);
-
-        // Fallback to merged if remote is empty
-        setActivity(mergedActivity.length > 0 ? mergedActivity : (remoteActivity || []));
+        setTrendData(dashboard?.weekly_trend || []);
+        setActivity((remoteActivity || []).slice(0, 5).map(item => ({
+          ...item,
+          icon: item.icon || activityIcons[item.type] || '•',
+        })));
 
       } catch (err) {
         if (!cancelled) {
@@ -332,15 +267,15 @@ function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="diagnosis-center">
-                <span className="diagnosis-total">{stats.totalPatients}</span>
-                <span className="diagnosis-label">Patients</span>
+                <span className="diagnosis-total">{stats.diagnosisRecords}</span>
+                <span className="diagnosis-label">Diagnostics</span>
               </div>
             </div>
             <div className="diagnosis-legend">
               {(stats.commonDiagnoses.length ? stats.commonDiagnoses : []).map((item, index) => (
                 <div key={index} className="legend-item">
                   <span className="legend-dot" style={{ background: item.color }}></span>
-                  <span>{item.name}</span>
+                  <span>{item.name} ({item.value})</span>
                 </div>
               ))}
             </div>
