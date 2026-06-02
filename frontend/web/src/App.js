@@ -1,6 +1,7 @@
-import React, { useEffect, useCallback, useRef } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ToastProvider } from './components/common';
+import { getCurrentUser } from './api/api';
 import LoginPage from './pages/Login';
 import SignupPage from './pages/Signup';
 import DashboardPage from './pages/Dashboard';
@@ -23,6 +24,64 @@ import ProfilePage from './pages/Profile';
 import { TermsPage, PrivacyPage } from './pages/Legal';
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const PUBLIC_PATHS = ['/', '/signup', '/terms', '/privacy'];
+
+function clearAuth() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+}
+
+function AuthRoute({ children, adminOnly = false }) {
+  const location = useLocation();
+  const [state, setState] = useState({ status: 'checking', user: null });
+
+  useEffect(() => {
+    let isMounted = true;
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setState({ status: 'unauthenticated', user: null });
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getCurrentUser()
+      .then((res) => {
+        if (!isMounted) return;
+        const user = res.data?.user || res.data;
+        localStorage.setItem('user', JSON.stringify(user));
+        setState({ status: 'authenticated', user });
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        clearAuth();
+        setState({ status: 'unauthenticated', user: null });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname]);
+
+  if (state.status === 'checking') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#64748B' }}>
+        Vérification de la session...
+      </div>
+    );
+  }
+
+  if (state.status === 'unauthenticated') {
+    return <Navigate to="/" replace state={{ from: location }} />;
+  }
+
+  if (adminOnly && !state.user?.is_admin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
 
 function InactivityGuard({ children }) {
   const navigate = useNavigate();
@@ -30,8 +89,7 @@ function InactivityGuard({ children }) {
   const timerRef = useRef(null);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuth();
     navigate('/', { replace: true });
   }, [navigate]);
 
@@ -43,7 +101,7 @@ function InactivityGuard({ children }) {
 
   useEffect(() => {
     // Skip on public pages
-    if (location.pathname === '/' || location.pathname === '/signup') return;
+    if (PUBLIC_PATHS.includes(location.pathname)) return;
     if (!localStorage.getItem('token')) return;
 
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
@@ -67,23 +125,23 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/users/:id" element={<AdminUserDetail />} />
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-        <Route path="/admin/security" element={<AdminSecurity />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
-        <Route path="/admin/form-builder" element={<FormBuilder />} />
-        <Route path="/patients" element={<PatientPage />} />
-        <Route path="/patients/:id" element={<PatientDetailPage />} />
-        <Route path="/patients/:patientId/chat" element={<ChatPage />} />
-        <Route path="/appointments" element={<AppointmentsPage />} />
-        <Route path="/medical-acts" element={<MedicalActsPage />} />
-        <Route path="/assistant" element={<AssistantPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/dashboard" element={<AuthRoute><DashboardPage /></AuthRoute>} />
+        <Route path="/admin" element={<AuthRoute adminOnly><AdminDashboard /></AuthRoute>} />
+        <Route path="/admin/users" element={<AuthRoute adminOnly><AdminUsers /></AuthRoute>} />
+        <Route path="/admin/users/:id" element={<AuthRoute adminOnly><AdminUserDetail /></AuthRoute>} />
+        <Route path="/admin/analytics" element={<AuthRoute adminOnly><AdminAnalytics /></AuthRoute>} />
+        <Route path="/admin/security" element={<AuthRoute adminOnly><AdminSecurity /></AuthRoute>} />
+        <Route path="/admin/settings" element={<AuthRoute adminOnly><AdminSettings /></AuthRoute>} />
+        <Route path="/admin/form-builder" element={<AuthRoute adminOnly><FormBuilder /></AuthRoute>} />
+        <Route path="/patients" element={<AuthRoute><PatientPage /></AuthRoute>} />
+        <Route path="/patients/:id" element={<AuthRoute><PatientDetailPage /></AuthRoute>} />
+        <Route path="/patients/:patientId/chat" element={<AuthRoute><ChatPage /></AuthRoute>} />
+        <Route path="/appointments" element={<AuthRoute><AppointmentsPage /></AuthRoute>} />
+        <Route path="/medical-acts" element={<AuthRoute><MedicalActsPage /></AuthRoute>} />
+        <Route path="/assistant" element={<AuthRoute><AssistantPage /></AuthRoute>} />
+        <Route path="/analytics" element={<AuthRoute><AnalyticsPage /></AuthRoute>} />
+        <Route path="/notifications" element={<AuthRoute><NotificationsPage /></AuthRoute>} />
+        <Route path="/profile" element={<AuthRoute><ProfilePage /></AuthRoute>} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, Response
+from fastapi import APIRouter, Depends, Query, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 from typing import Dict, List, Optional
 from datetime import datetime, date
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, exists
+from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_db
 from app.models.patient import Patient as PatientModel
@@ -16,6 +17,7 @@ from app.models.appointment import Appointment
 from app.models.act_result import ActResult
 from app.analytics.audit import log_action
 from app.pdf import service as pdf_service
+from app.patients.deletion import delete_patient_cascade
 
 router = APIRouter()
 
@@ -435,26 +437,36 @@ def update_patient(
 
 @router.delete("/{patient_id}")
 def delete_patient(
-    patient_id: int, 
+    patient_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(RoleChecker(["admin", "department_head"])),
+    current_user: User = Depends(RoleChecker(["admin", "doctor", "department_head"])),
 ):
     db_patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    
+
     patient_name = f"{db_patient.first_name} {db_patient.last_name}"
-    db.delete(db_patient)
-    db.commit()
-    
+    try:
+        delete_patient_cascade(db, patient_id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Impossible de supprimer ce patient : des données liées existent encore "
+                "(rendez-vous, actes médicaux, etc.)."
+            ),
+        )
+
     log_action(
-        db, 
-        action="DELETE_PATIENT", 
-        user_id=current_user.id, 
+        db,
+        action="DELETE_PATIENT",
+        user_id=current_user.id,
         username=current_user.username,
         resource_type="patient",
         resource_id=str(patient_id),
-        details=f"Deleted patient: {patient_name}"
+        details=f"Deleted patient: {patient_name}",
     )
     return {"message": "Deleted"}
 

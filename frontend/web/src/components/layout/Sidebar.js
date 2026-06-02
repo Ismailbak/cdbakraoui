@@ -36,6 +36,7 @@ function Sidebar() {
 
   const handleConfirm = () => {
     setShowConfirm(false);
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     warning('Vous avez été déconnecté.', 3500);
     navigate('/');
