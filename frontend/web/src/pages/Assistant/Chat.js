@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { deleteChatHistoryItem, getChatHistory, sendChatMessage } from '../../api/api';
+import { deleteChatHistoryItem, deleteChatSession, getChatHistory, sendChatMessage } from '../../api/api';
 import { ConfirmDialog, SourceCitationPanel } from '../../components/common';
 import {
   FiActivity,
@@ -111,6 +111,45 @@ const formatConversationTitle = (text = '') => {
   return title;
 };
 
+const groupHistoryBySession = (rows = []) => {
+  const conversations = new Map();
+
+  rows.forEach((row) => {
+    const conversationId = row.session_id ? `session-${row.session_id}` : `message-${row.id}`;
+    if (!conversations.has(conversationId)) {
+      conversations.set(conversationId, {
+        id: conversationId,
+        session_id: row.session_id || null,
+        latestMessageId: row.id,
+        patient_id: row.patient_id,
+        message: row.message,
+        response: row.response,
+        tokens_used: row.tokens_used,
+        model_name: row.model_name || row.model,
+        created_at: row.created_at,
+        exchanges: [],
+      });
+    }
+
+    conversations.get(conversationId).exchanges.push({
+      id: row.id,
+      message: row.message,
+      response: row.response,
+      tokens_used: row.tokens_used,
+      model_name: row.model_name || row.model,
+      patient_id: row.patient_id,
+      created_at: row.created_at,
+    });
+  });
+
+  return Array.from(conversations.values()).map((conversation) => ({
+    ...conversation,
+    exchanges: conversation.exchanges.sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    ),
+  }));
+};
+
 function Chat({ patientId, currentUser }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -128,6 +167,8 @@ function Chat({ patientId, currentUser }) {
   const copyTimeoutRef = useRef(null);
   const textareaRef = useRef(null);
   const activePatientIdRef = useRef(patientId || null);
+  const activeSessionIdRef = useRef(null);
+  const activeConversationIdRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -156,8 +197,8 @@ function Chat({ patientId, currentUser }) {
       try {
         setHistoryLoading(true);
         setHistoryError('');
-        const res = await getChatHistory(patientId, 30);
-        if (isMounted) setHistoryItems(res.data || []);
+        const res = await getChatHistory(patientId, 50);
+        if (isMounted) setHistoryItems(groupHistoryBySession(res.data || []));
       } catch (err) {
         console.error('Failed to load chat history:', err);
         if (isMounted) setHistoryError("Impossible de charger l'historique.");
@@ -197,6 +238,8 @@ function Chat({ patientId, currentUser }) {
     abortControllerRef.current = new AbortController();
 
     const currentMsgId = generateId();
+    const fallbackConversationId = activeConversationIdRef.current || `local-${generateId()}`;
+    activeConversationIdRef.current = fallbackConversationId;
     
     const userMsg = {
       id: currentMsgId,
@@ -215,7 +258,10 @@ function Chat({ patientId, currentUser }) {
         textToSend,
         activePatientIdRef.current || patientId,
         'fr',
-        { signal: abortControllerRef.current.signal }
+        {
+          signal: abortControllerRef.current.signal,
+          sessionId: activeSessionIdRef.current,
+        }
       );
 
       const resolvedPatientId = res?.data?.patient_id || activePatientIdRef.current || patientId || null;
@@ -239,8 +285,14 @@ function Chat({ patientId, currentUser }) {
       };
 
       const storedHistoryId = Number(res?.data?.message_id) || currentMsgId;
-      setMessages(prev => [...prev, aiMsg]);
-      setHistoryItems(prev => [{
+      const storedSessionId = Number(res?.data?.session_id) || null;
+      if (storedSessionId) {
+        activeSessionIdRef.current = storedSessionId;
+      }
+      const historyConversationId = storedSessionId ? `session-${storedSessionId}` : fallbackConversationId;
+      const previousConversationId = activeConversationIdRef.current;
+      activeConversationIdRef.current = historyConversationId;
+      const newExchange = {
         id: storedHistoryId,
         message: textToSend,
         response: aiMsg.content,
@@ -248,7 +300,57 @@ function Chat({ patientId, currentUser }) {
         model_name: aiMsg.model,
         patient_id: resolvedPatientId,
         created_at: userMsg.timestamp.toISOString(),
-      }, ...prev.filter(item => item.message !== textToSend).slice(0, 29)]);
+      };
+      setMessages(prev => [...prev, aiMsg]);
+      setSelectedHistoryId(historyConversationId);
+      setHistoryItems(prev => {
+        const existing = prev.find(item => item.id === historyConversationId);
+        if (existing) {
+          const updated = {
+            ...existing,
+            latestMessageId: storedHistoryId,
+            response: aiMsg.content,
+            tokens_used: aiMsg.tokens,
+            model_name: aiMsg.model,
+            patient_id: resolvedPatientId,
+            created_at: newExchange.created_at,
+            exchanges: [...(existing.exchanges || []), newExchange],
+          };
+          return [updated, ...prev.filter(item => item.id !== historyConversationId)].slice(0, 30);
+        }
+
+        const previousLocal = previousConversationId
+          ? prev.find(item => item.id === previousConversationId)
+          : null;
+        if (previousLocal) {
+          const updated = {
+            ...previousLocal,
+            id: historyConversationId,
+            session_id: storedSessionId,
+            latestMessageId: storedHistoryId,
+            response: aiMsg.content,
+            tokens_used: aiMsg.tokens,
+            model_name: aiMsg.model,
+            patient_id: resolvedPatientId,
+            created_at: newExchange.created_at,
+            exchanges: [...(previousLocal.exchanges || []), newExchange],
+          };
+          return [updated, ...prev.filter(item => item.id !== previousConversationId)].slice(0, 30);
+        }
+
+        return [{
+          id: historyConversationId,
+          session_id: storedSessionId,
+          latestMessageId: storedHistoryId,
+          patient_id: resolvedPatientId,
+          message: textToSend,
+          response: aiMsg.content,
+          tokens_used: aiMsg.tokens,
+          model_name: aiMsg.model,
+          created_at: newExchange.created_at,
+          exchanges: [newExchange],
+        }, ...prev].slice(0, 30);
+      });
     } catch (err) {
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
         console.log("Request aborted.");
@@ -289,29 +391,38 @@ function Chat({ patientId, currentUser }) {
     setLoading(false);
     setSelectedHistoryId(null);
     activePatientIdRef.current = patientId || null;
+    activeSessionIdRef.current = null;
+    activeConversationIdRef.current = null;
   };
 
   const handleSelectHistory = (item) => {
     const timestamp = new Date(item.created_at);
     const safeTimestamp = isNaN(timestamp.getTime()) ? new Date() : timestamp;
 
-    setMessages([
-      {
-        id: `${item.id}-user`,
-        role: 'user',
-        content: item.message,
-        timestamp: safeTimestamp,
-      },
-      {
-        id: `${item.id}-assistant`,
-        role: 'assistant',
-        content: item.response,
-        tokens: item.tokens_used,
-        model: item.model_name || 'RhumatoAI',
-        timestamp: safeTimestamp,
-      },
-    ]);
+    const exchanges = item.exchanges?.length ? item.exchanges : [item];
+    setMessages(exchanges.flatMap((exchange) => {
+      const exchangeTimestamp = new Date(exchange.created_at);
+      const safeExchangeTimestamp = isNaN(exchangeTimestamp.getTime()) ? safeTimestamp : exchangeTimestamp;
+      return [
+        {
+          id: `${exchange.id}-user`,
+          role: 'user',
+          content: exchange.message,
+          timestamp: safeExchangeTimestamp,
+        },
+        {
+          id: `${exchange.id}-assistant`,
+          role: 'assistant',
+          content: exchange.response,
+          tokens: exchange.tokens_used,
+          model: exchange.model_name || 'RhumatoAI',
+          timestamp: safeExchangeTimestamp,
+        },
+      ];
+    }));
     setSelectedHistoryId(item.id);
+    activeConversationIdRef.current = item.id;
+    activeSessionIdRef.current = item.session_id || null;
     activePatientIdRef.current = item.patient_id || patientId || null;
     setInput('');
     setError('');
@@ -334,9 +445,17 @@ function Chat({ patientId, currentUser }) {
       handleNewChat();
     }
 
-    if (typeof target.id === 'number') {
+    if (target.session_id) {
       try {
-        await deleteChatHistoryItem(target.id);
+        await deleteChatSession(target.session_id);
+      } catch (err) {
+        console.error('Failed to delete chat session:', err);
+        setHistoryItems(previousItems);
+        setHistoryError('Impossible de supprimer cette conversation.');
+      }
+    } else if (typeof target.latestMessageId === 'number') {
+      try {
+        await deleteChatHistoryItem(target.latestMessageId);
       } catch (err) {
         console.error('Failed to delete chat history item:', err);
         setHistoryItems(previousItems);

@@ -123,7 +123,12 @@ export const sendChatMessage = (message, arg2 = null, arg3 = 'fr', arg4 = {}, ar
     config = (arg4 && typeof arg4 === 'object') ? arg4 : {};
   }
 
-  return api.post('/chat/grounded', { message, patient_id: patientId, language }, config);
+  const { sessionId, ...axiosConfig } = config;
+  return api.post(
+    '/chat/grounded',
+    { message, patient_id: patientId, session_id: sessionId || null, language },
+    axiosConfig
+  );
 };
 
 export const getChatHistory = (patientId = null, limit = 50) => {

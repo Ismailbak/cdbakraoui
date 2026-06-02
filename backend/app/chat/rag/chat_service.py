@@ -5,6 +5,7 @@ Extends the existing chat service with RAG orchestrator for grounded responses.
 
 import logging
 import re
+from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -55,6 +56,7 @@ async def get_grounded_chat_response(
     user_id: int,
     db: Session,
     patient_id: Optional[int] = None,
+    session_id: Optional[int] = None,
     language: str = "fr",
     retrieval_mode: str = "auto"
 ) -> dict:
@@ -171,22 +173,35 @@ async def get_grounded_chat_response(
         
         # Store in database
         message_id = None
+        resolved_session_id = session_id
         try:
             # Import chat_service for session management
             from app.chat.service import create_chat_session
             from app.models.chat_session import ChatSession
             
+            # Prefer the currently open session when the frontend provides it.
+            existing_session = None
+            if resolved_session_id:
+                existing_session = db.query(ChatSession).filter(
+                    ChatSession.id == resolved_session_id,
+                    ChatSession.created_by == user_id,
+                ).first()
+                if existing_session:
+                    resolved_session_id = existing_session.id
+                    final_patient_id = final_patient_id or existing_session.patient_id
+
             # Create or get chat session if patient is identified
-            session_id = None
             if final_patient_id:
                 # Check if there's an active session for this patient
-                existing_session = db.query(ChatSession).filter(
-                    ChatSession.patient_id == final_patient_id,
-                    ChatSession.created_by == user_id
-                ).order_by(ChatSession.created_at.desc()).first()
+                if not existing_session:
+                    existing_session = db.query(ChatSession).filter(
+                        ChatSession.patient_id == final_patient_id,
+                        ChatSession.created_by == user_id
+                    ).order_by(ChatSession.updated_at.desc()).first()
                 
                 if existing_session:
-                    session_id = existing_session.id
+                    resolved_session_id = existing_session.id
+                    existing_session.updated_at = datetime.utcnow()
                 else:
                     # Create new session
                     new_session = create_chat_session(
@@ -196,10 +211,10 @@ async def get_grounded_chat_response(
                         title=f"Chat session for patient {final_patient_id}"
                     )
                     db.commit()
-                    session_id = new_session.id
+                    resolved_session_id = new_session.id
             
             chat_msg = ChatMessage(
-                session_id=session_id,
+                session_id=resolved_session_id,
                 user_id=user_id,
                 patient_id=final_patient_id,
                 message=message,
@@ -229,6 +244,7 @@ async def get_grounded_chat_response(
             "retrieval_type": rag_response.metadata.retrieval_type,
             "patient_id": final_patient_id,
             "patient_name": final_patient_name,
+            "session_id": resolved_session_id,
             "message_id": message_id,
         }
     

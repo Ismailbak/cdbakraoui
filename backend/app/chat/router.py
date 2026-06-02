@@ -45,6 +45,7 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, strip_whitespace=True)
     patient_id: Optional[int] = None
+    session_id: Optional[int] = None
     language: Literal["fr", "en", "ar"] = "fr"
 
 
@@ -77,11 +78,13 @@ class GroundedChatResponse(BaseModel):
     retrieval_type: str = "structured"  # "structured" | "hybrid" | "none"
     patient_id: Optional[int] = None
     patient_name: Optional[str] = None
+    session_id: Optional[int] = None
     message_id: Optional[int] = None
 
 
 class ChatHistoryItem(BaseModel):
     id: int
+    session_id: Optional[int] = None
     patient_id: Optional[int] = None
     message: str
     response: str
@@ -156,6 +159,7 @@ async def chat_grounded(
             user_id=current_user.id,
             db=db,
             patient_id=request.patient_id,
+            session_id=request.session_id,
             language=request.language,
             retrieval_mode="auto"
         )
@@ -184,6 +188,7 @@ async def chat_grounded(
             retrieval_type=result.get("retrieval_type", "structured"),
             patient_id=result.get("patient_id"),
             patient_name=result.get("patient_name"),
+            session_id=result.get("session_id"),
             message_id=result.get("message_id"),
         )
     except PermissionError:
