@@ -1,5 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { deleteChatHistoryItem, deleteChatSession, getChatHistory, sendChatMessage } from '../../api/api';
+import {
+  deleteChatHistoryItem,
+  deleteChatSession,
+  getChatHistory,
+  sendChatMessage,
+  sendChatMessageWithAttachment,
+} from '../../api/api';
 import { ConfirmDialog, SourceCitationPanel } from '../../components/common';
 import {
   FiActivity,
@@ -161,11 +167,13 @@ function Chat({ patientId, currentUser }) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [attachment, setAttachment] = useState(null);
   
   const messageEndRef = useRef(null);
   const abortControllerRef = useRef(null);
   const copyTimeoutRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
   const activePatientIdRef = useRef(patientId || null);
   const activeSessionIdRef = useRef(null);
   const activeConversationIdRef = useRef(null);
@@ -229,8 +237,26 @@ function Chat({ patientId, currentUser }) {
     }
   };
 
-  const internalHandleSend = async (textToSend) => {
-    if (!textToSend.trim() || loading) return;
+  const handleAttachmentChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      setError('La pièce jointe dépasse la limite de 8 Mo.');
+      event.target.value = '';
+      return;
+    }
+    setAttachment(file);
+    setError('');
+    event.target.value = '';
+  };
+
+  const clearAttachment = () => {
+    setAttachment(null);
+  };
+
+  const internalHandleSend = async (textToSend, fileToSend = null) => {
+    const cleanText = textToSend.trim();
+    if ((!cleanText && !fileToSend) || loading) return;
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -244,25 +270,38 @@ function Chat({ patientId, currentUser }) {
     const userMsg = {
       id: currentMsgId,
       role: 'user',
-      content: textToSend,
+      content: fileToSend
+        ? `${cleanText || 'Analyse cette pièce jointe.'}\n\nPièce jointe: ${fileToSend.name}`
+        : cleanText,
       timestamp: new Date()
     };
     
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setAttachment(null);
     setLoading(true);
     setError('');
 
     try {
-      const res = await sendChatMessage(
-        textToSend,
-        activePatientIdRef.current || patientId,
-        'fr',
-        {
-          signal: abortControllerRef.current.signal,
-          sessionId: activeSessionIdRef.current,
-        }
-      );
+      const activePatientId = activePatientIdRef.current || patientId;
+      const res = fileToSend
+        ? await sendChatMessageWithAttachment({
+            message: cleanText,
+            patientId: activePatientId,
+            sessionId: activeSessionIdRef.current,
+            language: 'fr',
+            file: fileToSend,
+            signal: abortControllerRef.current.signal,
+          })
+        : await sendChatMessage(
+            cleanText,
+            activePatientId,
+            'fr',
+            {
+              signal: abortControllerRef.current.signal,
+              sessionId: activeSessionIdRef.current,
+            }
+          );
 
       const resolvedPatientId = res?.data?.patient_id || activePatientIdRef.current || patientId || null;
       if (resolvedPatientId) {
@@ -294,7 +333,7 @@ function Chat({ patientId, currentUser }) {
       activeConversationIdRef.current = historyConversationId;
       const newExchange = {
         id: storedHistoryId,
-        message: textToSend,
+        message: userMsg.content,
         response: aiMsg.content,
         tokens_used: aiMsg.tokens,
         model_name: aiMsg.model,
@@ -343,7 +382,7 @@ function Chat({ patientId, currentUser }) {
           session_id: storedSessionId,
           latestMessageId: storedHistoryId,
           patient_id: resolvedPatientId,
-          message: textToSend,
+          message: userMsg.content,
           response: aiMsg.content,
           tokens_used: aiMsg.tokens,
           model_name: aiMsg.model,
@@ -364,7 +403,7 @@ function Chat({ patientId, currentUser }) {
         role: 'error',
         content: errorMsg,
         timestamp: new Date(),
-        failedPrompt: textToSend
+        failedPrompt: cleanText
       };
       setMessages(prev => [...prev, errorChatMsg]);
       
@@ -376,7 +415,7 @@ function Chat({ patientId, currentUser }) {
     }
   };
 
-  const handleSend = () => internalHandleSend(input);
+  const handleSend = () => internalHandleSend(input, attachment);
 
   const handleRetryFailed = (promptText, msgId) => {
     setMessages(prev => prev.filter(m => m.id !== msgId));
@@ -677,8 +716,31 @@ function Chat({ patientId, currentUser }) {
         )}
 
         <footer className="assistant-composer-wrap">
+          {attachment && (
+            <div className="assistant-attachment-chip" title={attachment.name}>
+              <FiPaperclip />
+              <span>{attachment.name}</span>
+              <small>{Math.ceil(attachment.size / 1024)} Ko</small>
+              <button type="button" onClick={clearAttachment} aria-label="Retirer la pièce jointe">
+                ×
+              </button>
+            </div>
+          )}
           <div className="assistant-composer">
-            <button type="button" className="composer-icon-btn" aria-label="Joindre un fichier">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="assistant-file-input"
+              accept=".pdf,.txt,.md,.csv,.json,.xml,.html,.log,text/*,application/pdf"
+              onChange={handleAttachmentChange}
+            />
+            <button
+              type="button"
+              className="composer-icon-btn"
+              aria-label="Joindre un fichier"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+            >
               <FiPaperclip />
             </button>
             <textarea
@@ -697,7 +759,7 @@ function Chat({ patientId, currentUser }) {
             </button>
             <button
               onClick={handleSend}
-              disabled={loading || !input.trim()}
+              disabled={loading || (!input.trim() && !attachment)}
               className="composer-send-btn"
               aria-label="Envoyer le message"
             >

@@ -131,6 +131,27 @@ export const sendChatMessage = (message, arg2 = null, arg3 = 'fr', arg4 = {}, ar
   );
 };
 
+export const sendChatMessageWithAttachment = ({
+  message,
+  patientId = null,
+  sessionId = null,
+  language = 'fr',
+  file,
+  signal,
+}) => {
+  const formData = new FormData();
+  formData.append('message', message || '');
+  formData.append('language', language);
+  if (patientId) formData.append('patient_id', patientId);
+  if (sessionId) formData.append('session_id', sessionId);
+  formData.append('file', file);
+
+  return api.post('/chat/grounded/attachment', formData, {
+    signal,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
 export const getChatHistory = (patientId = null, limit = 50) => {
   const params = new URLSearchParams({ limit });
   if (patientId) params.append('patient_id', patientId);

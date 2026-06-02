@@ -4,11 +4,12 @@ Chat API endpoints for AI Assistant
 - GET /chat/history: Get chat history
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime
+import io
 import logging
 import traceback
 
@@ -47,6 +48,74 @@ class ChatRequest(BaseModel):
     patient_id: Optional[int] = None
     session_id: Optional[int] = None
     language: Literal["fr", "en", "ar"] = "fr"
+
+
+MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024
+TEXT_ATTACHMENT_EXTENSIONS = {".txt", ".md", ".csv", ".json", ".xml", ".html", ".log"}
+
+
+def _attachment_extension(filename: Optional[str]) -> str:
+    if not filename or "." not in filename:
+        return ""
+    return f".{filename.rsplit('.', 1)[-1].lower()}"
+
+
+async def _extract_attachment_text(file: UploadFile) -> tuple[str, str]:
+    """Extract plain text from a supported assistant attachment."""
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="La pièce jointe est vide.")
+    if len(raw) > MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=413, detail="La pièce jointe dépasse la limite de 8 Mo.")
+
+    filename = file.filename or "piece_jointe"
+    extension = _attachment_extension(filename)
+
+    if extension in TEXT_ATTACHMENT_EXTENSIONS or (file.content_type or "").startswith("text/"):
+        try:
+            return raw.decode("utf-8"), filename
+        except UnicodeDecodeError:
+            return raw.decode("latin-1", errors="ignore"), filename
+
+    if extension == ".pdf" or file.content_type == "application/pdf":
+        try:
+            try:
+                from pypdf import PdfReader
+            except ImportError:
+                from PyPDF2 import PdfReader
+
+            reader = PdfReader(io.BytesIO(raw))
+            text = "\n\n".join((page.extract_text() or "").strip() for page in reader.pages)
+            text = text.strip()
+            if not text:
+                raise HTTPException(status_code=400, detail="Aucun texte lisible trouvé dans ce PDF.")
+            return text, filename
+        except HTTPException:
+            raise
+        except ImportError:
+            raise HTTPException(
+                status_code=400,
+                detail="Lecture PDF indisponible. Installez pypdf ou testez avec un fichier texte.",
+            )
+        except Exception:
+            raise HTTPException(status_code=400, detail="Impossible de lire cette pièce jointe PDF.")
+
+    raise HTTPException(
+        status_code=400,
+        detail="Type de pièce jointe non supporté. Utilisez PDF, TXT, MD, CSV, JSON, XML ou LOG.",
+    )
+
+
+def _build_attachment_prompt(message: str, filename: str, text: str) -> str:
+    clipped = text[:12000]
+    truncated_note = "\n\n[Texte tronqué à 12 000 caractères pour l'analyse.]" if len(text) > len(clipped) else ""
+    user_message = message.strip() or "Analyse cette pièce jointe."
+    return (
+        f"{user_message}\n\n"
+        f"--- PIECE JOINTE: {filename} ---\n"
+        f"{clipped}{truncated_note}\n"
+        "--- FIN PIECE JOINTE ---"
+    )
 
 
 class ChatResponse(BaseModel):
@@ -196,6 +265,70 @@ async def chat_grounded(
     except Exception as e:
         logger.error(f"Grounded chat error for user {current_user.id}:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Error generating grounded response")
+
+
+@router.post("/grounded/attachment", response_model=GroundedChatResponse)
+async def chat_grounded_with_attachment(
+    message: str = Form(""),
+    patient_id: Optional[int] = Form(None),
+    session_id: Optional[int] = Form(None),
+    language: Literal["fr", "en", "ar"] = Form("fr"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """
+    Send a grounded assistant message with one attachment.
+
+    The attachment text is extracted and appended to the user prompt so the
+    existing RAG + LLM path can analyze it without changing normal chat.
+    """
+    try:
+        attachment_text, filename = await _extract_attachment_text(file)
+        enriched_message = _build_attachment_prompt(message, filename, attachment_text)
+
+        result = await get_grounded_chat_response(
+            message=enriched_message,
+            user_id=current_user.id,
+            db=db,
+            patient_id=patient_id,
+            session_id=session_id,
+            stored_message=f"{message.strip() or 'Analyse cette pièce jointe.'}\n\nPièce jointe: {filename}",
+            language=language,
+            retrieval_mode="auto",
+        )
+
+        sources = [
+            SourceReference(
+                source_type=s.get("source_type"),
+                source_id=s.get("source_id"),
+                label=s.get("label"),
+                timestamp=s.get("timestamp"),
+                snippet=s.get("snippet"),
+                score=s.get("score"),
+            )
+            for s in result.get("sources", [])
+        ]
+
+        return GroundedChatResponse(
+            response=result.get("response", ""),
+            sources=sources,
+            confidence=result.get("confidence", "low"),
+            warnings=result.get("warnings", []),
+            tokens=result.get("tokens", 0),
+            model=result.get("model", "biomistral"),
+            language=result.get("language", language),
+            retrieval_type=result.get("retrieval_type", "structured"),
+            patient_id=result.get("patient_id"),
+            patient_name=result.get("patient_name"),
+            session_id=result.get("session_id"),
+            message_id=result.get("message_id"),
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error(f"Attachment chat error for user {current_user.id}:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Error generating response from attachment")
 
 
 @router.get("/history", response_model=List[ChatHistoryItem])

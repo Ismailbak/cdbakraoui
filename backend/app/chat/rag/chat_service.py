@@ -57,6 +57,7 @@ async def get_grounded_chat_response(
     db: Session,
     patient_id: Optional[int] = None,
     session_id: Optional[int] = None,
+    stored_message: Optional[str] = None,
     language: str = "fr",
     retrieval_mode: str = "auto"
 ) -> dict:
@@ -217,7 +218,7 @@ async def get_grounded_chat_response(
                 session_id=resolved_session_id,
                 user_id=user_id,
                 patient_id=final_patient_id,
-                message=message,
+                message=stored_message or message,
                 response=rag_response.response,
                 language=language,
                 model_name=rag_response.metadata.model,
