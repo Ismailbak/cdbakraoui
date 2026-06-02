@@ -7,7 +7,20 @@ import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/
 import { getDashboardSummary, getRecentActivity } from '../../api/api';
 import './DashboardPage.css';
 
-const diagnosisColors = ['#6B7280', '#F97316', '#3B82F6', '#06B6D4', '#10B981'];
+const diagnosisColors = [
+  '#6B7280',
+  '#F97316',
+  '#3B82F6',
+  '#06B6D4',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#14B8A6',
+  '#6366F1',
+  '#84CC16',
+  '#0EA5E9',
+  '#A855F7',
+];
 const activityIcons = {
   patient: '👤',
   appointment: '📅',
@@ -70,10 +83,10 @@ function DashboardPage() {
           medicalActs: dashboard?.medical_acts || 0,
           consultations: dashboard?.consultations || 0,
           diagnosisRecords: dashboard?.diagnosis_records || 0,
-          commonDiagnoses: (dashboard?.common_diagnoses || []).slice(0, 5).map((diag, i) => ({
+          commonDiagnoses: (dashboard?.common_diagnoses || []).map((diag, i) => ({
             name: diag.name,
             value: diag.count,
-            color: diagnosisColors[i]
+            color: diagnosisColors[i % diagnosisColors.length]
           })),
         });
 

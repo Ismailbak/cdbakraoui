@@ -14,7 +14,20 @@ import { SkeletonCard, SkeletonChart } from '../../components/common';
 import { getAnalyticsSummary } from '../../api/api';
 import './AnalyticsPage.css';
 
-const diagnosisColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+const diagnosisColors = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#84CC16',
+  '#F97316',
+  '#6366F1',
+  '#14B8A6',
+  '#6B7280',
+];
 
 function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('6months');

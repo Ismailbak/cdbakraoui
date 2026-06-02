@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUsers, FiUserPlus, FiSearch, FiFilter, FiMoreVertical, FiEdit2, FiTrash2, FiEye, FiPhone, FiMail, FiCalendar, FiX, FiAlertTriangle } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
-import { getPatients, getTodayAppointments, createPatient, updatePatient, deletePatient } from '../../api/api';
+import { getPatients, createPatient, updatePatient, deletePatient } from '../../api/api';
 import PatientForm from './PatientForm';
 import './PatientsPage.css';
 
@@ -20,28 +20,13 @@ const INSURANCE_OPTIONS = [
   { value: 'Autre', label: 'Autre' },
 ];
 
-function mapApiPatientToUi(p, appointments = []) {
-  const now = new Date();
-  const patientAppointments = appointments.filter(a => a.patient_id === p.id);
-  
-  // Find last visit (past appointment) - use datetime_scheduled if available, fallback to date
-  const pastAppointments = patientAppointments
-    .filter(a => new Date(a.datetime_scheduled || a.date) < now)
-    .sort((a, b) => new Date(b.datetime_scheduled || b.date) - new Date(a.datetime_scheduled || a.date));
-  const lastVisit = pastAppointments.length > 0 ? (pastAppointments[0].datetime_scheduled || pastAppointments[0].date) : null;
-  
-  // Find next appointment (future appointment) - use datetime_scheduled if available, fallback to date
-  const futureAppointments = patientAppointments
-    .filter(a => new Date(a.datetime_scheduled || a.date) >= now)
-    .sort((a, b) => new Date(a.datetime_scheduled || a.date) - new Date(b.datetime_scheduled || b.date));
-  const nextAppointment = futureAppointments.length > 0 ? (futureAppointments[0].datetime_scheduled || futureAppointments[0].date) : null;
-  
+function mapApiPatientToUi(p) {
   return {
     ...p,
     insuranceNumber: p.insurance_number,
     notesAdmin: p.notes_admin,
-    lastVisit,
-    nextAppointment,
+    lastVisit: p.last_visit ?? null,
+    nextAppointment: p.next_appointment ?? null,
     avatar: (p.gender && p.gender.toLowerCase() === 'femme') ? '👩' : '👨',
   };
 }
@@ -60,7 +45,6 @@ function PatientsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalPatientCount, setTotalPatientCount] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const todayAppointmentsRef = useRef(null);
   const toast = useToast();
   const itemsPerPage = 15;
   const totalPatients = totalPatientCount;
@@ -133,19 +117,8 @@ function PatientsPage() {
       });
       setTotalPatientCount(Number(patientsRes.headers['x-total-count'] || patientsRes.data?.length || 0));
       const rows = patientsRes.data || [];
-      setPatients(rows.map((p) => mapApiPatientToUi(p, [])));
+      setPatients(rows.map((p) => mapApiPatientToUi(p)));
       setIsLoading(false);
-
-      // Enrich with today's appointments in background (fetch once per session)
-      if (todayAppointmentsRef.current === null) {
-        try {
-          const appointmentsRes = await getTodayAppointments();
-          todayAppointmentsRef.current = appointmentsRes.data || [];
-        } catch {
-          todayAppointmentsRef.current = [];
-        }
-      }
-      setPatients(rows.map((p) => mapApiPatientToUi(p, todayAppointmentsRef.current || [])));
     } catch {
       toast.error('Impossible de charger les patients');
       setIsLoading(false);
@@ -455,9 +428,13 @@ function PatientsPage() {
                           <span className="contact-item"><FiMail /> {patient.email}</span>
                         </div>
                       </td>
-                      <td>{patient.city || '-'}</td>
+                      <td>{patient.display_city || '-'}</td>
                       <td>
-                        <span className="diagnosis-badge">{patient.primary_diagnosis}</span>
+                        {patient.display_diagnosis ? (
+                          <span className="diagnosis-badge">{patient.display_diagnosis}</span>
+                        ) : (
+                          <span>-</span>
+                        )}
                       </td>
                       <td>{formatDate(patient.lastVisit)}</td>
                       <td>

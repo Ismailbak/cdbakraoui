@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Response
 from fastapi.responses import StreamingResponse
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import datetime, date
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func, exists
 
 from app.core.database import get_db
 from app.models.patient import Patient as PatientModel
 from app.models.patient_allergy import PatientAllergy as PatientAllergyModel
 from app.auth.router import get_current_user_orm, RoleChecker
 from app.models.user import User
-from app.models.medical_act import MedicalAct
+from app.models.medical_act import MedicalAct, ActDiagnosis
 from app.models.appointment import Appointment
 from app.models.act_result import ActResult
 from app.analytics.audit import log_action
@@ -63,9 +63,169 @@ class Patient(PatientBase):
     ipp: Optional[str] = None
     created_at: Optional[datetime] = None
     age: Optional[int] = None  # Computed field - never stored
+    display_diagnosis: Optional[str] = None  # primary_diagnosis or latest act diagnosis
+    display_city: Optional[str] = None  # city or best-effort city extracted from address
+    last_visit: Optional[str] = None  # latest past appointment (ISO datetime)
+    next_appointment: Optional[str] = None  # nearest future appointment (ISO datetime)
 
     class Config:
         from_attributes = True
+
+
+_SKIP_DIAGNOSIS_LABELS = {"non précisé", "non precise", "n/a", "-", ""}
+_CITY_ALIASES = {
+    "casa": "Casablanca",
+    "casablanca": "Casablanca",
+    "mohammedia": "Mohammedia",
+    "rabat": "Rabat",
+    "sale": "Salé",
+    "salé": "Salé",
+    "temara": "Témara",
+    "témara": "Témara",
+    "fes": "Fès",
+    "fès": "Fès",
+    "meknes": "Meknès",
+    "meknès": "Meknès",
+    "marrakech": "Marrakech",
+    "agadir": "Agadir",
+    "tanger": "Tanger",
+    "tetouan": "Tétouan",
+    "tétouan": "Tétouan",
+    "kenitra": "Kénitra",
+    "kénitra": "Kénitra",
+    "el jadida": "El Jadida",
+    "beni mellal": "Béni Mellal",
+    "béni mellal": "Béni Mellal",
+    "kasba tadla": "Kasba Tadla",
+    "khouribga": "Khouribga",
+    "settat": "Settat",
+    "safi": "Safi",
+    "oujda": "Oujda",
+    "nador": "Nador",
+    "taourirt": "Taourirt",
+    "errachidia": "Errachidia",
+    "laayoune": "Laayoune",
+    "laâyoune": "Laayoune",
+    "dakhla": "Dakhla",
+    "el hajeb": "El Hajeb",
+    "azrou": "Azrou",
+    "ifrane": "Ifrane",
+    "sidi kacem": "Sidi Kacem",
+    "sidi slimane": "Sidi Slimane",
+    "dar bouazza": "Dar Bouazza",
+    "ain harrouda": "Ain Harrouda",
+    "aïn harrouda": "Ain Harrouda",
+}
+
+
+def _normalize_diagnosis(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    if not cleaned or cleaned.lower() in _SKIP_DIAGNOSIS_LABELS:
+        return None
+    return cleaned
+
+
+def _resolve_display_diagnosis(
+    primary_diagnosis: Optional[str],
+    act_diagnosis: Optional[str] = None,
+) -> Optional[str]:
+    return _normalize_diagnosis(primary_diagnosis) or _normalize_diagnosis(act_diagnosis)
+
+
+def _normalize_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).lower().replace("-", " ").split())
+
+
+def _resolve_display_city(city: Optional[str], address: Optional[str]) -> Optional[str]:
+    cleaned_city = (city or "").strip()
+    if cleaned_city:
+        return cleaned_city
+
+    normalized_address = _normalize_text(address)
+    if not normalized_address:
+        return None
+
+    for alias, display in sorted(_CITY_ALIASES.items(), key=lambda item: len(item[0]), reverse=True):
+        if alias in normalized_address:
+            return display
+    return None
+
+
+def _latest_act_diagnoses_by_patient(db: Session, patient_ids: List[int]) -> Dict[int, str]:
+    """Pick principal diagnosis from latest act when available, else latest act diagnosis."""
+    if not patient_ids:
+        return {}
+
+    rows = (
+        db.query(
+            MedicalAct.patient_id,
+            ActDiagnosis.diagnosis_label,
+            ActDiagnosis.diagnosis_type,
+            MedicalAct.act_date,
+            ActDiagnosis.id,
+        )
+        .join(ActDiagnosis, ActDiagnosis.act_id == MedicalAct.id)
+        .filter(MedicalAct.patient_id.in_(patient_ids))
+        .filter(ActDiagnosis.diagnosis_label.isnot(None))
+        .filter(func.trim(ActDiagnosis.diagnosis_label) != "")
+        .all()
+    )
+
+    best: Dict[int, tuple] = {}
+    for patient_id, label, diagnosis_type, act_date, diagnosis_id in rows:
+        normalized = _normalize_diagnosis(label)
+        if not normalized:
+            continue
+        rank = 0 if (diagnosis_type or "").lower() == "principal" else 1
+        sort_key = (rank, act_date or date.min, diagnosis_id or 0)
+        current = best.get(patient_id)
+        if current is None or sort_key < current[0]:
+            best[patient_id] = (sort_key, normalized)
+
+    return {patient_id: value[1] for patient_id, value in best.items()}
+
+
+def _appointment_bounds_by_patient(db: Session, patient_ids: List[int]) -> Dict[int, Dict[str, Optional[str]]]:
+    """Latest past and nearest future appointment per patient."""
+    if not patient_ids:
+        return {}
+
+    now = datetime.utcnow()
+    bounds: Dict[int, Dict[str, Optional[str]]] = {pid: {} for pid in patient_ids}
+
+    past_rows = (
+        db.query(
+            Appointment.patient_id,
+            func.max(Appointment.datetime_scheduled).label("last_visit"),
+        )
+        .filter(Appointment.patient_id.in_(patient_ids))
+        .filter(Appointment.datetime_scheduled < now)
+        .group_by(Appointment.patient_id)
+        .all()
+    )
+    for patient_id, last_visit in past_rows:
+        bounds[patient_id]["last_visit"] = last_visit.isoformat() if last_visit else None
+
+    future_rows = (
+        db.query(
+            Appointment.patient_id,
+            func.min(Appointment.datetime_scheduled).label("next_appointment"),
+        )
+        .filter(Appointment.patient_id.in_(patient_ids))
+        .filter(Appointment.datetime_scheduled >= now)
+        .group_by(Appointment.patient_id)
+        .all()
+    )
+    for patient_id, next_appointment in future_rows:
+        bounds[patient_id]["next_appointment"] = (
+            next_appointment.isoformat() if next_appointment else None
+        )
+
+    return bounds
 
 
 class PatientAllergyBase(BaseModel):
@@ -88,8 +248,15 @@ class PatientAllergyOut(PatientAllergyBase):
         from_attributes = True
 
 
-def _patient_to_dict(patient: PatientModel) -> dict:
+def _patient_to_dict(
+    patient: PatientModel,
+    act_diagnosis_fallback: Optional[str] = None,
+    appointment_bounds: Optional[Dict[str, Optional[str]]] = None,
+) -> dict:
     """Convert PatientModel to dict with computed age and full name."""
+    primary = _normalize_diagnosis(patient.primary_diagnosis)
+    display = _resolve_display_diagnosis(primary, act_diagnosis_fallback)
+    display_city = _resolve_display_city(patient.city, patient.address)
     patient_dict = {
         "id": patient.id,
         "first_name": patient.first_name,
@@ -102,6 +269,7 @@ def _patient_to_dict(patient: PatientModel) -> dict:
         "email": patient.email,
         "address": patient.address,
         "city": patient.city,
+        "display_city": display_city,
         "marital_status": patient.marital_status,
         "nationality": patient.nationality,
         "profession": patient.profession,
@@ -111,13 +279,17 @@ def _patient_to_dict(patient: PatientModel) -> dict:
         "emergency_contact_name": patient.emergency_contact_name,
         "emergency_contact_relation": patient.emergency_contact_relation,
         "emergency_contact_phone": patient.emergency_contact_phone,
-        "primary_diagnosis": patient.primary_diagnosis,
+        "primary_diagnosis": primary,
+        "display_diagnosis": display,
         "notes": patient.notes,
         "notes_admin": patient.notes_admin,
         "status": patient.status,
         "ipp": patient.ipp,
         "created_at": patient.created_at.isoformat() if patient.created_at else None,
     }
+    if appointment_bounds:
+        patient_dict["last_visit"] = appointment_bounds.get("last_visit")
+        patient_dict["next_appointment"] = appointment_bounds.get("next_appointment")
     return patient_dict
 
 
@@ -126,7 +298,10 @@ def get_patients(
     response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
-    q: Optional[str] = Query(None, description="Search by first_name, last_name, IPP, or phone"),
+    q: Optional[str] = Query(
+        None,
+        description="Search by name, IPP, phone, city, primary diagnosis, or act diagnosis",
+    ),
     ipp: Optional[str] = Query(None),
     first_name: Optional[str] = Query(None),
     last_name: Optional[str] = Query(None),
@@ -138,6 +313,14 @@ def get_patients(
     query = db.query(PatientModel)
     if q:
         q_filter = f"%{q}%"
+        act_diag_match = (
+            exists()
+            .where(
+                MedicalAct.patient_id == PatientModel.id,
+                ActDiagnosis.act_id == MedicalAct.id,
+                ActDiagnosis.diagnosis_label.ilike(q_filter),
+            )
+        )
         query = query.filter(
             or_(
                 PatientModel.first_name.ilike(q_filter),
@@ -145,6 +328,9 @@ def get_patients(
                 PatientModel.ipp.ilike(q_filter),
                 PatientModel.phone.ilike(q_filter),
                 PatientModel.city.ilike(q_filter),
+                PatientModel.address.ilike(q_filter),
+                PatientModel.primary_diagnosis.ilike(q_filter),
+                act_diag_match,
             )
         )
     if ipp:
@@ -168,7 +354,17 @@ def get_patients(
         query = query.limit(limit)
 
     patients = query.all()
-    return [_patient_to_dict(p) for p in patients]
+    patient_ids = [p.id for p in patients]
+    diagnosis_fallback = _latest_act_diagnoses_by_patient(db, patient_ids)
+    appointment_bounds = _appointment_bounds_by_patient(db, patient_ids)
+    return [
+        _patient_to_dict(
+            p,
+            diagnosis_fallback.get(p.id),
+            appointment_bounds.get(p.id, {}),
+        )
+        for p in patients
+    ]
 
 
 @router.get("/{patient_id}", response_model=Patient)
@@ -180,7 +376,13 @@ def get_patient(
     patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    return _patient_to_dict(patient)
+    diagnosis_fallback = _latest_act_diagnoses_by_patient(db, [patient.id])
+    appointment_bounds = _appointment_bounds_by_patient(db, [patient.id])
+    return _patient_to_dict(
+        patient,
+        diagnosis_fallback.get(patient.id),
+        appointment_bounds.get(patient.id, {}),
+    )
 
 
 @router.post("/", response_model=Patient)

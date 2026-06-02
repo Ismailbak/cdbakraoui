@@ -13,7 +13,7 @@ from app.models.patient import Patient
 def get_top_act_diagnoses(
     db: Session,
     start_date: Optional[date] = None,
-    limit: int = 5,
+    limit: Optional[int] = 5,
 ) -> List[dict]:
     """Top diagnosis labels from act_diagnoses (CHUIR import stores diagnoses per act, not on patients)."""
     q = (
@@ -24,12 +24,10 @@ def get_top_act_diagnoses(
     )
     if start_date is not None:
         q = q.filter(MedicalAct.act_date >= start_date)
-    rows = (
-        q.group_by(ActDiagnosis.diagnosis_label)
-        .order_by(desc(func.count(ActDiagnosis.id)))
-        .limit(limit)
-        .all()
-    )
+    q = q.group_by(ActDiagnosis.diagnosis_label).order_by(desc(func.count(ActDiagnosis.id)))
+    if limit is not None:
+        q = q.limit(limit)
+    rows = q.all()
     return [{"name": label, "count": count} for label, count in rows if label and str(label).strip()]
 
 def calculate_age(date_of_birth):
@@ -76,7 +74,7 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
                 ages.append(age)
         avg_age = sum(ages) / len(ages) if ages else 0.0
     
-    common_diagnoses = get_top_act_diagnoses(db, start_date=start_date, limit=5)
+    common_diagnoses = get_top_act_diagnoses(db, start_date=start_date, limit=None)
 
     # Weekly Activity (current week, filtered by date range)
     week_start = today - timedelta(days=today.weekday())
