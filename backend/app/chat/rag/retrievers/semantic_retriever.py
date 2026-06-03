@@ -3,6 +3,7 @@ Semantic retrieval via Qdrant (graceful degradation if unavailable).
 """
 
 import logging
+import atexit
 from datetime import datetime
 from typing import List, Optional
 
@@ -15,23 +16,58 @@ logger = logging.getLogger(__name__)
 _qdrant_client = None
 
 
+def _close_qdrant():
+    global _qdrant_client
+    if _qdrant_client is not None:
+        try:
+            _qdrant_client.close()
+        except Exception:
+            pass
+        _qdrant_client = None
+
+
+atexit.register(_close_qdrant)
+
+
 def _get_qdrant():
     global _qdrant_client
     if _qdrant_client is not None:
         return _qdrant_client
     try:
         from qdrant_client import QdrantClient
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-        _qdrant_client = QdrantClient(
-            host=rag_config.QDRANT_HOST,
-            port=rag_config.QDRANT_PORT,
-            timeout=rag_config.RETRIEVAL_TIMEOUT_SECONDS,
-        )
+        if rag_config.QDRANT_PATH:
+            _qdrant_client = QdrantClient(path=rag_config.QDRANT_PATH)
+        else:
+            _qdrant_client = QdrantClient(
+                host=rag_config.QDRANT_HOST,
+                port=rag_config.QDRANT_PORT,
+                timeout=rag_config.RETRIEVAL_TIMEOUT_SECONDS,
+            )
         return _qdrant_client
     except Exception as e:
         logger.warning("Qdrant client unavailable: %s", e)
         return None
+
+
+def ensure_qdrant_collection(client) -> bool:
+    """Create the semantic chunk collection when it does not exist yet."""
+    try:
+        from qdrant_client.models import Distance, VectorParams
+
+        collections = [c.name for c in client.get_collections().collections]
+        if rag_config.QDRANT_COLLECTION_NAME not in collections:
+            client.create_collection(
+                collection_name=rag_config.QDRANT_COLLECTION_NAME,
+                vectors_config=VectorParams(
+                    size=rag_config.QDRANT_VECTOR_SIZE,
+                    distance=Distance.COSINE,
+                ),
+            )
+        return True
+    except Exception as e:
+        logger.warning("Qdrant collection unavailable: %s", e)
+        return False
 
 
 async def semantic_retrieve(
@@ -48,6 +84,8 @@ async def semantic_retrieve(
     client = _get_qdrant()
     if not client:
         return []
+    if not ensure_qdrant_collection(client):
+        return []
 
     try:
         from qdrant_client.models import Filter, FieldCondition, MatchValue
@@ -58,13 +96,23 @@ async def semantic_retrieve(
                 must=[FieldCondition(key="patient_id", match=MatchValue(value=patient_id))]
             )
 
-        results = client.search(
-            collection_name=rag_config.QDRANT_COLLECTION_NAME,
-            query_vector=vector,
-            query_filter=query_filter,
-            limit=top_k,
-            score_threshold=rag_config.QDRANT_SIMILARITY_THRESHOLD,
-        )
+        if hasattr(client, "query_points"):
+            response = client.query_points(
+                collection_name=rag_config.QDRANT_COLLECTION_NAME,
+                query=vector,
+                query_filter=query_filter,
+                limit=top_k,
+                score_threshold=rag_config.QDRANT_SIMILARITY_THRESHOLD,
+            )
+            results = response.points
+        else:
+            results = client.search(
+                collection_name=rag_config.QDRANT_COLLECTION_NAME,
+                query_vector=vector,
+                query_filter=query_filter,
+                limit=top_k,
+                score_threshold=rag_config.QDRANT_SIMILARITY_THRESHOLD,
+            )
 
         facts = []
         for hit in results:

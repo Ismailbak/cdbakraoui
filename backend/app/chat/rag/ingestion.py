@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.chat.rag.embedding_service import embed_texts
+from app.chat.rag.retrievers.semantic_retriever import _get_qdrant, ensure_qdrant_collection
 from app.core.config_rag import rag_config
 from app.models.rag_chunk import RAGChunk
 from app.models.patient import Patient
@@ -37,19 +38,11 @@ def _upsert_qdrant(points: List[dict]) -> bool:
     if not points:
         return True
     try:
-        from qdrant_client import QdrantClient
-        from qdrant_client.models import Distance, VectorParams, PointStruct
+        from qdrant_client.models import PointStruct
 
-        client = QdrantClient(host=rag_config.QDRANT_HOST, port=rag_config.QDRANT_PORT)
-        collections = [c.name for c in client.get_collections().collections]
-        if rag_config.QDRANT_COLLECTION_NAME not in collections:
-            client.create_collection(
-                collection_name=rag_config.QDRANT_COLLECTION_NAME,
-                vectors_config=VectorParams(
-                    size=rag_config.QDRANT_VECTOR_SIZE,
-                    distance=Distance.COSINE,
-                ),
-            )
+        client = _get_qdrant()
+        if not client or not ensure_qdrant_collection(client):
+            return False
 
         structs = [
             PointStruct(id=p["id"], vector=p["vector"], payload=p["payload"])

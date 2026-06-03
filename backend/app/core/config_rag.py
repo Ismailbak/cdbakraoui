@@ -31,6 +31,7 @@ class RAGConfig(BaseSettings):
     # Qdrant settings (Phase 2)
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
+    QDRANT_PATH: Optional[str] = None
     QDRANT_COLLECTION_NAME: str = "medical_chunks"
     QDRANT_VECTOR_SIZE: int = 384  # For sentence-transformers/all-MiniLM-L6-v2
     QDRANT_SIMILARITY_THRESHOLD: float = 0.6
@@ -49,8 +50,10 @@ class RAGConfig(BaseSettings):
     ENABLE_QUERY_CACHING: bool = False
     
     model_config = ConfigDict(
+        env_file=".env",
         env_prefix="RAG_",
-        case_sensitive=True
+        case_sensitive=True,
+        extra="ignore",
     )
 
 

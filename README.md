@@ -100,6 +100,8 @@ Services exposed by the checked-in Compose file:
 - MySQL: `localhost:3306`
 - Qdrant: `http://localhost:6333`
 
+MySQL and Qdrant are bound to `127.0.0.1` in Compose so they are available to local tools without being published on the LAN.
+
 Create or update the development admin user:
 
 ```bash
@@ -192,12 +194,12 @@ cd frontend/mobile
 npm start
 ```
 
-## Known Limitations
+## Production Readiness Notes
 
-- No verified performance, latency, or concurrent-user benchmark is documented yet.
-- Semantic retrieval is available but disabled by default.
-- Background job processing is not currently part of the default stack.
-- Docker Compose exposes MySQL and Qdrant ports for local development; lock these down for production.
+- Do not publish performance, latency, or concurrent-user numbers until a reproducible benchmark is documented with the evidence listed below.
+- Structured RAG is the default runtime path. Enable semantic retrieval with `RAG_SEMANTIC_ENABLED=true` only after validating local memory usage, Qdrant availability, and indexed data.
+- The default stack does not require a queue worker today. Add one only when long-running background jobs are introduced.
+- Docker Compose binds MySQL and Qdrant to localhost for local development. Production deployments should keep data stores on private networks.
 - Production deployment details should be documented separately for the actual target environment.
 
 ## Benchmarking Policy
