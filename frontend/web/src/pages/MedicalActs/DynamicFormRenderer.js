@@ -12,17 +12,24 @@ const DynamicFormRenderer = ({ template, formData, setFormData }) => {
 
   return (
     <div className="dynamic-form-renderer">
-      <h4>{template.title}</h4>
-      <div className="form-row">
+      <div className="maf-dynamic-form-title">
+        <h4>{template.title}</h4>
+        <p>Renseignez les champs du formulaire personnalisé.</p>
+      </div>
+      <div className="maf-grid-2">
         {template.schema_json.map((field) => (
-          <div key={field.id} className="form-group half-width">
-            <label>
-              {field.label} {field.required && <span className="required-asterisk">*</span>}
+          <div
+            key={field.id}
+            className={`maf-field ${field.type === 'textarea' ? 'maf-field-full' : ''}`}
+          >
+            <label className="maf-label">
+              {field.label} {field.required && <span className="maf-required">*</span>}
             </label>
             
             {field.type === 'text' && (
               <input
                 type="text"
+                className="maf-input"
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 required={field.required}
@@ -31,6 +38,7 @@ const DynamicFormRenderer = ({ template, formData, setFormData }) => {
             
             {field.type === 'textarea' && (
               <textarea
+                className="maf-textarea"
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 required={field.required}
@@ -41,6 +49,7 @@ const DynamicFormRenderer = ({ template, formData, setFormData }) => {
             {field.type === 'number' && (
               <input
                 type="number"
+                className="maf-input"
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 required={field.required}
@@ -50,6 +59,7 @@ const DynamicFormRenderer = ({ template, formData, setFormData }) => {
             {field.type === 'date' && (
               <input
                 type="date"
+                className="maf-input"
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 required={field.required}
@@ -58,6 +68,7 @@ const DynamicFormRenderer = ({ template, formData, setFormData }) => {
             
             {field.type === 'select' && (
               <select
+                className="maf-input"
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 required={field.required}
@@ -70,15 +81,15 @@ const DynamicFormRenderer = ({ template, formData, setFormData }) => {
             )}
             
             {field.type === 'checkbox' && (
-              <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label className="maf-checkbox-card">
                 <input
                   type="checkbox"
                   checked={formData[field.name] || false}
                   onChange={(e) => handleChange(field.name, e.target.checked)}
                   required={field.required}
                 />
-                <span style={{ fontWeight: 'normal', color: '#64748b' }}>Oui / Non</span>
-              </div>
+                <span>Oui / Non</span>
+              </label>
             )}
           </div>
         ))}

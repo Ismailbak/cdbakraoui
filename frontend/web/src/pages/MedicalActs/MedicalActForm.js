@@ -20,7 +20,8 @@ import {
   getDynamicTemplates, submitDynamicResponse
 } from '../../api/api';
 import {
-  FormCsRd, FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur
+  FormCsRd, FormCsRic, FormCsOs, FormCsEcho, FormCsGeste, FormCsSeances, FormCsDxa, FormCsDouleur,
+  CLINICAL_FORM_AUTOSAVE_EVENT
 } from '../../components/MedicalForms/AllForms';
 import DynamicFormRenderer from './DynamicFormRenderer';
 import './MedicalActForm.css';
@@ -162,7 +163,7 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
 
   return (
     <fieldset style={{ marginTop: '1rem', border: 'none', padding: 0 }} onSubmit={handleNestedFormSubmit}>
-      <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="info-box maf-clinical-sticky-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <FiCheckCircle style={{ color: '#10b981' }} />
           <span>Formulaire: <strong>{(formTypes.find(ft => ft.form_name === formName)?.form_label || formName).replace('Unit??', 'Unité')}</strong></span>
@@ -200,6 +201,7 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
             
             // Success feedback
             toast.success('✓ Enregistré');
+            return result;
           } catch (err) {
             console.error('Error saving form:', err);
             let errorMsg = 'Erreur lors de l\'enregistrement du formulaire.';
@@ -213,6 +215,7 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
               }
             }
             toast.error(errorMsg);
+            throw err;
           }
         },
         initialData: {},
@@ -233,6 +236,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [userIntentToSubmit, setUserIntentToSubmit] = useState(false);
+  const [isAutoSavingForm, setIsAutoSavingForm] = useState(false);
   
   // Treatment Form State
   const [selectedFamily, setSelectedFamily] = useState('');
@@ -558,8 +562,34 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
+  const autoSaveClinicalForm = async () => {
+    const savePromises = [];
+    window.dispatchEvent(new CustomEvent(CLINICAL_FORM_AUTOSAVE_EVENT, {
+      detail: {
+        register: (promise) => savePromises.push(Promise.resolve(promise))
+      }
+    }));
+
+    if (savePromises.length > 0) {
+      await Promise.all(savePromises);
+    }
+  };
+
+  const handleNext = async () => {
     if (validateStep(step)) {
+      if (step === 3 && form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName]) {
+        setIsAutoSavingForm(true);
+        try {
+          await autoSaveClinicalForm();
+        } catch {
+          setIsAutoSavingForm(false);
+          return;
+        }
+        setIsAutoSavingForm(false);
+      }
+      if (step === 3 && selectedDynamicTemplate) {
+        setDynamicSaved(true);
+      }
       setStep(s => s + 1);
       setUserIntentToSubmit(false); // Reset intent when navigating
     }
@@ -873,7 +903,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
             
             {selectedDynamicTemplate ? (
               <div style={{ marginTop: '1rem' }}>
-                <div className="info-box" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="info-box maf-clinical-sticky-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <FiCheckCircle style={{ color: '#10b981' }} />
                     <span>Formulaire dynamique: <strong>{selectedDynamicTemplate.title}</strong></span>
@@ -887,22 +917,9 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
                   setFormData={setDynamicFormData}
                 />
 
-                <div className="maf-dynamic-save-row">
-                  <button
-                    type="button"
-                    className="maf-btn-submit maf-dynamic-save-btn"
-                    onClick={() => {
-                      // mark dynamic data saved locally (will be submitted with the act)
-                      setDynamicSaved(true);
-                      toast.info('Réponses enregistrées localement');
-                    }}
-                  >
-                    Enregistrer les réponses
-                  </button>
-                  {dynamicSaved && (
-                    <span className="maf-dynamic-save-badge">Enregistré</span>
-                  )}
-                </div>
+                {dynamicSaved && (
+                  <span className="maf-dynamic-save-badge">Réponses prêtes à enregistrer</span>
+                )}
               </div>
             ) : form.careTypeId && form.formName && FORM_COMPONENT_MAP[form.formName] ? (
               // Form automatically selected and rendered - no dropdown needed
@@ -1384,8 +1401,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               Annuler
             </button>
             {step < 6 ? (
-              <button type="button" className="maf-btn-next" onClick={handleNext}>
-                Suivant <FiChevronRight />
+              <button type="button" className="maf-btn-next" onClick={handleNext} disabled={isAutoSavingForm}>
+                {isAutoSavingForm ? 'Enregistrement...' : <>Suivant <FiChevronRight /></>}
               </button>
             ) : (
               <button 

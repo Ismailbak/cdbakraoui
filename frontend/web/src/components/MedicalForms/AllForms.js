@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   FiAlertCircle, FiCheckCircle, FiChevronDown, FiPlus, FiTrash2, FiCheck,
   FiActivity, FiThermometer, FiDroplet, FiCalendar, FiTarget, FiBox, FiClock,
@@ -6,6 +6,37 @@ import {
 } from 'react-icons/fi';
 import useFormNavigation from '../../hooks/useFormNavigation';
 import './AllForms.css';
+
+export const CLINICAL_FORM_AUTOSAVE_EVENT = 'clinical-form-autosave';
+
+function useClinicalFormAutoSave(formData, onSubmit, prepareData = data => data) {
+  const latestRef = useRef({ formData, onSubmit, prepareData });
+
+  latestRef.current = { formData, onSubmit, prepareData };
+
+  useEffect(() => {
+    const handleAutoSave = (event) => {
+      const { formData: latestData, onSubmit: latestSubmit, prepareData: latestPrepare } = latestRef.current;
+      const savePromise = Promise.resolve(latestSubmit(latestPrepare(latestData)));
+      event.detail?.register?.(savePromise);
+    };
+
+    window.addEventListener(CLINICAL_FORM_AUTOSAVE_EVENT, handleAutoSave);
+    return () => window.removeEventListener(CLINICAL_FORM_AUTOSAVE_EVENT, handleAutoSave);
+  }, []);
+}
+
+function preparePainFormData(data) {
+  const processedData = { ...data };
+  ['pain_locations', 'pain_character', 'aggravating_factors', 'relieving_factors'].forEach(field => {
+    if (typeof processedData[field] === 'string' && processedData[field].trim() !== '') {
+      processedData[field] = processedData[field].split(',').map(s => s.trim()).filter(Boolean);
+    } else if (typeof processedData[field] === 'string' || processedData[field] === null) {
+      processedData[field] = [];
+    }
+  });
+  return processedData;
+}
 
 /**
  * RD Form: Consultation Rhumatisme Dégénératif (Degenerative Rheumatism)
@@ -45,11 +76,11 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     treatment: true,
     signs: true,
-    exam: false,
-    labs: false,
-    imaging: false,
-    diagnosis: false,
-    plan: false
+    exam: true,
+    labs: true,
+    imaging: true,
+    diagnosis: true,
+    plan: true
   });
 
   // Form navigation ref
@@ -58,8 +89,8 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
   // Setup keyboard navigation between fields
   useFormNavigation(formRef);
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (field, value) => {
@@ -97,6 +128,8 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
     e.stopPropagation();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   return (
     <div className="medical-form" ref={formRef} onKeyDown={(e) => {
@@ -599,13 +632,13 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     markers: true,
     activity: true,
-    joints: false,
-    symptoms: false,
-    medications: false,
+    joints: true,
+    symptoms: true,
+    medications: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -620,6 +653,8 @@ export const FormCsRic = ({ onSubmit, initialData = {} }) => {
     e.preventDefault();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   // Form navigation ref
   const formRef = useRef(null);
@@ -916,12 +951,12 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     dxa: true,
     fractures: true,
-    risk: false,
-    vitamin: false,
+    risk: true,
+    vitamin: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -937,6 +972,8 @@ export const FormCsOs = ({ onSubmit, initialData = {} }) => {
     e.stopPropagation();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   // Form navigation ref
   const formRef = useRef(null);
@@ -1272,12 +1309,12 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     general: true,
     findings: true,
-    doppler: false,
-    impression: false,
+    doppler: true,
+    impression: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -1293,6 +1330,8 @@ export const FormCsEcho = ({ onSubmit, initialData = {} }) => {
     e.stopPropagation();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   // Form navigation ref
   const formRef = useRef(null);
@@ -1594,12 +1633,12 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     procedure: true,
     technique: true,
-    findings: false,
-    complications: false,
+    findings: true,
+    complications: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -1614,6 +1653,8 @@ export const FormCsGeste = ({ onSubmit, initialData = {} }) => {
     e.preventDefault();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   // Form navigation ref
   const formRef = useRef(null);
@@ -1939,12 +1980,12 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     session: true,
     parameters: true,
-    assessment: false,
-    progress: false,
+    assessment: true,
+    progress: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -1960,6 +2001,8 @@ export const FormCsSeances = ({ onSubmit, initialData = {} }) => {
     e.stopPropagation();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   // Form navigation ref
   const formRef = useRef(null);
@@ -2221,12 +2264,12 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     general: true,
     scores: true,
-    frax: false,
-    impression: false,
+    frax: true,
+    impression: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -2241,6 +2284,8 @@ export const FormCsDxa = ({ onSubmit, initialData = {} }) => {
     e.preventDefault();
     onSubmit(formData);
   };
+
+  useClinicalFormAutoSave(formData, onSubmit);
 
   // Form navigation ref
   const formRef = useRef(null);
@@ -2545,12 +2590,12 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
   const [expandedSections, setExpandedSections] = useState({
     profile: true,
     impact: true,
-    psychological: false,
-    plan: false,
+    psychological: true,
+    plan: true,
   });
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = () => {
+    setExpandedSections(prev => prev);
   };
 
   const handleInputChange = (e) => {
@@ -2563,17 +2608,10 @@ export const FormCsDouleur = ({ onSubmit, initialData = {} }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Convert comma-separated strings to arrays for the backend
-    const processedData = { ...formData };
-    ['pain_locations', 'pain_character', 'aggravating_factors', 'relieving_factors'].forEach(field => {
-      if (typeof processedData[field] === 'string' && processedData[field].trim() !== '') {
-        processedData[field] = processedData[field].split(',').map(s => s.trim()).filter(Boolean);
-      } else if (typeof processedData[field] === 'string' || processedData[field] === null) {
-        processedData[field] = [];
-      }
-    });
-    onSubmit(processedData);
+    onSubmit(preparePainFormData(formData));
   };
+
+  useClinicalFormAutoSave(formData, onSubmit, preparePainFormData);
 
   // Form navigation ref
   const formRef = useRef(null);

@@ -236,6 +236,10 @@
     gap: 10px;
 }
 
+.maf-field-full {
+    grid-column: 1 / -1;
+}
+
 .maf-label {
     font-size: 13px;
     font-weight: 500;
@@ -687,6 +691,324 @@
     border: 1px solid #a7f3d0;
     font-size: 13px;
     font-weight: 600;
+}
+
+/* ── Embedded Clinical Forms ─────────────── */
+.maf-form .medical-form,
+.maf-form .dynamic-form-renderer {
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    font-family: inherit;
+}
+
+.maf-form .form-header,
+.maf-dynamic-form-title {
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.maf-form .form-header h2,
+.maf-dynamic-form-title h4 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1E2A4A;
+    letter-spacing: 0;
+}
+
+.maf-form .form-header p,
+.maf-dynamic-form-title p {
+    margin: 0;
+    font-size: 13px;
+    color: #6B7280;
+    font-weight: 400;
+}
+
+.maf-form .form-section {
+    margin-bottom: 16px;
+    background: #FAFAFA;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+.maf-form .form-section:hover {
+    border-color: #fda4af;
+    box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.08);
+}
+
+.maf-form .section-header {
+    padding: 14px 16px;
+    background: #fff;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E2A4A;
+    font-family: inherit;
+}
+
+.maf-form .section-header:hover {
+    background: #fdf2f8;
+}
+
+.maf-form .section-header svg {
+    color: #f87171;
+}
+
+.maf-form .section-content {
+    padding: 18px;
+    background: #fff;
+}
+
+.maf-form .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.maf-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.maf-form .form-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    letter-spacing: 0;
+}
+
+.maf-form .form-input,
+.maf-form .form-select,
+.maf-form .form-textarea,
+.maf-form .form-group input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.maf-form .form-group select,
+.maf-form .form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #374151;
+    background: #FAFAFA;
+    box-shadow: none;
+    box-sizing: border-box;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.maf-form .form-input:focus,
+.maf-form .form-select:focus,
+.maf-form .form-textarea:focus,
+.maf-form .form-group input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.maf-form .form-group select:focus,
+.maf-form .form-group textarea:focus {
+    border-color: #fca5a5;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.1);
+}
+
+.maf-form .form-textarea,
+.maf-form .form-group textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.maf-form .checkbox-label,
+.maf-checkbox-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    margin: 0;
+    padding: 10px 14px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: #FAFAFA;
+    font-size: 13px;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.maf-form .checkbox-label:hover,
+.maf-checkbox-card:hover {
+    border-color: #fda4af;
+    background: #fdf2f8;
+}
+
+.maf-form .checkbox-label input[type="checkbox"],
+.maf-checkbox-card input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #f87171;
+    cursor: pointer;
+}
+
+.maf-form .btn-add,
+.maf-form .btn-submit {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 11px 18px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(252, 165, 165, 0.3) !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.maf-form .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.maf-form .form-actions .btn-submit {
+    flex: 1;
+}
+
+.maf-form .btn-add:hover,
+.maf-form .btn-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(252, 165, 165, 0.4) !important;
+}
+
+.maf-form .help-text {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+.maf-form .medical-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    counter-reset: clinical-section;
+}
+
+.maf-form .medical-form .form-section {
+    margin-bottom: 0;
+    padding: 18px;
+    background: #FAFAFA;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.maf-form .medical-form .form-section:hover {
+    border-color: #fecaca;
+    box-shadow: 0 6px 18px rgba(248, 113, 113, 0.08);
+}
+
+.maf-form .medical-form .section-header,
+.maf-form .medical-form .section-header-simple {
+    width: 100%;
+    padding: 0 0 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #F3F4F6;
+    margin-bottom: 16px;
+    cursor: default;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E2A4A;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.maf-form .medical-form .section-header:hover {
+    background: transparent;
+}
+
+.maf-form .medical-form .section-header::before,
+.maf-form .medical-form .section-header-simple::before {
+    counter-increment: clinical-section;
+    content: counter(clinical-section);
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(248, 113, 113, 0.25);
+    flex-shrink: 0;
+}
+
+.maf-form .medical-form .section-header > svg,
+.maf-form .medical-form .section-header-left svg:first-child {
+    display: none;
+}
+
+.maf-form .medical-form .section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.maf-form .medical-form .section-icon {
+    color: #f87171;
+    font-size: 17px;
+}
+
+.maf-form .medical-form .section-content {
+    padding: 0;
+    background: transparent;
+}
+
+.maf-form .medical-form .form-row {
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.maf-form .medical-form .form-group {
+    gap: 7px;
+}
+
+.maf-form .medical-form .form-group:has(textarea) {
+    grid-column: 1 / -1;
+}
+
+.maf-form .medical-form textarea,
+.maf-form .medical-form .form-textarea,
+.maf-form .medical-form .form-group textarea {
+    min-height: 116px;
+}
+
+.maf-form .medical-form .form-actions {
+    display: none;
+}
+
+.maf-clinical-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(8px);
 }
 
 /* ── Success State ────────────────────────── */

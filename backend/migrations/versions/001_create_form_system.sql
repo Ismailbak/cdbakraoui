@@ -182,7 +182,7 @@ INSERT IGNORE INTO ref_act_types (ref_care_type_id, code, label, display_order) 
 
 -- Form types for CS_RD
 INSERT IGNORE INTO ref_form_types (ref_act_type_id, form_name, form_label, form_order) VALUES
-((SELECT id FROM ref_act_types WHERE code='CS_RD'), 'cs_rd', 'Consultation Rhumatisme Dégénératif', 1);
+((SELECT id FROM ref_act_types WHERE code='CS_RD'), 'form_cs_rd', 'Consultation Rhumatisme Dégénératif', 1);
 
 -- ============================================================================
 -- END Migration
