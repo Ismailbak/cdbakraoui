@@ -41,6 +41,7 @@ frontend/web/node_modules/.cache/
 data/*
 !data/.gitkeep
 backend/data/uploads/
+backend/.qdrant/
 
 # Docker
 *.log
