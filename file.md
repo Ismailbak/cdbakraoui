@@ -2,7 +2,7 @@
 
 This file is a concise inventory of the active repository layout. It is not a generated file; update it when major folders, deployment behavior, or feature ownership changes.
 
-Last updated: May 21, 2026.
+Last updated: June 3, 2026.
 
 ---
 
@@ -10,12 +10,12 @@ Last updated: May 21, 2026.
 
 - **README.md**: Project overview and high-level usage notes.
 - **deploy.md**: On-prem Proxmox/Ubuntu deployment guide for FastAPI + React build + Nginx + managed MySQL.
-- **docker-compose.yml**: Local Docker workflow for backend, MySQL, optional Qdrant, and web. The web path is `frontend/web`; semantic RAG stays disabled unless `RAG_SEMANTIC_ENABLED=true`.
+- **docker-compose.yml**: Local Docker workflow for backend, MySQL, optional Qdrant, and web. MySQL and Qdrant bind to `127.0.0.1` only. Semantic RAG stays disabled unless `RAG_SEMANTIC_ENABLED=true`.
 - **RAG.md**: RAG design, phased plan, and safety rules.
 - **SYSTEM.md**: Long-form system reference. Some older sections may lag behind the code.
 - **data/.gitkeep**: Placeholder for root-level runtime data. Runtime uploads should not be committed.
 - **Diagrams/** and **Presentations/**: Project visual/presentation assets.
-- **.gitignore**: Ignores local env files, Python/Node caches, build output, and runtime uploads.
+- **.gitignore**: Ignores local env files, Python/Node caches, build output, runtime uploads, and embedded Qdrant data (`backend/.qdrant/`).
 
 Sensitive local configuration lives in `.env` files and is intentionally ignored by git.
 
@@ -37,7 +37,7 @@ Sensitive local configuration lives in `.env` files and is intentionally ignored
 - **app/core/**
   - `config.py`: Environment-driven settings (`DATABASE_URL`, `SECRET_KEY`, `CORS_ORIGINS`, `OLLAMA_HOST`, `OLLAMA_MODEL`, production flags).
   - `database.py`: SQLAlchemy engine/session setup.
-  - `config_rag.py`: RAG thresholds, retrieval configuration, and Phase 2 vector settings.
+  - `config_rag.py`: RAG thresholds, retrieval configuration, and vector settings (`RAG_SEMANTIC_ENABLED`, `RAG_QDRANT_PATH` for embedded mode, or `RAG_QDRANT_HOST`/`RAG_QDRANT_PORT` for server mode).
   - `schemas/`: Shared Pydantic contracts for chat sessions and RAG responses.
   - `utils/`: Rate limiting, preprocessing, and security helpers.
 - **app/auth/**: Login, JWT, current user, user management, password helpers.
@@ -55,7 +55,7 @@ Sensitive local configuration lives in `.env` files and is intentionally ignored
   - `embedding_service.py`, `ingestion.py`, `rag_db.py`: Phase 2 semantic support helpers.
   - `retrievers/query_classifier.py`: Rule-based intent and IPP detection.
   - `retrievers/structured_retriever.py`: Patient, appointment, medical act, and lab result facts.
-  - `retrievers/semantic_retriever.py`: Qdrant semantic retrieval when enabled.
+  - `retrievers/semantic_retriever.py`: Qdrant semantic retrieval when enabled; supports embedded local storage or a Qdrant server.
   - `retrievers/prompt_builder.py`: Deterministic evidence prompt generation.
 - **app/analytics/**: Summary analytics, admin stats, audit log retrieval/export, broadcast helpers. Recent activity uses patient first/last name (not a legacy `name` field).
 - **app/notifications/**: Personal/broadcast notification endpoints and service logic.
@@ -75,7 +75,7 @@ Sensitive local configuration lives in `.env` files and is intentionally ignored
 | Notifications | Implemented | Personal and broadcast messaging |
 | Chat/RAG Phase 1 | Implemented | Structured retrieval with citations/metadata |
 | File upload | Partial | Upload storage exists; UI coverage is not complete everywhere |
-| Semantic RAG Phase 2 | Available, disabled locally | Qdrant/embeddings code exists; local default is `RAG_SEMANTIC_ENABLED=false` |
+| Semantic RAG Phase 2 | Available, opt-in locally | Embedded Qdrant via `RAG_QDRANT_PATH=.qdrant` or server Qdrant; enable with `RAG_SEMANTIC_ENABLED=true` |
 
 ---
 
@@ -144,7 +144,7 @@ Sensitive local configuration lives in `.env` files and is intentionally ignored
 ## Cleanup Notes
 
 - Keep `.env` files local only; they are ignored by git and may contain secrets or LAN IPs.
-- Do not commit generated output: `__pycache__`, `.pytest_cache`, `frontend/web/build`, `node_modules`, cache folders, logs, or runtime uploads.
+- Do not commit generated output: `__pycache__`, `.pytest_cache`, `frontend/web/build`, `node_modules`, cache folders, logs, runtime uploads, or `backend/.qdrant/`.
 - `docs/cleanup.md` and `frontend/mobile/UI_COMPONENTS_GUIDE.md` were removed from the active docs set; keep generated/cache cleanup decisions in `.gitignore` and project notes.
 - `backend/data/uploads/profiles/user_7.png` was removed from git tracking because it is runtime upload data.
 

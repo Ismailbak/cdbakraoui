@@ -13,7 +13,7 @@ This README intentionally avoids unverified usage, latency, doctor-count, and lo
 - Generates PDFs for medical documents through the backend.
 - Provides notifications for staff messages and broadcast announcements.
 - Includes an AI assistant that can answer general medical questions and use structured patient context when available.
-- Includes semantic RAG/Qdrant scaffolding, disabled locally by default.
+- Includes semantic RAG with optional embedded or server-based Qdrant storage.
 
 ## Project Structure
 
@@ -38,7 +38,7 @@ FastAPI backend
         |
         +-- MySQL via SQLAlchemy
         +-- Ollama for local LLM responses
-        +-- Qdrant for optional semantic retrieval
+        +-- Qdrant for optional semantic retrieval (embedded path or server)
         +-- ReportLab for PDF generation
 ```
 
@@ -132,6 +132,22 @@ APP_ENV=development
 RAG_SEMANTIC_ENABLED=false
 ```
 
+To enable semantic retrieval **without Docker**, use embedded local Qdrant storage:
+
+```env
+RAG_SEMANTIC_ENABLED=true
+RAG_QDRANT_PATH=.qdrant
+```
+
+The `backend/.qdrant/` folder is local runtime data and is ignored by git. Pre-index a patient with:
+
+```bash
+cd backend
+python -m scripts.ingest_rag --patient-id PATIENT_ID
+```
+
+When using Docker Compose instead, omit `RAG_QDRANT_PATH` and point at the Qdrant service with `RAG_QDRANT_HOST=qdrant`.
+
 Do not commit real secrets in `.env` files.
 
 ### Run Web Manually
@@ -160,7 +176,12 @@ The backend checks Ollama during startup in a background thread. If Ollama is un
 
 Structured RAG is the default retrieval path. It uses patient identifiers and clinical database records to ground assistant responses when a patient context is available.
 
-Semantic RAG support exists through Qdrant and local embeddings, but `RAG_SEMANTIC_ENABLED` defaults to `false` because embedding model loading can be memory-heavy on local machines.
+Semantic RAG adds vector search over notes, act reports, and similar free-text fields. It can run in two modes:
+
+- **Embedded (no Docker):** `RAG_QDRANT_PATH=.qdrant` stores vectors on disk under `backend/.qdrant/`.
+- **Server (Docker or standalone Qdrant):** use `RAG_QDRANT_HOST` and `RAG_QDRANT_PORT`.
+
+`RAG_SEMANTIC_ENABLED` defaults to `false` because embedding model loading can be memory-heavy on local machines. Grounded chat responses expose `retrieval_type` as `structured`, `hybrid`, or `none` in the assistant UI sources panel.
 
 ## Security Notes
 
