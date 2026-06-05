@@ -1,20 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getAnalyticsSummary } from '../../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
-import Card from '../../components/common/Card';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import PhoneShell, { ScreenHeader } from '../../components/common/PhoneShell';
 
-export default function AnalyticsScreen() {
+function MetricCard({ title, value, icon, tint }) {
+  return (
+    <View style={styles.metricCard}>
+      <View style={[styles.metricIcon, { backgroundColor: tint }]}>
+        <Feather name={icon} size={18} color={colors.mobilePrimary} />
+      </View>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{title}</Text>
+    </View>
+  );
+}
+
+function SectionCard({ title, icon, children }) {
+  return (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleRow}>
+          <Feather name={icon} size={17} color={colors.mobilePrimary} />
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function formatAverageAge(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '0';
+  return numeric.toFixed(1);
+}
+
+export default function AnalyticsScreen({ navigation }) {
   const [data, setData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const { width } = useWindowDimensions();
-  const isSmall = width < 360;
 
   const fetchData = () => {
     getAnalyticsSummary()
       .then((res) => setData(res.data))
-      .catch(() => {})
+      .catch(() => setData(null))
       .finally(() => setRefreshing(false));
   };
 
@@ -25,32 +55,33 @@ export default function AnalyticsScreen() {
     fetchData();
   };
 
-  if (!data) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{'Chargement des statistiques...'}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.safe}>
+    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
+      <ScreenHeader title="Statistiques" onBack={() => navigation.goBack()} />
+
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { padding: isSmall ? spacing.md : spacing.lg }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.mobilePrimary} />}
       >
-        <Text style={styles.title}>{'Statistiques'}</Text>
-
-        <View style={styles.kpiRow}>
-          <Card title="Patients" value={data.total_patients} icon="👥" accentColor={colors.primary} style={styles.kpiCard} />
-          <Card title="Âge Moyen" value={data.avg_age} icon="📊" accentColor={colors.accent} style={styles.kpiCard} />
+        <View style={styles.heroCard}>
+          <Text style={styles.heroEyebrow}>Vue d'ensemble</Text>
+          <Text style={styles.heroTitle}>Activité du cabinet</Text>
+          <Text style={styles.heroSubtitle}>Suivez les patients, les consultations et les revenus récents.</Text>
         </View>
 
-        {data.demographics && data.demographics.length > 0 ? (
-          <Card title="Démographie" icon="📋" accentColor={colors.primary}>
+        {data ? (
+          <View style={styles.kpiRow}>
+            <MetricCard title="Patients" value={data.total_patients} icon="users" tint="#E9F7F8" />
+            <MetricCard title="Âge moyen" value={formatAverageAge(data.avg_age)} icon="bar-chart-2" tint="#FFF4DE" />
+          </View>
+        ) : (
+          <Text style={styles.emptyText}>Connectez-vous pour charger les statistiques du cabinet.</Text>
+        )}
+
+        {data?.demographics && data.demographics.length > 0 ? (
+          <SectionCard title="Démographie" icon="pie-chart">
             <View style={styles.demoTable}>
               <View style={styles.demoHeader}>
                 <Text style={[styles.demoLabel, { flex: 2 }]}>{'Tranche'}</Text>
@@ -65,11 +96,11 @@ export default function AnalyticsScreen() {
                 </View>
               ))}
             </View>
-          </Card>
+          </SectionCard>
         ) : null}
 
-        {data.weekly_activity && data.weekly_activity.length > 0 ? (
-          <Card title="Activité Hebdomadaire" icon="📅" accentColor={colors.success}>
+        {data?.weekly_activity && data.weekly_activity.length > 0 ? (
+          <SectionCard title="Activité hebdomadaire" icon="activity">
             <View style={styles.weekTable}>
               {data.weekly_activity.map((w, i) => {
                 const total = (w.consultations || 0) + (w.suivis || 0) + (w.urgences || 0);
@@ -84,11 +115,11 @@ export default function AnalyticsScreen() {
                 );
               })}
             </View>
-          </Card>
+          </SectionCard>
         ) : null}
 
-        {data.revenue_trends && data.revenue_trends.length > 0 ? (
-          <Card title="Revenus Mensuels" icon="💰" accentColor={colors.warning}>
+        {data?.revenue_trends && data.revenue_trends.length > 0 ? (
+          <SectionCard title="Revenus mensuels" icon="credit-card">
             <View style={styles.revTable}>
               {data.revenue_trends.filter((r) => r.revenue > 0).length > 0 ? (
                 data.revenue_trends.filter((r) => r.revenue > 0).map((r, i) => (
@@ -102,38 +133,125 @@ export default function AnalyticsScreen() {
                 <Text style={styles.emptyText}>{'Aucune donnée de revenu'}</Text>
               )}
             </View>
-          </Card>
+          </SectionCard>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  shellContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: 0,
+  },
   scroll: { flex: 1 },
-  content: { paddingBottom: 100 },
-  title: { ...fonts.heading, marginBottom: spacing.lg },
-  kpiRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  kpiCard: { flex: 1, marginHorizontal: 4 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { ...fonts.body },
-  demoTable: { marginTop: spacing.md },
-  demoHeader: { flexDirection: 'row', marginBottom: spacing.xs, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
-  demoLabel: { ...fonts.label, flex: 1, textAlign: 'center' },
-  demoRow: { flexDirection: 'row', paddingVertical: spacing.xs },
-  demoAge: { ...fonts.body, flex: 1, textAlign: 'center' },
-  demoVal: { ...fonts.body, flex: 1, textAlign: 'center', fontWeight: '600', color: colors.textPrimary },
-  weekTable: { marginTop: spacing.md },
+  content: { paddingBottom: 112 },
+  heroCard: {
+    backgroundColor: colors.mobileBackground,
+    borderRadius: 22,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  heroEyebrow: {
+    color: '#BFE4E7',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  heroTitle: {
+    color: colors.surface,
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: spacing.xs,
+  },
+  heroSubtitle: {
+    color: '#D6ECEE',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: spacing.xs,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: spacing.md,
+    minHeight: 118,
+  },
+  metricIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  metricValue: {
+    color: colors.mobileText,
+    fontSize: 26,
+    fontWeight: '900',
+  },
+  metricLabel: {
+    color: colors.mobileMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  sectionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  sectionHeader: {
+    marginBottom: spacing.sm,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sectionTitle: {
+    color: colors.mobileText,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  demoTable: { marginTop: spacing.xs },
+  demoHeader: {
+    flexDirection: 'row',
+    marginBottom: spacing.xs,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mobileDivider,
+  },
+  demoLabel: { color: colors.mobileMuted, fontSize: 11, fontWeight: '900', flex: 1, textAlign: 'center' },
+  demoRow: { flexDirection: 'row', paddingVertical: spacing.sm },
+  demoAge: { ...fonts.bodySmall, flex: 1, textAlign: 'center', color: colors.mobileText },
+  demoVal: { ...fonts.bodySmall, flex: 1, textAlign: 'center', fontWeight: '900', color: colors.mobileText },
+  weekTable: { marginTop: spacing.xs },
   weekRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  weekDay: { ...fonts.caption, width: 36 },
-  weekBarBg: { flex: 1, height: 8, backgroundColor: colors.border, borderRadius: 4, marginHorizontal: spacing.sm },
-  weekBar: { height: 8, backgroundColor: colors.success, borderRadius: 4 },
-  weekTotal: { ...fonts.caption, width: 28, textAlign: 'right' },
-  revTable: { marginTop: spacing.md },
-  revRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  revMonth: { ...fonts.body, fontWeight: '600', width: 50 },
-  revAmount: { ...fonts.body, color: colors.textPrimary, fontWeight: '600' },
-  revPatients: { ...fonts.caption, width: 50, textAlign: 'right' },
-  emptyText: { ...fonts.caption, textAlign: 'center', marginTop: spacing.md },
+  weekDay: { ...fonts.caption, width: 38, color: colors.mobileText, fontWeight: '800' },
+  weekBarBg: { flex: 1, height: 9, backgroundColor: '#E9F7F8', borderRadius: radius.full, marginHorizontal: spacing.sm },
+  weekBar: { height: 9, backgroundColor: colors.mobilePrimary, borderRadius: radius.full },
+  weekTotal: { ...fonts.caption, width: 28, textAlign: 'right', color: colors.mobileMuted, fontWeight: '800' },
+  revTable: { marginTop: spacing.xs },
+  revRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mobileDivider,
+  },
+  revMonth: { ...fonts.bodySmall, fontWeight: '900', color: colors.mobileText, width: 50 },
+  revAmount: { ...fonts.bodySmall, color: colors.mobileText, fontWeight: '900' },
+  revPatients: { ...fonts.caption, color: colors.mobileMuted, width: 50, textAlign: 'right' },
+  emptyText: { ...fonts.caption, color: colors.mobileMuted, textAlign: 'center', marginTop: spacing.md },
 });

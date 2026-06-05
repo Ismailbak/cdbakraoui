@@ -32,7 +32,7 @@ export default function PrimaryButton({
   };
 
   const size_style = sizeStyles[size] || sizeStyles.medium;
-  const buttonBackgroundColor = isDanger ? colors.error : colors.primary;
+  const buttonBackgroundColor = isDanger ? colors.error : colors.mobilePrimary;
 
   return (
     <TouchableOpacity
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 50,
     flexDirection: 'row',
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
   },
   pill: {
     borderRadius: radius.full,

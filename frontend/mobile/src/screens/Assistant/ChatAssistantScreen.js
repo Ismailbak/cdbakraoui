@@ -1,27 +1,35 @@
-import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, KeyboardAvoidingView,
-  Platform, TouchableOpacity, ActivityIndicator, useWindowDimensions,
+  Platform, TouchableOpacity, ActivityIndicator, TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { sendChatMessage } from '../../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
-import Input from '../../components/common/Input';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import PhoneShell from '../../components/common/PhoneShell';
 
 const SUGGESTED_PROMPTS = [
-  '🩺 Signes de la polyarthrite rhumatoïde ?',
-  '💊 Traitement de l\'arthrose',
-  '🔬 Interpréter un bilan inflammatoire',
-  '📋 Protocole de suivi rhumatologique',
+  'Signes de la polyarthrite rhumatoïde ?',
+  'Traitement de l\'arthrose',
+  'Interpréter un bilan inflammatoire',
 ];
 
-export default function ChatAssistantScreen() {
+const parseErrorMessage = (error) => {
+  if (!error.response) return 'Erreur réseau. Vérifiez votre connexion et réessayez.';
+  if (error.response.status === 401) return 'Session expirée. Reconnectez-vous.';
+  if (error.response.status === 403) return 'Accès refusé.';
+  if (error.response.status === 422) return 'Données invalides. Vérifiez votre saisie.';
+  if (error.response.status >= 500) return 'Serveur temporairement indisponible. Réessayez dans quelques instants.';
+  return error.response.data?.detail || "Erreur lors de la communication avec l'IA.";
+};
+
+export default function ChatAssistantScreen({ navigation, route }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const patientId = route?.params?.patientId || null;
   const flatListRef = useRef(null);
-  const { width } = useWindowDimensions();
-  const isSmall = width < 360;
 
   const sendMessage = useCallback(async (text) => {
     const userMsg = text || input.trim();
@@ -36,197 +44,321 @@ export default function ChatAssistantScreen() {
     setLoading(true);
 
     try {
-      const res = await sendChatMessage(userMsg);
+      const res = await sendChatMessage(userMsg, patientId, 'fr', { sessionId });
+      if (res.data?.session_id) {
+        setSessionId(res.data.session_id);
+      }
       setMessages([
         ...newMessages,
-        { id: (Date.now() + 1).toString(), role: 'assistant', text: res.data.response },
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          text: res.data?.response || "Le serveur n'a pas renvoyé de réponse valide.",
+          sources: res.data?.sources || [],
+          warnings: res.data?.warnings || [],
+          confidence: res.data?.confidence || 'low',
+          retrievalType: res.data?.retrieval_type || 'none',
+          patientName: res.data?.patient_name || null,
+          tokens: res.data?.tokens || 0,
+          model: res.data?.model || 'RhumatoAI',
+        },
       ]);
-    } catch {
+    } catch (error) {
       setMessages([
         ...newMessages,
-        { id: (Date.now() + 1).toString(), role: 'error', text: "Erreur de connexion avec l'assistant." },
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          text: parseErrorMessage(error),
+          error: true,
+        },
       ]);
     } finally {
       setLoading(false);
     }
-  }, [input, messages]);
+  }, [input, messages, patientId, sessionId]);
 
   const renderMessage = ({ item }) => {
     const isUser = item.role === 'user';
-    const isError = item.role === 'error';
+    const sourceCount = item.sources?.length || 0;
+    const hasWarnings = item.warnings?.length > 0;
 
     return (
-      <View style={[
-        styles.messageBubble,
-        isUser ? styles.userBubble : isError ? styles.errorBubble : styles.aiBubble,
-      ]}>
-        {!isUser && (
-          <View style={styles.aiHeader}>
-            <Text style={styles.aiIcon}>{isError ? '⚠️' : '🤖'}</Text>
-            <Text style={styles.aiLabel}>{isError ? 'Erreur' : 'MedAI'}</Text>
-          </View>
-        )}
-        <Text style={[
-          styles.messageText,
-          isUser && styles.userText,
-          isError && styles.errorText,
-        ]}>
-          {String(item.text)}
-        </Text>
+      <View style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowAssistant]}>
+        {!isUser && <View style={styles.smallAvatar}><Text style={styles.smallAvatarText}>AI</Text></View>}
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble, item.error && styles.errorBubble]}>
+          <Text style={[styles.messageText, isUser && styles.userText]}>{String(item.text)}</Text>
+          {!isUser && !item.error && (sourceCount > 0 || hasWarnings || item.patientName) ? (
+            <View style={styles.groundingMeta}>
+              {item.patientName ? <Text style={styles.metaText}>Patient: {item.patientName}</Text> : null}
+              {sourceCount > 0 ? <Text style={styles.metaText}>{sourceCount} source{sourceCount > 1 ? 's' : ''}</Text> : null}
+              {hasWarnings ? <Text style={styles.warningText}>{item.warnings[0]}</Text> : null}
+            </View>
+          ) : null}
+        </View>
+        {isUser && <View style={styles.smallAvatar}><Text style={styles.smallAvatarText}>Dr</Text></View>}
       </View>
     );
   };
 
-  const renderWelcome = () => (
-    <View style={styles.welcomeContainer}>
-      <Text style={styles.welcomeIcon}>{'🤖'}</Text>
-      <Text style={styles.welcomeTitle}>{'Assistant MedAI'}</Text>
-      <Text style={styles.welcomeSubtitle}>
-        {'Posez vos questions médicales en rhumatologie. Je suis là pour vous aider.'}
-      </Text>
-
-      <View style={styles.suggestionsContainer}>
-        <Text style={styles.suggestionsLabel}>{'Suggestions :'}</Text>
-        {SUGGESTED_PROMPTS.map((prompt, i) => (
-          <TouchableOpacity
-            key={String(i)}
-            style={styles.suggestionChip}
-            onPress={() => sendMessage(prompt)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.suggestionText}>{prompt}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+  const listData = messages.length > 0 ? messages : [
+    { id: 'time', role: 'system', text: '09:41 AM' },
+    { id: 'hello', role: 'assistant', text: 'Bonjour, je suis votre assistant RhumatoAI. Posez-moi une question clinique ou demandez un résumé patient.' },
+  ];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
       <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Text style={{ fontSize: 20 }}>{'🤖'}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.75}>
+          <Feather name="chevron-left" size={22} color={colors.mobileMuted} />
+        </TouchableOpacity>
+        <View style={styles.assistantAvatar}><Text style={styles.assistantAvatarText}>AI</Text></View>
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerName}>Assistant RhumatoAI</Text>
+          <Text style={styles.headerRole}>{loading ? 'Réponse en cours...' : 'Réponses médicales contextualisées'}</Text>
         </View>
-        <View>
-          <Text style={[styles.headerTitle, isSmall && { fontSize: 18 }]}>{'Assistant IA'}</Text>
-          <Text style={styles.headerSub}>
-            {loading ? 'En train de répondre...' : 'En ligne · Rhumatologie'}
-          </Text>
-        </View>
-        {loading && <ActivityIndicator style={{ marginLeft: 'auto' }} color={colors.primary} />}
+        <TouchableOpacity
+          style={styles.iconButton}
+          activeOpacity={0.8}
+          onPress={() => {
+            setMessages([]);
+            setSessionId(null);
+            setInput('');
+          }}
+        >
+          <Feather name="plus" size={17} color={colors.mobilePrimary} />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.chatContainer}
-        keyboardVerticalOffset={90}
+        style={styles.chatBody}
+        keyboardVerticalOffset={8}
       >
-        {messages.length === 0 ? renderWelcome() : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            contentContainerStyle={styles.messagesList}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
+        <FlatList
+          ref={flatListRef}
+          data={listData}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            if (item.role === 'system') {
+              return <Text style={styles.timeText}>{item.text}</Text>;
             }
-          />
-        )}
+            return renderMessage({ item });
+          }}
+          ListFooterComponent={
+            <>
+              {messages.length === 0 && (
+                <View style={styles.suggestionWrap}>
+                  {SUGGESTED_PROMPTS.map((prompt) => (
+                    <TouchableOpacity key={prompt} style={styles.suggestionChip} onPress={() => sendMessage(prompt)}>
+                      <Text style={styles.suggestionText}>{prompt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              {loading && (
+                <View style={styles.typingRow}>
+                  <View style={styles.smallAvatar}><Text style={styles.smallAvatarText}>AI</Text></View>
+                  <Text style={styles.typingText}>L'assistant analyse...</Text>
+                  <ActivityIndicator size="small" color={colors.mobileMuted} style={{ marginLeft: spacing.sm }} />
+                </View>
+              )}
+            </>
+          }
+          contentContainerStyle={styles.messagesList}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
+        />
 
-        <View style={styles.inputBar}>
-          <View style={styles.inputWrapper}>
-            <Input
-              placeholder="Posez votre question..."
-              value={input}
-              onChangeText={setInput}
-              containerStyle={{ flex: 1, marginBottom: 0 }}
-              onSubmitEditing={() => sendMessage()}
-              returnKeyType="send"
-              editable={!loading}
-            />
-          </View>
+        <View style={styles.composerRow}>
+          <TextInput
+            style={styles.composerInput}
+            placeholder="Votre question médicale..."
+            placeholderTextColor={colors.mobileMuted}
+            value={input}
+            onChangeText={setInput}
+            onSubmitEditing={() => sendMessage()}
+            returnKeyType="send"
+            editable={!loading}
+          />
           <TouchableOpacity
-            style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
+            style={[styles.attachButton, (!input.trim() || loading) && styles.attachButtonDisabled]}
             onPress={() => sendMessage()}
             disabled={!input.trim() || loading}
             activeOpacity={0.8}
           >
-            <Text style={styles.sendBtnText}>{'➤'}</Text>
+            <Feather name="send" size={18} color={colors.mobileText} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  // Header
+  shellContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  headerIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.primaryLight, justifyContent: 'center',
-    alignItems: 'center', marginRight: spacing.md,
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: { ...fonts.subheading, fontSize: 18 },
-  headerSub: { ...fonts.caption, marginTop: 1 },
-  // Chat
-  chatContainer: { flex: 1 },
-  messagesList: { padding: spacing.lg, paddingBottom: spacing.md },
-  messageBubble: {
-    maxWidth: '85%', borderRadius: radius.md,
-    padding: spacing.md, marginBottom: spacing.sm,
+  assistantAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#A9DCE6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assistantAvatarText: {
+    color: colors.mobilePrimaryDark,
+    fontWeight: '900',
+    fontSize: 13,
+  },
+  headerCopy: {
+    flex: 1,
+  },
+  headerName: {
+    fontSize: 14,
+    color: colors.mobileText,
+    fontWeight: '900',
+  },
+  headerRole: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    fontSize: 10,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatBody: {
+    flex: 1,
+  },
+  messagesList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+  },
+  timeText: {
+    ...fonts.caption,
+    alignSelf: 'center',
+    color: colors.mobileMuted,
+    marginBottom: spacing.md,
+  },
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  messageRowUser: {
+    justifyContent: 'flex-end',
+  },
+  messageRowAssistant: {
+    justifyContent: 'flex-start',
+  },
+  smallAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#D8E7EA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallAvatarText: {
+    fontSize: 9,
+    color: colors.mobilePrimaryDark,
+    fontWeight: '900',
+  },
+  bubble: {
+    maxWidth: '74%',
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
   },
   userBubble: {
-    alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4,
+    backgroundColor: colors.surface,
   },
-  aiBubble: {
-    alignSelf: 'flex-start', backgroundColor: colors.surface,
-    borderBottomLeftRadius: 4, ...shadows.card,
+  assistantBubble: {
+    backgroundColor: colors.surface,
   },
-  errorBubble: {
-    alignSelf: 'flex-start', backgroundColor: colors.error + '10',
-    borderLeftWidth: 3, borderLeftColor: colors.error,
+  messageText: {
+    fontSize: 13,
+    color: colors.mobileText,
+    fontWeight: '600',
+    lineHeight: 18,
   },
-  aiHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
-  aiIcon: { fontSize: 14, marginRight: spacing.xs },
-  aiLabel: { ...fonts.label, fontSize: 10, color: colors.primary },
-  messageText: { ...fonts.body, color: colors.textPrimary, lineHeight: 22 },
-  userText: { color: '#FFFFFF' },
-  errorText: { color: colors.error },
-  // Welcome
-  welcomeContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  welcomeIcon: { fontSize: 64, marginBottom: spacing.md },
-  welcomeTitle: { ...fonts.heading, fontSize: 24, textAlign: 'center' },
-  welcomeSubtitle: {
-    ...fonts.body, textAlign: 'center', marginTop: spacing.sm,
-    marginBottom: spacing.xl, lineHeight: 22,
+  userText: {
+    color: colors.mobileText,
   },
-  suggestionsContainer: { width: '100%' },
-  suggestionsLabel: { ...fonts.label, marginBottom: spacing.sm },
+  suggestionWrap: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
   suggestionChip: {
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.md, marginBottom: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.md,
   },
-  suggestionText: { ...fonts.body, color: colors.textPrimary },
-  // Input bar
-  inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
+  suggestionText: {
+    fontSize: 12,
+    color: colors.mobileText,
+    fontWeight: '700',
   },
-  inputWrapper: { flex: 1, marginRight: spacing.sm },
-  sendBtn: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.primary, justifyContent: 'center',
-    alignItems: 'center', marginBottom: 0,
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.xs,
   },
-  sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: '#FFF', fontSize: 20 },
+  typingText: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+  },
+  composerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  composerInput: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    color: colors.mobileText,
+    fontSize: 14,
+  },
+  attachButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachButtonDisabled: {
+    opacity: 0.7,
+  },
 });

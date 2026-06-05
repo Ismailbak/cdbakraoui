@@ -1,23 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, useWindowDimensions,
+  View, Text, StyleSheet, TouchableOpacity,
+  Alert, Switch,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
+import { colors, fonts, spacing } from '../../styles/theme';
+import PhoneShell, { ScreenHeader } from '../../components/common/PhoneShell';
 
-function SettingRow({ icon, label, value, onPress, danger }) {
+function SettingRow({ icon, label, value, onPress, danger, toggle, enabled, onToggle }) {
   return (
     <TouchableOpacity
       style={styles.settingRow}
       onPress={onPress}
       activeOpacity={onPress ? 0.7 : 1}
+      disabled={!onPress && !toggle}
     >
-      <Text style={styles.settingIcon}>{icon}</Text>
-      <Text style={[styles.settingLabel, danger && { color: colors.error }]}>{label}</Text>
-      {value ? <Text style={styles.settingValue}>{String(value)}</Text> : null}
-      {onPress && <Text style={styles.settingChevron}>{'›'}</Text>}
+      <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
+        <Feather name={icon} size={17} color={danger ? colors.error : colors.mobilePrimary} />
+      </View>
+      <View style={styles.rowText}>
+        <Text style={[styles.settingLabel, danger && { color: colors.error }]}>{label}</Text>
+        {value ? <Text style={styles.settingValue}>{String(value)}</Text> : null}
+      </View>
+      {toggle ? (
+        <Switch
+          value={enabled}
+          onValueChange={onToggle}
+          trackColor={{ false: '#D6D6D6', true: colors.mobilePrimary }}
+          thumbColor={colors.surface}
+          ios_backgroundColor="#D6D6D6"
+        />
+      ) : onPress ? (
+        <Feather name="chevron-right" size={17} color={colors.mobileMuted} />
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -28,8 +44,8 @@ function SectionHeader({ title }) {
 
 export default function SettingsScreen({ navigation }) {
   const [appVersion] = useState('1.0.0');
-  const { width } = useWindowDimensions();
-  const isSmall = width < 360;
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [emailEnabled, setEmailEnabled] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -50,112 +66,144 @@ export default function SettingsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { padding: isSmall ? spacing.md : spacing.lg }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={[styles.title, isSmall && { fontSize: 22 }]}>{'Paramètres'}</Text>
+    <PhoneShell contentStyle={styles.content}>
+      <ScreenHeader title="Paramètres" onBack={() => navigation.goBack()} />
 
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>{'🩺'}</Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{'Docteur'}</Text>
-            <Text style={styles.profileRole}>{'Rhumatologue · MedAI'}</Text>
-          </View>
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Feather name="user" size={24} color={colors.surface} />
         </View>
-
-        {/* App Settings */}
-        <SectionHeader title="APPLICATION" />
-        <View style={styles.settingGroup}>
-          <SettingRow icon="🌐" label="Langue" value="Français" />
-          <SettingRow icon="🔔" label="Notifications" value="Activées" />
-          <SettingRow icon="🎨" label="Thème" value="Clair" />
-          <SettingRow icon="📱" label="Version" value={appVersion} />
+        <View style={styles.profileText}>
+          <Text style={styles.profileTitle}>Cabinet rhumatologie</Text>
+          <Text style={styles.profileSubtitle}>Préférences de l'application mobile</Text>
         </View>
+      </View>
 
-        {/* Medical Settings */}
-        <SectionHeader title="MÉDICAL" />
-        <View style={styles.settingGroup}>
-          <SettingRow icon="🏥" label="Établissement" value="Cabinet" />
-          <SettingRow icon="🩺" label="Spécialité" value="Rhumatologie" />
-        </View>
+      <SectionHeader title="Général" />
+      <View style={styles.settingGroup}>
+        <SettingRow icon="edit-3" label="Modifier le profil" onPress={() => {}} />
+        <SettingRow icon="lock" label="Changer le mot de passe" onPress={() => {}} />
+        <SettingRow icon="globe" label="Langue" value="Français" onPress={() => {}} />
+        <SettingRow icon="map-pin" label="Emplacement" value="Cabinet" onPress={() => {}} />
+      </View>
 
-        {/* Data */}
-        <SectionHeader title="DONNÉES" />
-        <View style={styles.settingGroup}>
-          <SettingRow icon="💾" label="Stockage local" value="AsyncStorage" />
-          <SettingRow icon="🔗" label="Serveur API" value="192.168.1.199" />
-        </View>
+      <SectionHeader title="Notification" />
+      <View style={styles.settingGroup}>
+        <SettingRow
+          icon="bell"
+          label="Notifications push"
+          toggle
+          enabled={pushEnabled}
+          onToggle={setPushEnabled}
+        />
+        <SettingRow
+          icon="mail"
+          label="Rappels par email"
+          toggle
+          enabled={emailEnabled}
+          onToggle={setEmailEnabled}
+        />
+      </View>
 
-        {/* Legal */}
-        <SectionHeader title="LÉGAL" />
-        <View style={styles.settingGroup}>
-          <SettingRow icon="📄" label="Conditions d'utilisation" onPress={() => {}} />
-          <SettingRow icon="🔒" label="Politique de confidentialité" onPress={() => {}} />
-          <SettingRow icon="ℹ️" label="À propos de MedAI" onPress={() => {}} />
-        </View>
+      <SectionHeader title="Aide et confidentialité" />
+      <View style={styles.settingGroup}>
+        <SettingRow icon="file-text" label="Conditions d'utilisation" onPress={() => {}} />
+        <SettingRow icon="shield" label="Politique de confidentialité" onPress={() => {}} />
+        <SettingRow icon="help-circle" label="Support" onPress={() => {}} />
+        <SettingRow icon="info" label="Version" value={appVersion} />
+      </View>
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-          <Text style={styles.logoutIcon}>{'🚪'}</Text>
-          <Text style={styles.logoutText}>{'Se déconnecter'}</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.footer}>{'© 2026 MedAI · Tous droits réservés'}</Text>
-      </ScrollView>
-    </SafeAreaView>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+        <Feather name="log-out" size={17} color={colors.error} />
+        <Text style={styles.logoutText}>{'Se déconnecter'}</Text>
+      </TouchableOpacity>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { paddingBottom: 100 },
-  title: { ...fonts.heading, marginBottom: spacing.lg },
-  // Profile
+  content: { paddingBottom: 90 },
   profileCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, marginBottom: spacing.lg, ...shadows.elevated,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.mobileBackground,
+    borderRadius: 22,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
-  profileAvatar: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.primaryLight, justifyContent: 'center',
-    alignItems: 'center', marginRight: spacing.md,
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: colors.mobilePrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
   },
-  profileAvatarText: { fontSize: 28 },
-  profileInfo: { flex: 1 },
-  profileName: { ...fonts.subheading, fontSize: 18 },
-  profileRole: { ...fonts.caption, marginTop: 2 },
-  // Section
+  profileText: {
+    flex: 1,
+  },
+  profileTitle: {
+    color: colors.surface,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  profileSubtitle: {
+    color: '#D6ECEE',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+  },
   sectionHeader: {
-    ...fonts.label, marginBottom: spacing.sm, marginTop: spacing.md,
-    paddingHorizontal: spacing.xs,
+    fontSize: 17,
+    fontWeight: '900',
+    color: colors.mobileText,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   settingGroup: {
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    ...shadows.card, overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.md,
   },
   settingRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: spacing.md, paddingHorizontal: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    minHeight: 58,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mobileDivider,
+    paddingVertical: spacing.sm,
   },
-  settingIcon: { fontSize: 18, marginRight: spacing.md },
-  settingLabel: { ...fonts.body, color: colors.textPrimary, flex: 1, fontWeight: '500' },
-  settingValue: { ...fonts.caption, marginRight: spacing.xs },
-  settingChevron: { fontSize: 20, color: colors.textMuted, fontWeight: '300' },
-  // Logout
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  rowIconDanger: {
+    backgroundColor: colors.errorLight,
+  },
+  rowText: {
+    flex: 1,
+  },
+  settingLabel: {
+    color: colors.mobileText,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  settingValue: { ...fonts.caption, color: colors.mobileMuted, marginTop: 2 },
   logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.error + '10', borderRadius: radius.md,
-    paddingVertical: spacing.md, marginTop: spacing.xl,
-    borderWidth: 1, borderColor: colors.error + '30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
   },
-  logoutIcon: { fontSize: 18, marginRight: spacing.sm },
-  logoutText: { ...fonts.subheading, fontSize: 16, color: colors.error },
-  footer: { ...fonts.caption, textAlign: 'center', marginTop: spacing.lg },
+  logoutText: { ...fonts.bodySmall, color: colors.error, fontWeight: '700' },
 });

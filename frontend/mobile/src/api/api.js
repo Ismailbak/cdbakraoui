@@ -1,10 +1,23 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-const API_URL = 'http://10.13.3.26:8000/api';
+const getDevApiUrl = () => {
+  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoClient?.hostUri;
+  const host = hostUri?.split(':')[0];
+
+  if (host) {
+    return `http://${host}:8000/api`;
+  }
+
+  return 'http://10.13.1.81:8000/api';
+};
+
+export const API_URL = getDevApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 10000,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -53,7 +66,24 @@ export const getAnalyticsSummary = () => api.get('/analytics/summary');
 export const getNotifications = () => api.get('/notifications/');
 
 // ─── Chat AI ─────────────────────────────────────────────────────────────────
-export const sendChatMessage = (message, patientId) =>
-  api.post('/chat/', { message, patient_id: patientId || null });
+export const sendChatMessage = (message, patientId = null, language = 'fr', config = {}) => {
+  const { sessionId, ...axiosConfig } = config || {};
+  return api.post(
+    '/chat/grounded',
+    {
+      message,
+      patient_id: patientId || null,
+      session_id: sessionId || null,
+      language,
+    },
+    { timeout: 60000, ...axiosConfig },
+  );
+};
+
+export const getChatHistory = (patientId = null, limit = 50) => {
+  const params = { limit };
+  if (patientId) params.patient_id = patientId;
+  return api.get('/chat/history', { params });
+};
 
 export default api;

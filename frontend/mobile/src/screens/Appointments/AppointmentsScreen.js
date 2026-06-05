@@ -1,55 +1,78 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, RefreshControl,
-  TouchableOpacity, Modal, Alert, useWindowDimensions, ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Modal, ScrollView, Alert, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import {
-  getAppointments, createAppointment, getPatients, deleteAppointment,
-} from '../../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
-import Input from '../../components/common/Input';
+import { getAppointments, createAppointment, getPatients, deleteAppointment } from '../../api/api';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import PhoneShell from '../../components/common/PhoneShell';
 import PrimaryButton from '../../components/common/PrimaryButton';
 
-// Updated status colors using new palette
-const STATUS_COLORS = {
-  scheduled: { bg: colors.rdvLight, text: colors.rdv, label: 'Planifié', icon: 'calendar' },
-  completed: { bg: colors.appointmentSuccessLight, text: colors.appointmentSuccess, label: 'Terminé', icon: 'check-circle' },
-  cancelled: { bg: colors.errorLight, text: colors.error, label: 'Annulé', icon: 'x-circle' },
+const STATUS = {
+  scheduled: { label: 'Planifié', color: colors.mobilePrimary, bg: '#E9F7F8', icon: 'clock' },
+  completed: { label: 'Terminé', color: colors.success, bg: colors.successLight, icon: 'check' },
+  cancelled: { label: 'Annulé', color: colors.error, bg: colors.errorLight, icon: 'x' },
 };
-
-function getStatusStyle(status) {
-  return STATUS_COLORS[status] || STATUS_COLORS.scheduled;
-}
-
-function groupByDate(appointments) {
-  const groups = {};
-  appointments.forEach((a) => {
-    const dateStr = a.datetime_scheduled ? a.datetime_scheduled.split('T')[0] : 'Sans date';
-    if (!groups[dateStr]) groups[dateStr] = [];
-    groups[dateStr].push(a);
-  });
-  return Object.entries(groups)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, items]) => ({ date, items }));
-}
 
 function formatDateLabel(dateStr) {
   try {
-    const d = new Date(dateStr + 'T00:00:00');
+    const d = new Date(`${dateStr}T00:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diff = Math.round((d - today) / 86400000);
     if (diff === 0) return "Aujourd'hui";
     if (diff === 1) return 'Demain';
     if (diff === -1) return 'Hier';
-    return d.toLocaleDateString('fr-FR', {
-      weekday: 'long', day: 'numeric', month: 'long',
-    });
+    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   } catch {
     return dateStr;
   }
+}
+
+function groupByDate(appointments) {
+  const groups = {};
+  appointments.forEach((apt) => {
+    const date = apt.datetime_scheduled ? apt.datetime_scheduled.split('T')[0] : 'Sans date';
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(apt);
+  });
+  return Object.entries(groups)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, items]) => ({ date, items }));
+}
+
+function SummaryPill({ value, label, icon }) {
+  return (
+    <View style={styles.summaryPill}>
+      <Feather name={icon} size={15} color={colors.mobilePrimary} />
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function AppointmentCard({ item, onDelete }) {
+  const state = STATUS[item.status] || STATUS.scheduled;
+  const date = item.datetime_scheduled ? new Date(item.datetime_scheduled) : null;
+  const time = date ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+
+  return (
+    <TouchableOpacity style={styles.appointmentCard} activeOpacity={0.86} onLongPress={() => onDelete(item.id)}>
+      <View style={styles.timeBox}>
+        <Text style={styles.timeText}>{time}</Text>
+        <Text style={styles.timeLabel}>RDV</Text>
+      </View>
+      <View style={styles.apptBody}>
+        <Text style={styles.patientName} numberOfLines={1}>{item.patient_name || `Patient #${item.patient_id}`}</Text>
+        <Text style={styles.reason} numberOfLines={2}>{item.reason || 'Rendez-vous médical'}</Text>
+        <View style={[styles.statusChip, { backgroundColor: state.bg }]}>
+          <Feather name={state.icon} size={11} color={state.color} />
+          <Text style={[styles.statusText, { color: state.color }]}>{state.label}</Text>
+        </View>
+      </View>
+      <View style={styles.cardAction}>
+        <Feather name="chevron-right" size={17} color={colors.mobilePrimary} />
+      </View>
+    </TouchableOpacity>
+  );
 }
 
 export default function AppointmentsScreen() {
@@ -59,15 +82,11 @@ export default function AppointmentsScreen() {
   const [patients, setPatients] = useState([]);
   const [form, setForm] = useState({ patient_id: '', datetime_scheduled: '', reason: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [showPatientPicker, setShowPatientPicker] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const { width } = useWindowDimensions();
-  const isSmall = width < 360;
 
   const fetchData = useCallback(() => {
     getAppointments()
-      .then((res) => setAppointments(res.data))
-      .catch(() => {})
+      .then((res) => setAppointments(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAppointments([]))
       .finally(() => setRefreshing(false));
   }, []);
 
@@ -80,10 +99,9 @@ export default function AppointmentsScreen() {
 
   const openModal = () => {
     setForm({ patient_id: '', datetime_scheduled: '', reason: '' });
-    setSelectedPatient(null);
     getPatients()
-      .then((res) => setPatients(res.data))
-      .catch(() => {});
+      .then((res) => setPatients(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setPatients([]));
     setShowModal(true);
   };
 
@@ -126,227 +144,350 @@ export default function AppointmentsScreen() {
     ]);
   };
 
-  const grouped = groupByDate(appointments);
-  const totalCount = appointments.length;
-  const todayCount = appointments.filter((a) => {
-    const today = new Date().toISOString().split('T')[0];
-    const appointmentDate = a.datetime_scheduled ? a.datetime_scheduled.split('T')[0] : null;
-    return appointmentDate === today;
-  }).length;
-
-  const renderAppointment = (item) => {
-    const st = getStatusStyle(item.status);
-    const dateTime = item.datetime_scheduled ? new Date(item.datetime_scheduled) : null;
-    const timeStr = dateTime ? dateTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-    return (
-      <TouchableOpacity
-        key={String(item.id)}
-        style={styles.apptCard}
-        activeOpacity={0.7}
-        onLongPress={() => handleDelete(item.id)}
-      >
-        <View style={styles.timeColumn}>
-          <Text style={styles.timeText}>{timeStr}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
-            <Text style={[styles.statusText, { color: st.text }]}>{st.label}</Text>
-          </View>
-        </View>
-        <View style={styles.apptInfo}>
-          <Text style={styles.patientName}>{String(item.patient_name || 'Patient #' + item.patient_id)}</Text>
-          {item.reason ? (
-            <Text style={styles.reason} numberOfLines={2}>{String(item.reason)}</Text>
-          ) : null}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderSection = ({ item: group }) => (
-    <View style={styles.section}>
-      <View style={styles.dateHeader}>
-        <View style={styles.dateDot} />
-        <Text style={styles.dateLabel}>{formatDateLabel(group.date)}</Text>
-        <Text style={styles.dateCount}>{String(group.items.length)}</Text>
-      </View>
-      {group.items.map(renderAppointment)}
-    </View>
-  );
+  const grouped = useMemo(() => groupByDate(appointments), [appointments]);
+  const today = new Date().toISOString().split('T')[0];
+  const todayCount = appointments.filter((apt) => apt.datetime_scheduled?.startsWith(today)).length;
+  const plannedCount = appointments.filter((apt) => apt.status !== 'completed' && apt.status !== 'cancelled').length;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
       <View style={styles.header}>
         <View>
-          <Text style={[styles.title, isSmall && { fontSize: 22 }]}>{'Rendez-vous'}</Text>
-          <Text style={styles.subtitle}>
-            {String(todayCount) + " aujourd'hui · " + String(totalCount) + ' total'}
-          </Text>
+          <Text style={styles.title}>Rendez-vous</Text>
+          <Text style={styles.subtitle}>Planning des consultations</Text>
         </View>
-        <TouchableOpacity style={styles.addBtn} onPress={openModal} activeOpacity={0.8}>
-          <Text style={styles.addBtnText}>{'+'}</Text>
+        <TouchableOpacity style={styles.addButton} onPress={openModal} activeOpacity={0.85}>
+          <Feather name="plus" size={22} color={colors.surface} />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.summaryRow}>
+        <SummaryPill value={todayCount} label="Aujourd'hui" icon="calendar" />
+        <SummaryPill value={plannedCount} label="Planifiés" icon="clock" />
+        <SummaryPill value={appointments.length} label="Total" icon="list" />
       </View>
 
       <FlatList
         data={grouped}
         keyExtractor={(item) => item.date}
-        renderItem={renderSection}
-        contentContainerStyle={[styles.list, { paddingHorizontal: isSmall ? spacing.md : spacing.lg }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        style={styles.listView}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.mobilePrimary} />}
+        renderItem={({ item }) => (
+          <View style={styles.section}>
+            <View style={styles.dateHeader}>
+              <Text style={styles.dateLabel}>{formatDateLabel(item.date)}</Text>
+              <Text style={styles.dateCount}>{item.items.length}</Text>
+            </View>
+            {item.items.map((apt) => <AppointmentCard key={String(apt.id)} item={apt} onDelete={handleDelete} />)}
+          </View>
+        )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>{'📅'}</Text>
-            <Text style={styles.emptyText}>{'Aucun rendez-vous'}</Text>
+          <View style={styles.emptyState}>
+            <Feather name="calendar" size={42} color={colors.mobileMuted} />
+            <Text style={styles.emptyTitle}>Aucun rendez-vous</Text>
           </View>
         }
       />
 
-      {/* Add Appointment Modal */}
       <Modal visible={showModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{'Nouveau Rendez-vous'}</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Text style={styles.modalClose}>{'✕'}</Text>
+              <Text style={styles.modalTitle}>Nouveau rendez-vous</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
+                <Feather name="x" size={18} color={colors.mobileMuted} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Patient Picker */}
-              <Text style={styles.fieldLabel}>{'PATIENT'}</Text>
-              <TouchableOpacity
-                style={styles.pickerBtn}
-                onPress={() => setShowPatientPicker(!showPatientPicker)}
-              >
-                <Text style={selectedPatient ? styles.pickerText : styles.pickerPlaceholder}>
-                  {selectedPatient ? selectedPatient.name : 'Sélectionner un patient'}
-                </Text>
-                <Text style={styles.pickerArrow}>{'▾'}</Text>
-              </TouchableOpacity>
+              <Text style={styles.fieldLabel}>Patient</Text>
+              <View style={styles.patientPicker}>
+                {patients.map((patient) => {
+                  const patientName = patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Patient';
+                  const active = String(form.patient_id) === String(patient.id);
+                  return (
+                    <TouchableOpacity
+                      key={String(patient.id)}
+                      style={[styles.patientOption, active && styles.patientOptionActive]}
+                      onPress={() => {
+                        setForm({ ...form, patient_id: String(patient.id) });
+                      }}
+                    >
+                      <Text style={[styles.patientOptionText, active && styles.patientOptionTextActive]}>{patientName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-              {showPatientPicker && (
-                <View style={styles.pickerDropdown}>
-                  <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
-                    {patients.map((p) => (
-                      <TouchableOpacity
-                        key={String(p.id)}
-                        style={styles.pickerItem}
-                        onPress={() => {
-                          setSelectedPatient(p);
-                          setForm({ ...form, patient_id: String(p.id) });
-                          setShowPatientPicker(false);
-                        }}
-                      >
-                        <Text style={styles.pickerItemText}>{String(p.name)}</Text>
-                        <Text style={styles.pickerItemSub}>{String(p.diagnosis || '')}</Text>
-                      </TouchableOpacity>
-                    ))}
-                    {patients.length === 0 && (
-                      <Text style={styles.pickerEmpty}>{'Aucun patient'}</Text>
-                    )}
-                  </ScrollView>
-                </View>
-              )}
-
-              <Input
-                label="Date & Heure (AAAA-MM-JJTHH:MM)"
-                placeholder="2026-04-03T09:30"
+              <Text style={styles.fieldLabel}>Date & heure</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="2026-06-12T09:30"
+                placeholderTextColor={colors.mobileMuted}
                 value={form.datetime_scheduled}
-                onChangeText={(v) => setForm({ ...form, datetime_scheduled: v })}
+                onChangeText={(value) => setForm({ ...form, datetime_scheduled: value })}
               />
-              <Input
-                label="Motif (optionnel)"
+
+              <Text style={styles.fieldLabel}>Motif</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextarea]}
                 placeholder="Consultation de suivi..."
+                placeholderTextColor={colors.mobileMuted}
                 value={form.reason}
-                onChangeText={(v) => setForm({ ...form, reason: v })}
+                onChangeText={(value) => setForm({ ...form, reason: value })}
                 multiline
               />
-              <PrimaryButton title="Créer" onPress={handleSubmit} loading={submitting} />
+
+              <PrimaryButton title="Créer" onPress={handleSubmit} loading={submitting} style={styles.createButton} />
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  shellContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: 0,
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-  title: { ...fonts.heading },
-  subtitle: { ...fonts.caption, marginTop: 2 },
-  addBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-    ...shadows.elevated,
+  title: {
+    fontSize: 25,
+    fontWeight: '900',
+    color: colors.mobileText,
+    letterSpacing: -0.6,
   },
-  addBtnText: { color: '#FFF', fontSize: 26, fontWeight: '300', marginTop: -2 },
-  list: { paddingBottom: 100 },
-  section: { marginBottom: spacing.lg },
-  dateHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  dateDot: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: colors.primary, marginRight: spacing.sm,
+  subtitle: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    marginTop: 2,
   },
-  dateLabel: { ...fonts.subheading, fontSize: 15, flex: 1, textTransform: 'capitalize' },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.mobileBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  summaryPill: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: spacing.sm,
+    minHeight: 72,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summaryValue: {
+    color: colors.mobileText,
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  summaryLabel: {
+    fontSize: 9,
+    color: colors.mobileMuted,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  list: {
+    paddingBottom: 112,
+  },
+  listView: {
+    flex: 1,
+  },
+  section: {
+    marginBottom: spacing.md,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  dateLabel: {
+    fontSize: 17,
+    color: colors.mobileText,
+    fontWeight: '900',
+    textTransform: 'capitalize',
+  },
   dateCount: {
-    ...fonts.caption, backgroundColor: colors.primaryLight,
-    paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.full,
-    color: colors.primary, fontWeight: '600', fontSize: 12, overflow: 'hidden',
+    color: colors.mobilePrimary,
+    fontWeight: '900',
   },
-  apptCard: {
-    flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.md, padding: spacing.md,
-    marginBottom: spacing.sm, marginLeft: spacing.lg, ...shadows.card,
+  appointmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  timeColumn: { alignItems: 'center', marginRight: spacing.md, minWidth: 60 },
-  timeText: { ...fonts.subheading, fontSize: 16, color: colors.primary },
-  statusBadge: { marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.full },
-  statusText: { fontSize: 10, fontWeight: '600' },
-  apptInfo: { flex: 1 },
-  patientName: { ...fonts.subheading, fontSize: 15 },
-  reason: { ...fonts.caption, marginTop: 4, lineHeight: 18 },
-  emptyContainer: { alignItems: 'center', marginTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyText: { ...fonts.body },
-  // Modal styles
+  timeBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  timeText: {
+    color: colors.mobilePrimary,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  timeLabel: {
+    color: colors.mobileMuted,
+    fontSize: 8,
+    fontWeight: '800',
+    marginTop: 1,
+  },
+  apptBody: {
+    flex: 1,
+  },
+  patientName: {
+    color: colors.mobileText,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  reason: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    marginTop: 2,
+  },
+  statusChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  cardAction: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: spacing.xxl,
+  },
+  emptyTitle: {
+    ...fonts.body,
+    color: colors.mobileMuted,
+    marginTop: spacing.md,
+  },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.42)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.surface, borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl, padding: spacing.lg,
-    maxHeight: '85%',
+    backgroundColor: colors.mobilePanel,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: spacing.lg,
+    maxHeight: '86%',
   },
-  modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: spacing.lg,
-  },
-  modalTitle: { ...fonts.heading, fontSize: 20 },
-  modalClose: { fontSize: 22, color: colors.textMuted, padding: spacing.sm },
-  fieldLabel: { ...fonts.label, marginBottom: spacing.xs },
-  pickerBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.inputBg, borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 14,
+  modalHandle: {
+    width: 42,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.mobileDivider,
+    alignSelf: 'center',
     marginBottom: spacing.md,
   },
-  pickerText: { fontSize: 15, color: colors.textPrimary },
-  pickerPlaceholder: { fontSize: 15, color: colors.textMuted },
-  pickerArrow: { fontSize: 14, color: colors.textMuted },
-  pickerDropdown: {
-    backgroundColor: colors.surface, borderRadius: radius.sm,
-    borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md,
-    marginTop: -spacing.sm, ...shadows.card,
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-  pickerItem: {
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+  modalTitle: {
+    color: colors.mobileText,
+    fontSize: 21,
+    fontWeight: '900',
   },
-  pickerItemText: { ...fonts.body, color: colors.textPrimary, fontWeight: '500' },
-  pickerItemSub: { ...fonts.caption, marginTop: 2 },
-  pickerEmpty: { ...fonts.caption, textAlign: 'center', paddingVertical: spacing.md },
+  closeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldLabel: {
+    color: colors.mobileText,
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  patientPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  patientOption: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  patientOptionActive: {
+    backgroundColor: colors.mobilePrimary,
+  },
+  patientOptionText: {
+    color: colors.mobileText,
+    fontWeight: '800',
+  },
+  patientOptionTextActive: {
+    color: colors.surface,
+  },
+  modalInput: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    color: colors.mobileText,
+    fontSize: 14,
+    marginBottom: spacing.sm,
+  },
+  modalTextarea: {
+    minHeight: 92,
+    paddingTop: spacing.md,
+    textAlignVertical: 'top',
+  },
+  createButton: {
+    marginTop: spacing.md,
+    backgroundColor: colors.mobilePrimary,
+  },
 });

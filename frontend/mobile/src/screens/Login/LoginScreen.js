@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../../api/api';
 import { colors, fonts, spacing, radius } from '../../styles/theme';
 import Input from '../../components/common/Input';
 import PrimaryButton from '../../components/common/PrimaryButton';
+import PhoneShell, { LogoMark } from '../../components/common/PhoneShell';
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -26,33 +26,33 @@ export default function LoginScreen({ navigation }) {
       await AsyncStorage.setItem('token', res.data.access_token);
       navigation.replace('Main');
     } catch (e) {
-      setError('Identifiants invalides');
+      const isNetworkIssue = e.code === 'ECONNABORTED' || !e.response;
+      setError(isNetworkIssue ? 'Serveur inaccessible. Vérifiez la connexion API.' : 'Identifiants invalides');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <View style={styles.headerSection}>
-          <View style={styles.iconWrapper}>
-            <Feather name="heart" size={56} color={colors.primary} />
+    <PhoneShell scroll={false} contentStyle={styles.content} panelStyle={styles.panel}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+        <View style={styles.headerBlock}>
+          <LogoMark size={56} compact />
+          <View style={styles.titleBlock}>
+            <Text style={styles.screenLabel}>Connexion sécurisée</Text>
+            <Text style={styles.heading}>Bienvenue</Text>
+            <Text style={styles.subtitle}>Accédez à votre espace médical avec vos identifiants du cabinet.</Text>
           </View>
-          <Text style={styles.title}>MedAI</Text>
-          <Text style={styles.subtitle}>Assistant Médical Intelligent</Text>
         </View>
 
-        <View style={[styles.formSection, { paddingHorizontal: spacing.lg }]}>
+        <View style={styles.formSection}>
           <Input
-            label="Nom d'utilisateur"
+            label="Identifiant"
             placeholder="Entrez votre identifiant"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
+            icon={<Feather name="user" size={18} color={colors.mobileMuted} />}
           />
           <Input
             label="Mot de passe"
@@ -61,64 +61,81 @@ export default function LoginScreen({ navigation }) {
             onChangeText={setPassword}
             secureTextEntry
             error={error || undefined}
+            icon={<Feather name="lock" size={18} color={colors.mobileMuted} />}
           />
           <PrimaryButton
             title="Se connecter"
             onPress={handleLogin}
             loading={loading}
-            style={{ marginTop: spacing.sm }}
+            style={styles.primaryButton}
           />
         </View>
 
-        <Text style={styles.footer}>© 2026 MedAI · Tous droits réservés</Text>
+        <Text style={styles.terms}>
+          En continuant, vous acceptez les conditions d'utilisation et la politique de confidentialité de RhumatoAI.
+        </Text>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
+  panel: {
+    backgroundColor: '#F8F9FA',
   },
-  container: {
+  content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl + 8,
+  keyboardView: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  iconWrapper: {
-    marginBottom: spacing.md,
+  headerBlock: {
+    marginBottom: spacing.xl,
+    gap: spacing.xl,
   },
-  title: {
+  titleBlock: {
+    marginTop: spacing.sm,
+  },
+  screenLabel: {
+    color: colors.mobilePrimary,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  heading: {
     fontSize: 32,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 1,
+    fontWeight: '900',
+    color: colors.mobileText,
+    letterSpacing: -0.8,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    ...fonts.body,
-    color: colors.textMuted,
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    lineHeight: 20,
+    maxWidth: 292,
   },
   formSection: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderRadius: 22,
+    padding: spacing.md,
   },
-  footer: {
+  primaryButton: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.mobilePrimary,
+    borderRadius: radius.lg,
+  },
+  terms: {
     ...fonts.caption,
     textAlign: 'center',
-    color: colors.textMuted,
+    color: colors.mobileMuted,
     marginTop: spacing.xl,
+    paddingHorizontal: spacing.sm,
+    lineHeight: 18,
   },
 });

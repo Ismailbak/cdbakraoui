@@ -18,7 +18,7 @@ export default function MoreMenuItemButton({ icon, label, onPress }) {
         <Feather 
           name={icon} 
           size={20} 
-          color={colors.primary} 
+          color={colors.mobilePrimary} 
           style={styles.icon}
         />
         <Text style={styles.label}>{label}</Text>
@@ -26,7 +26,7 @@ export default function MoreMenuItemButton({ icon, label, onPress }) {
       <Feather 
         name="chevron-right" 
         size={20} 
-        color={colors.textMuted} 
+        color={colors.mobileMuted} 
       />
     </TouchableOpacity>
   );
@@ -35,18 +35,15 @@ export default function MoreMenuItemButton({ icon, label, onPress }) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.mobileDivider,
   },
   content: {
     flexDirection: 'row',
@@ -58,7 +55,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: colors.textPrimary,
+    color: colors.mobileText,
     fontWeight: '500',
     flex: 1,
   },

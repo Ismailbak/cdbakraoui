@@ -81,14 +81,14 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.inputBg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
   },
   inputWrapperFocused: {
-    borderColor: colors.primary,
+    borderColor: colors.mobilePrimary,
     backgroundColor: colors.surface,
   },
   inputWrapperError: {
@@ -105,9 +105,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 15,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: colors.mobileText,
   },
   inputWithIcon: {
     paddingLeft: spacing.sm,

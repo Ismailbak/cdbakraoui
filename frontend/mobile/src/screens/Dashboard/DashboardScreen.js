@@ -1,15 +1,96 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getAnalyticsSummary } from '../../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
-import Card from '../../components/common/Card';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import PhoneShell from '../../components/common/PhoneShell';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
 import EmptyState from '../../components/common/EmptyState';
-import Badge from '../../components/common/Badge';
 import { hapticFeedback } from '../../utils/haptics';
+
+const QUICK_ACTIONS = [
+  { icon: 'users', label: 'Patients', target: 'Patients' },
+  { icon: 'calendar', label: 'RDV', target: 'Appointments' },
+  { icon: 'message-circle', label: 'Assistant', target: 'Chat' },
+  { icon: 'bar-chart-2', label: 'Stats', target: 'More' },
+  { icon: 'bell', label: 'Alertes', target: 'More' },
+];
+
+function SectionTitle({ title, action = 'Voir tout', onPress }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {onPress ? (
+        <TouchableOpacity onPress={onPress} activeOpacity={0.75}>
+          <Text style={styles.sectionAction}>{action}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+function QuickAction({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.quickAction} onPress={onPress} activeOpacity={0.82}>
+      <View style={styles.quickIconBox}>
+        <Feather name={icon} size={20} color={colors.mobilePrimary} />
+      </View>
+      <Text style={styles.quickLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function MetricBox({ value, label }) {
+  return (
+    <View style={styles.metricBox}>
+      <Text style={styles.metricValue}>{value ?? '0'}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function formatAverageAge(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '0';
+  return numeric.toFixed(1);
+}
+
+function CabinetSummaryCard({ summary }) {
+  return (
+    <View style={styles.cabinetCard}>
+      <View style={styles.cabinetIcon}>
+        <Feather name="activity" size={34} color={colors.mobilePrimary} />
+      </View>
+      <View style={styles.cabinetInfo}>
+        <Text style={styles.cabinetTitle}>Vue du cabinet</Text>
+        <Text style={styles.cabinetSubtitle}>{'R\u00e9sum\u00e9 clinique en temps r\u00e9el'}</Text>
+        <View style={styles.metricsRow}>
+          <MetricBox value={summary?.total_patients} label="PAT" />
+          <MetricBox value={summary?.appointments_today || 0} label="RDV" />
+          <MetricBox value={formatAverageAge(summary?.avg_age)} label={'\u00c2GE'} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function InsightCard({ rank, title, subtitle, icon = 'activity' }) {
+  return (
+    <View style={styles.insightCard}>
+      <View style={styles.insightRank}>
+        <Text style={styles.insightRankText}>{rank}</Text>
+      </View>
+      <View style={styles.insightBody}>
+        <Text style={styles.insightTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.insightSubtitle} numberOfLines={1}>{subtitle}</Text>
+      </View>
+      <View style={styles.insightIcon}>
+        <Feather name={icon} size={15} color={colors.mobilePrimary} />
+      </View>
+    </View>
+  );
+}
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
@@ -25,6 +106,7 @@ export default function DashboardScreen() {
       .catch((err) => {
         hapticFeedback.error();
         console.log('Error fetching analytics:', err);
+        setSummary(null);
       })
       .finally(() => setRefreshing(false));
   };
@@ -36,319 +118,332 @@ export default function DashboardScreen() {
     fetchData();
   };
 
-  const dateStr = new Date().toLocaleDateString('fr-FR', {
+  const dateStr = useMemo(() => new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  });
+  }), []);
+
+  const diagnoses = summary?.common_diagnoses || [];
+  const treatments = summary?.treatments || [];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
       <ScrollView
-        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.mobilePrimary} />
+        }
       >
-        {/* Clean Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Bonjour, Docteur</Text>
-            <Text style={styles.date}>{dateStr}</Text>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>Dr</Text>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.headerAction}>
-            <Feather name="user" size={24} color={colors.primary} />
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.greeting}>Bonjour, Docteur</Text>
+            <Text style={styles.subGreeting}>{dateStr}</Text>
+          </View>
+          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8} onPress={() => navigation.navigate('More')}>
+            <Feather name="bell" size={18} color={colors.surface} />
+            <View style={styles.notificationDot} />
           </TouchableOpacity>
         </View>
 
-        {/* Quick AI Chat Card */}
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Chat')}
-          style={styles.aiCallout}
-        >
-          <View style={styles.aiCalloutContent}>
-            <View>
-              <Text style={styles.aiCalloutTitle}>Assistant Médical</Text>
-              <Text style={styles.aiCalloutSubtitle}>Besoin d'aide ?</Text>
-            </View>
-            <Feather name="send" size={20} color={colors.textPrimary} />
+        <TouchableOpacity style={styles.hero} activeOpacity={0.9} onPress={() => navigation.navigate('Chat')}>
+          <Text style={styles.heroTitle}>{'Assistant m\u00e9dical,\npatients ou rendez-vous'}</Text>
+          <View style={styles.searchBox}>
+            <Feather name="search" size={18} color="rgba(255,255,255,0.72)" />
+            <Text style={styles.searchPlaceholder}>Rechercher patient, acte, RDV...</Text>
           </View>
         </TouchableOpacity>
 
+        <SectionTitle title={'Acc\u00e8s rapides'} onPress={() => navigation.navigate('More')} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
+          {QUICK_ACTIONS.map((action) => (
+            <QuickAction
+              key={action.label}
+              icon={action.icon}
+              label={action.label}
+              onPress={() => navigation.navigate(action.target)}
+            />
+          ))}
+        </ScrollView>
+
         {summary ? (
           <>
-            {/* KPI Cards - Clean */}
-            <View style={styles.kpiSection}>
-              <View style={[styles.kpiCard, { backgroundColor: colors.patientLight }]}>
-                <View style={styles.kpiIcon}>
-                  <Feather name="users" size={20} color={colors.patient} />
-                </View>
-                <Text style={styles.kpiValue}>{summary.total_patients}</Text>
-                <Text style={styles.kpiLabel}>Patients</Text>
-              </View>
-              <View style={[styles.kpiCard, { backgroundColor: colors.rdvLight }]}>
-                <View style={styles.kpiIcon}>
-                  <Feather name="trending-up" size={20} color={colors.rdv} />
-                </View>
-                <Text style={styles.kpiValue}>{summary.avg_age}</Text>
-                <Text style={styles.kpiLabel}>Âge Moyen</Text>
-              </View>
-            </View>
+            <CabinetSummaryCard summary={summary} />
 
-            {/* Diagnostics Section */}
-            {summary.common_diagnoses && summary.common_diagnoses.length > 0 ? (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Feather name="activity" size={18} color={colors.actes} />
-                  <Text style={styles.sectionTitle}>Diagnostics Fréquents</Text>
-                </View>
-                <View style={styles.listCard}>
-                  {summary.common_diagnoses.slice(0, 5).map((d, i) => (
-                    <View key={String(i)} style={[styles.listItem, i < summary.common_diagnoses.length - 1 && styles.listItemBorder]}>
-                      <Badge label={String(i + 1)} variant="actes" size="small" />
-                      <Text style={styles.listItemText}>{d.name || String(d)}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
+            <SectionTitle title={'Diagnostics fr\u00e9quents'} onPress={() => navigation.navigate('More')} />
+            {diagnoses.length > 0 ? (
+              diagnoses.slice(0, 3).map((item, index) => (
+                <InsightCard
+                  key={`${item?.name || item}-${index}`}
+                  rank={index + 1}
+                  title={item?.name || String(item)}
+                  subtitle={'Diagnostic enregistr\u00e9'}
+                  icon="activity"
+                />
+              ))
             ) : (
-              <EmptyState icon="inbox" title="Pas de diagnostics" description="Aucun diagnostic enregistré pour le moment" />
+              <EmptyState icon="inbox" title="Pas de diagnostics" description={'Aucun diagnostic enregistr\u00e9 pour le moment'} />
             )}
 
-            {/* Treatments Section */}
-            {summary.treatments && summary.treatments.length > 0 ? (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Feather name="droplet" size={18} color={colors.appointmentSuccess} />
-                  <Text style={styles.sectionTitle}>Traitements Populaires</Text>
-                </View>
-                <View style={styles.listCard}>
-                  {summary.treatments.slice(0, 5).map((t, i) => {
-                    // Calculate percentage based on count (normalize to 100% scale)
-                    const maxCount = Math.max(...summary.treatments.map(x => x.count || 0), 1);
-                    const percentage = Math.round((t.count || 0) / maxCount * 100);
-                    return (
-                      <View key={String(i)} style={[styles.treatmentItem, i < summary.treatments.length - 1 && styles.listItemBorder]}>
-                        <View style={styles.treatmentName}>
-                          <Text style={styles.treatmentLabel}>{t.treatment || String(t)}</Text>
-                          <View style={styles.barContainer}>
-                            <View style={[styles.bar, { width: `${percentage}%`, backgroundColor: colors.appointmentSuccess }]} />
-                          </View>
-                        </View>
-                        <Text style={styles.percentage}>{percentage}%</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
+            <SectionTitle title="Traitements suivis" onPress={() => navigation.navigate('More')} />
+            {treatments.length > 0 ? (
+              treatments.slice(0, 3).map((item, index) => (
+                <InsightCard
+                  key={`${item?.treatment || item}-${index}`}
+                  rank={index + 1}
+                  title={item?.treatment || String(item)}
+                  subtitle={`${item?.count || 0} occurrence(s)`}
+                  icon="droplet"
+                />
+              ))
             ) : (
-              <EmptyState icon="package" title="Pas de traitements" description="Aucun traitement enregistré pour le moment" />
+              <EmptyState icon="package" title="Pas de traitements" description={'Aucun traitement enregistr\u00e9 pour le moment'} />
             )}
           </>
         ) : (
           <View style={styles.loadingContainer}>
-            <SkeletonLoader height={80} count={3} style={{ marginBottom: spacing.lg }} />
-            <SkeletonLoader height={40} count={5} />
+            <SkeletonLoader height={100} count={2} style={{ marginBottom: spacing.md }} />
+            <SkeletonLoader height={56} count={3} />
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  // ─── Layout ───
-  safe: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  shellContent: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
-  scroll: { 
-    flex: 1 
+  content: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: 124,
   },
-  content: { 
-    paddingHorizontal: spacing.lg, 
-    paddingTop: spacing.md, 
-    paddingBottom: 100 
-  },
-
-  // ─── Header ───
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  greeting: {
-    ...fonts.heading,
-    fontSize: 32,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  date: {
-    ...fonts.caption,
-    color: colors.textMuted,
-  },
-  headerAction: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: spacing.md,
-  },
-
-  // ─── AI Callout ───
-  aiCallout: {
-    backgroundColor: colors.aiGradientStart,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    ...shadows.card,
-  },
-  aiCalloutContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  aiCalloutTitle: {
-    ...fonts.subheading,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  aiCalloutSubtitle: {
-    ...fonts.caption,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-
-  // ─── KPI Cards ───
-  kpiSection: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  kpiCard: {
-    flex: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    ...shadows.card,
-    justifyContent: 'space-between',
-    minHeight: 120,
-  },
-  kpiIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  kpiValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#A9DCE6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
   },
-  kpiLabel: {
+  avatarText: {
+    fontSize: 22,
+  },
+  headerTextWrap: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: colors.mobileText,
+    letterSpacing: -0.5,
+  },
+  subGreeting: {
     ...fonts.caption,
-    color: colors.textMuted,
-    fontWeight: '500',
+    color: colors.mobileMuted,
+    marginTop: 1,
+    textTransform: 'capitalize',
   },
-
-  // ─── Sections ───
-  section: {
-    marginBottom: spacing.xl,
+  notificationButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.mobileBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 12,
+    right: 13,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.surface,
+  },
+  hero: {
+    backgroundColor: colors.mobileBackground,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  heroTitle: {
+    color: colors.surface,
+    fontSize: 19,
+    lineHeight: 23,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+    marginBottom: spacing.md,
+  },
+  searchBox: {
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  searchPlaceholder: {
+    ...fonts.caption,
+    color: 'rgba(255,255,255,0.52)',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+    marginTop: spacing.xs,
   },
   sectionTitle: {
-    ...fonts.subheading,
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginLeft: spacing.md,
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.mobileText,
+    letterSpacing: -0.4,
   },
-  listCard: {
+  sectionAction: {
+    ...fonts.caption,
+    color: colors.mobilePrimary,
+    fontWeight: '800',
+  },
+  quickRow: {
+    gap: spacing.sm,
+    paddingRight: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  quickAction: {
+    alignItems: 'center',
+    width: 58,
+  },
+  quickIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadows.card,
-  },
-
-  // ─── List Items ───
-  listItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  listItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  listItemText: {
-    ...fonts.body,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  badge: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  // ─── Treatment Items ───
-  treatmentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  treatmentName: {
-    flex: 1,
-  },
-  treatmentLabel: {
-    ...fonts.bodySmall,
-    color: colors.textPrimary,
-    fontWeight: '500',
     marginBottom: spacing.xs,
   },
-  barContainer: {
-    height: 6,
-    backgroundColor: colors.divider,
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-  },
-  bar: {
-    height: 6,
-    borderRadius: radius.sm,
-  },
-  percentage: {
-    ...fonts.caption,
-    color: colors.textPrimary,
+  quickLabel: {
+    fontSize: 9,
+    color: colors.mobileMuted,
     fontWeight: '600',
-    minWidth: 40,
-    textAlign: 'right',
+    textAlign: 'center',
   },
-
-  // ─── Loading ───
-  loadingContainer: {
-    justifyContent: 'center',
+  cabinetCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  cabinetIcon: {
+    width: 76,
+    height: 84,
+    borderRadius: 14,
+    backgroundColor: '#E7EAEC',
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
+    justifyContent: 'center',
+    marginRight: spacing.sm,
   },
-  loadingText: {
-    ...fonts.body,
-    color: colors.textMuted,
-    marginTop: spacing.md,
+  cabinetInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cabinetTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: colors.mobileText,
+    letterSpacing: -0.4,
+  },
+  cabinetSubtitle: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    marginBottom: spacing.xs,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  metricBox: {
+    flex: 1,
+    minWidth: 0,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: colors.mobilePanel,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricValue: {
+    fontSize: 12,
+    color: colors.mobileText,
+    fontWeight: '900',
+  },
+  metricLabel: {
+    fontSize: 7,
+    color: colors.mobileMuted,
+    fontWeight: '700',
+  },
+  insightCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  insightRank: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  insightRankText: {
+    color: colors.mobilePrimary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  insightBody: {
+    flex: 1,
+  },
+  insightTitle: {
+    fontSize: 15,
+    color: colors.mobileText,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
+  insightSubtitle: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    marginTop: 2,
+  },
+  insightIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingContainer: {
+    paddingVertical: spacing.xl,
   },
 });

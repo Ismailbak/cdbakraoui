@@ -1,10 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
-import { colors, spacing, fonts } from '../styles/theme';
+import { colors, spacing } from '../styles/theme';
 
 import LoginScreen from '../screens/Login/LoginScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
@@ -17,6 +16,7 @@ import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 import ChatAssistantScreen from '../screens/Assistant/ChatAssistantScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import MoreMenuItemButton from '../components/navigation/MoreMenuItemButton';
+import PhoneShell, { ScreenHeader } from '../components/common/PhoneShell';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -51,32 +51,36 @@ function MainTabs() {
           const iconMap = {
             Dashboard: 'home',
             Patients: 'users',
-            Chat: 'message-circle',
+            ChatTab: 'message-circle',
             Appointments: 'calendar',
             More: 'more-horizontal',
           };
           return <TabIcon name={iconMap[route.name]} label={route.name} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,           // #3B82F6
-        tabBarInactiveTintColor: colors.textMuted,        // #6B7280 - darker for visibility
+        tabBarActiveTintColor: colors.mobilePrimary,
+        tabBarInactiveTintColor: colors.mobileMuted,
         tabBarStyle: {
+          position: 'absolute',
+          left: 18,
+          right: 18,
+          bottom: 14,
           backgroundColor: colors.surface,
           borderTopWidth: 0,
-          borderTopColor: colors.divider,
           elevation: 4,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          height: 80,
-          paddingBottom: 12,
-          paddingTop: 12,
+          shadowOpacity: 0.08,
+          shadowRadius: 14,
+          height: 68,
+          paddingBottom: 8,
+          paddingTop: 8,
           paddingHorizontal: spacing.xs,
+          borderRadius: 24,
         },
         tabBarLabelStyle: {
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: '500',
-          marginTop: 6,
+          marginTop: 4,
         },
         tabBarItemStyle: {
           paddingVertical: 8,
@@ -87,7 +91,17 @@ function MainTabs() {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Accueil' }} />
       <Tab.Screen name="Patients" component={PatientStackNavigator} options={{ tabBarLabel: 'Patients' }} />
-      <Tab.Screen name="Chat" component={ChatAssistantScreen} options={{ tabBarLabel: 'Assistant' }} />
+      <Tab.Screen
+        name="ChatTab"
+        component={DashboardScreen}
+        options={{ tabBarLabel: 'Assistant' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.getParent()?.navigate('Chat');
+          },
+        })}
+      />
       <Tab.Screen name="Appointments" component={AppointmentsScreen} options={{ tabBarLabel: 'RDV' }} />
       <Tab.Screen name="More" component={MoreStackNavigator} options={{ tabBarLabel: 'Plus' }} />
     </Tab.Navigator>
@@ -103,8 +117,8 @@ function MoreScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.moreContainer}>
-      <Text style={styles.moreTitle}>Plus</Text>
+    <PhoneShell contentStyle={styles.moreContainer}>
+      <ScreenHeader title="Plus" />
       <View style={styles.moreMenuList}>
         {items.map((item) => (
           <MoreMenuItemButton
@@ -115,7 +129,7 @@ function MoreScreen({ navigation }) {
           />
         ))}
       </View>
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
@@ -139,6 +153,7 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Main" component={MainTabs} />
+      <Stack.Screen name="Chat" component={ChatAssistantScreen} />
     </Stack.Navigator>
   );
 }
@@ -146,19 +161,9 @@ export default function AppNavigator() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   moreContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  moreTitle: {
-    ...fonts.heading,
-    fontSize: 26,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    paddingBottom: 90,
   },
   moreMenuList: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
 });

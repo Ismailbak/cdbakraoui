@@ -1,30 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getNotifications } from '../../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import PhoneShell, { ScreenHeader } from '../../components/common/PhoneShell';
 
 const CATEGORY_MAP = {
-  urgent: { bg: '#E53E3E15', clr: '#E53E3E', icon: '🚨' },
-  message: { bg: '#0A66C215', clr: '#0A66C2', icon: '💬' },
-  info: { bg: '#00B4D815', clr: '#00B4D8', icon: 'ℹ️' },
-  alert: { bg: '#ED893615', clr: '#ED8936', icon: '⚠️' },
+  urgent: { bg: colors.errorLight, clr: colors.error, icon: 'alert-triangle' },
+  message: { bg: '#E9F7F8', clr: colors.mobilePrimary, icon: 'message-circle' },
+  info: { bg: '#E9F7F8', clr: colors.mobilePrimary, icon: 'info' },
+  alert: { bg: '#FFF4DE', clr: colors.warning, icon: 'bell' },
 };
 
 function getCatStyle(category) {
   return CATEGORY_MAP[category] || CATEGORY_MAP.message;
 }
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const { width } = useWindowDimensions();
-  const isSmall = width < 360;
 
   const fetchData = () => {
     getNotifications()
-      .then((res) => setNotifications(res.data))
-      .catch(() => {})
+      .then((res) => setNotifications(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setNotifications([]))
       .finally(() => setRefreshing(false));
   };
 
@@ -42,7 +41,7 @@ export default function NotificationsScreen() {
     return (
       <TouchableOpacity style={[styles.notifCard, !item.read && styles.unread]} activeOpacity={0.7}>
         <View style={[styles.iconWrap, { backgroundColor: cat.bg }]}>
-          <Text style={styles.iconText}>{cat.icon}</Text>
+          <Feather name={cat.icon} size={19} color={cat.clr} />
         </View>
         <View style={styles.notifContent}>
           <View style={styles.notifHeader}>
@@ -59,65 +58,107 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={[styles.title, isSmall && { fontSize: 22 }]}>{'Notifications'}</Text>
-        {unreadCount > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{String(unreadCount)}</Text>
-          </View>
-        ) : null}
+    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
+      <ScreenHeader title="Notifications" onBack={() => navigation.goBack()} />
+
+      <View style={styles.heroCard}>
+        <View>
+          <Text style={styles.heroEyebrow}>Boîte d'alertes</Text>
+          <Text style={styles.heroTitle}>{unreadCount} non lue{unreadCount > 1 ? 's' : ''}</Text>
+          <Text style={styles.heroSubtitle}>Messages importants, rappels RDV et informations du cabinet.</Text>
+        </View>
+        <View style={styles.heroIcon}>
+          <Feather name="bell" size={24} color={colors.surface} />
+        </View>
       </View>
+
       <FlatList
         data={notifications}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderNotification}
-        contentContainerStyle={[styles.list, { paddingHorizontal: isSmall ? spacing.md : spacing.lg }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        style={styles.listView}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.mobilePrimary} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>{'🔔'}</Text>
+            <Feather name="bell" size={42} color={colors.mobileMuted} />
             <Text style={styles.emptyText}>{'Aucune notification'}</Text>
           </View>
         }
       />
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  title: { ...fonts.heading, flex: 1 },
-  badge: { backgroundColor: colors.error, paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.full },
-  badgeText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
-  list: { paddingBottom: 100 },
+  shellContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: 0,
+  },
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.mobileBackground,
+    borderRadius: 22,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  heroEyebrow: {
+    color: '#BFE4E7',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    color: colors.surface,
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: spacing.xs,
+  },
+  heroSubtitle: {
+    color: '#D6ECEE',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: spacing.xs,
+    maxWidth: 210,
+  },
+  heroIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    backgroundColor: colors.mobilePrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listView: { flex: 1 },
+  list: { paddingBottom: 112 },
   notifCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: 18,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadows.card,
   },
   unread: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+    borderWidth: 1,
+    borderColor: '#BFE4E7',
   },
   iconWrap: {
-    width: 40, height: 40, borderRadius: radius.sm,
+    width: 44, height: 44, borderRadius: 14,
     justifyContent: 'center', alignItems: 'center',
     marginRight: spacing.md,
   },
-  iconText: { fontSize: 18 },
   notifContent: { flex: 1 },
   notifHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  notifTitle: { ...fonts.subheading, fontSize: 15, flex: 1 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginLeft: spacing.sm },
-  notifMessage: { ...fonts.caption, lineHeight: 18 },
-  sender: { ...fonts.caption, marginTop: 4, color: colors.primary, fontWeight: '500' },
+  notifTitle: { color: colors.mobileText, fontSize: 15, fontWeight: '900', flex: 1 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.mobilePrimary, marginLeft: spacing.sm },
+  notifMessage: { ...fonts.caption, color: colors.mobileMuted, lineHeight: 18 },
+  sender: { ...fonts.caption, marginTop: 6, color: colors.mobilePrimary, fontWeight: '800' },
   emptyContainer: { alignItems: 'center', marginTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyText: { ...fonts.body },
+  emptyText: { ...fonts.body, color: colors.mobileMuted, marginTop: spacing.md },
 });

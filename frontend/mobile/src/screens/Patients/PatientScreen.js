@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { getPatients } from '../../api/api';
-import { colors, fonts, spacing, radius, shadows } from '../../styles/theme';
-import Input from '../../components/common/Input';
+import { colors, fonts, spacing, radius } from '../../styles/theme';
+import PhoneShell from '../../components/common/PhoneShell';
 
 const calculateAge = (dateOfBirth) => {
   if (!dateOfBirth) return null;
@@ -12,23 +11,50 @@ const calculateAge = (dateOfBirth) => {
   const birthDate = new Date(dateOfBirth);
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
   return age;
 };
+
+const getPatientName = (patient) => (
+  patient.name || `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Patient'
+);
+
+function PatientCard({ patient, onPress }) {
+  const age = calculateAge(patient.date_of_birth);
+  const name = getPatientName(patient);
+
+  return (
+    <TouchableOpacity style={styles.patientCard} activeOpacity={0.85} onPress={onPress}>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>{name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}</Text>
+      </View>
+      <View style={styles.patientInfo}>
+        <Text style={styles.patientName} numberOfLines={1}>{name}</Text>
+        <Text style={styles.patientDiagnosis} numberOfLines={1}>{patient.primary_diagnosis || patient.diagnosis || 'Aucun diagnostic'}</Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.metaText}>{age ? `${age} ans` : 'Âge inconnu'}</Text>
+          <View style={styles.metaDot} />
+          <Text style={styles.metaText}>{patient.gender || 'N/A'}</Text>
+          {patient.ipp ? <View style={styles.metaDot} /> : null}
+          {patient.ipp ? <Text style={styles.metaText}>{patient.ipp}</Text> : null}
+        </View>
+      </View>
+      <View style={styles.chevronBox}>
+        <Feather name="chevron-right" size={18} color={colors.mobilePrimary} />
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function PatientScreen({ navigation }) {
   const [patients, setPatients] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const { width } = useWindowDimensions();
-  const isSmall = width < 360;
 
   const fetchData = () => {
     getPatients()
-      .then((res) => setPatients(res.data))
-      .catch(() => {})
+      .then((res) => setPatients(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setPatients([]))
       .finally(() => setRefreshing(false));
   };
 
@@ -39,162 +65,175 @@ export default function PatientScreen({ navigation }) {
     fetchData();
   };
 
-  const getInitials = (firstName, lastName) => {
-    const name = `${firstName || ''} ${lastName || ''}`.trim();
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .filter(n => n.length > 0)
-      .map((n) => n[0].toUpperCase())
-      .slice(0, 2)
-      .join('');
-  };
-
-  const getAvatarColor = (index) => {
-    const colors_palette = [colors.patient, colors.actes, colors.rdv, colors.appointmentSuccess];
-    return colors_palette[index % colors_palette.length];
-  };
-
-  const filtered = patients.filter((p) => {
-    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
-    return !search || fullName.includes(search.toLowerCase());
-  });
-
-  const renderPatient = ({ item, index }) => (
-    <TouchableOpacity
-      style={[styles.patientCard, { padding: isSmall ? spacing.sm : spacing.md }]}
-      activeOpacity={0.7}
-      onPress={() => navigation.navigate('PatientDetail', { patientId: item.id })}
-    >
-      <View style={[styles.avatar, { backgroundColor: getAvatarColor(index) + '20' }]}>
-        <Text style={[styles.avatarText, { color: getAvatarColor(index) }]}>
-          {getInitials(item.first_name, item.last_name)}
-        </Text>
-      </View>
-      <View style={styles.patientInfo}>
-        <Text style={styles.patientName}>{`${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Inconnu'}</Text>
-        <View style={styles.patientMeta}>
-          <Feather name="activity" size={12} color={colors.textMuted} />
-          <Text style={[styles.patientDiag, { marginLeft: spacing.xs }]}>{String(item.primary_diagnosis || 'Aucun diagnostic')}</Text>
-        </View>
-        {item.date_of_birth ? (
-          <View style={styles.patientMeta}>
-            <Feather name="user" size={12} color={colors.textMuted} />
-            <Text style={[styles.patientAge, { marginLeft: spacing.xs }]}>{String(calculateAge(item.date_of_birth)) + ' ans · ' + String(item.gender || 'N/A')}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Feather name="chevron-right" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  );
+  const filtered = useMemo(() => patients.filter((p) => {
+    const haystack = `${getPatientName(p)} ${p.primary_diagnosis || ''} ${p.ipp || ''}`.toLowerCase();
+    return !search || haystack.includes(search.toLowerCase());
+  }), [patients, search]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
       <View style={styles.header}>
         <View>
-          <Text style={[styles.title, isSmall && { fontSize: 24 }]}>{'Patients'}</Text>
-          <Text style={styles.subtitle}>{`${filtered.length} patient${filtered.length !== 1 ? 's' : ''}`}</Text>
+          <Text style={styles.title}>Patients</Text>
+          <Text style={styles.subtitle}>{filtered.length} dossier{filtered.length > 1 ? 's' : ''} patient</Text>
         </View>
-        <TouchableOpacity style={styles.headerAction}>
-          <Feather name="plus" size={24} color={colors.primary} />
+        <TouchableOpacity style={styles.addButton} activeOpacity={0.85}>
+          <Feather name="plus" size={22} color={colors.surface} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Chercher par nom..."
+      <View style={styles.searchBox}>
+        <Feather name="search" size={18} color={colors.mobileMuted} />
+        <TextInput
           value={search}
           onChangeText={setSearch}
-          icon={<Feather name="search" size={18} color={colors.textMuted} />}
-          containerStyle={styles.searchInput}
+          placeholder="Chercher un patient..."
+          placeholderTextColor={colors.mobileMuted}
+          style={styles.searchInput}
         />
       </View>
 
       <FlatList
         data={filtered}
         keyExtractor={(item) => String(item.id)}
-        renderItem={renderPatient}
-        contentContainerStyle={[styles.list, { paddingHorizontal: isSmall ? spacing.md : spacing.lg }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        renderItem={({ item }) => (
+          <PatientCard
+            patient={item}
+            onPress={() => navigation.navigate('PatientDetail', { patientId: item.id, patient: item })}
+          />
+        )}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.mobilePrimary} />}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Feather name="inbox" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyText}>{'Aucun patient trouvé'}</Text>
+          <View style={styles.emptyState}>
+            <Feather name="inbox" size={42} color={colors.mobileMuted} />
+            <Text style={styles.emptyTitle}>Aucun patient trouvé</Text>
           </View>
         }
       />
-    </SafeAreaView>
+    </PhoneShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, 
-    paddingTop: spacing.lg, 
-    paddingBottom: spacing.md 
+  shellContent: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: 0,
   },
-  title: { ...fonts.subheading, fontSize: 28, color: colors.textPrimary },
-  subtitle: { ...fonts.caption, color: colors.textMuted, marginTop: spacing.xs },
-  
-  headerAction: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-
-  searchContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+  title: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: colors.mobileText,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    marginTop: 2,
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.mobileBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBox: {
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   searchInput: {
-    marginBottom: 0,
+    flex: 1,
+    color: colors.mobileText,
+    fontSize: 14,
   },
-
-  list: { paddingBottom: 100, paddingTop: spacing.sm },
-  
+  list: {
+    paddingBottom: 112,
+    gap: spacing.sm,
+  },
   patientCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.card,
   },
-  
   avatar: {
-    width: 48, 
-    height: 48, 
-    borderRadius: radius.lg,
-    justifyContent: 'center', 
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#E9F7F8',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: spacing.md,
   },
-  avatarText: { fontWeight: '700', fontSize: 14 },
-  
-  patientInfo: { flex: 1 },
-  patientName: { ...fonts.subheading, fontSize: 15, color: colors.textPrimary },
-  
-  patientMeta: { 
-    flexDirection: 'row', 
+  avatarText: {
+    color: colors.mobilePrimary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  patientInfo: {
+    flex: 1,
+  },
+  patientName: {
+    fontSize: 16,
+    color: colors.mobileText,
+    fontWeight: '900',
+  },
+  patientDiagnosis: {
+    ...fonts.caption,
+    color: colors.mobileMuted,
+    marginTop: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xs 
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
   },
-  patientDiag: { ...fonts.caption, color: colors.textMuted, flex: 1 },
-  patientAge: { ...fonts.caption, color: colors.textMuted },
-  
-  emptyContainer: { 
-    alignItems: 'center', 
-    marginTop: 60,
-    paddingHorizontal: spacing.lg
+  metaText: {
+    fontSize: 10,
+    color: colors.mobileMuted,
+    fontWeight: '700',
   },
-  emptyText: { ...fonts.body, color: colors.textMuted, marginTop: spacing.md },
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.mobileMuted,
+    marginHorizontal: 6,
+  },
+  chevronBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E9F7F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: spacing.xxl,
+  },
+  emptyTitle: {
+    ...fonts.body,
+    color: colors.mobileMuted,
+    marginTop: spacing.md,
+  },
 });

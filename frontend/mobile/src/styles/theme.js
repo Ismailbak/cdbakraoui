@@ -7,6 +7,15 @@ import { StyleSheet } from 'react-native';
  */
 
 export const colors = {
+  // Mobile remodel palette
+  mobileBackground: '#0A4A4F',
+  mobilePanel: '#F6F7F8',
+  mobilePrimary: '#238C96',
+  mobilePrimaryDark: '#0F6870',
+  mobileText: '#303236',
+  mobileMuted: '#8B8F96',
+  mobileDivider: '#E4E6E8',
+
   // Core Background & Surfaces
   background: '#f5f7fa',
   surface: '#ffffff',
