@@ -1,19 +1,36 @@
-# RhumatoAI
+# DentAI — Centre Dentaire Bakraoui
 
-RhumatoAI is a local-first medical assistant for rheumatology workflows. It combines a FastAPI backend, a React web app, an Expo React Native mobile app, MySQL persistence, and an optional local LLM through Ollama.
+DentAI is a local-first dental practice assistant for **Centre Dentaire Bakraoui**. It combines a FastAPI backend, a React web app, an Expo React Native mobile app, MySQL persistence (`dentai` database), and an optional local LLM through Ollama.
 
-This README intentionally avoids unverified usage, latency, doctor-count, and load-testing claims. Add performance numbers only after running and documenting reproducible benchmarks for the target machine and dataset.
+This README intentionally avoids unverified usage, latency, staff-count, and load-testing claims. Add performance numbers only after running and documenting reproducible benchmarks for the target machine and dataset.
 
 ## What It Does
 
 - Manages patients, appointments, medical acts, lab results, and related clinical records.
+- Provides predefined **dental clinical forms** (examen, soins conservateurs, endodontie, extraction, prothèse, parodontologie, plan de traitement).
 - Provides authenticated web and mobile access with JWT-based sessions.
 - Includes role-aware admin areas in the web app.
 - Supports analytics screens for operational summaries.
 - Generates PDFs for medical documents through the backend.
 - Provides notifications for staff messages and broadcast announcements.
-- Includes an AI assistant that can answer general medical questions and use structured patient context when available.
+- Includes an AI assistant specialized in dentistry that can answer clinical questions and use structured patient context when available.
 - Includes semantic RAG with optional embedded or server-based Qdrant storage.
+
+## Dental Forms (dentai)
+
+The app uses the `dentai` MySQL database with these predefined form tables:
+
+| Care type | Form table |
+|-----------|------------|
+| Examen & Diagnostic | `form_dent_exam` |
+| Soins Conservateurs | `form_dent_soin` |
+| Endodontie | `form_dent_endo` |
+| Extraction & Chirurgie | `form_dent_extraction` |
+| Prothèse | `form_dent_prothese` |
+| Parodontologie | `form_dent_paro` |
+| Plan de Traitement | `form_dent_plan` |
+
+Catalog migrations live under `backend/migrations/versions/` (`007`–`009`).
 
 ## Project Structure
 
@@ -34,15 +51,15 @@ React Web / Expo Mobile
         |
         | HTTP + JWT
         v
-FastAPI backend
+FastAPI backend (DentAI)
         |
-        +-- MySQL via SQLAlchemy
+        +-- MySQL (dentai) via SQLAlchemy
         +-- Ollama for local LLM responses
         +-- Qdrant for optional semantic retrieval (embedded path or server)
         +-- ReportLab for PDF generation
 ```
 
-The API exposes routes for authentication, patients, appointments, medical acts, act results, dynamic forms, chat, analytics, and notifications.
+The API exposes routes for authentication, patients, appointments, medical acts, act results, dental forms, dynamic forms, chat, analytics, and notifications.
 
 ## Tech Stack
 
@@ -66,7 +83,7 @@ The API exposes routes for authentication, patients, appointments, medical acts,
 - Axios
 - Recharts
 - React Icons
-- Create React App tooling
+- Create React App tooling (`react-scripts` 5.0.1)
 
 ### Mobile
 
@@ -81,10 +98,20 @@ The API exposes routes for authentication, patients, appointments, medical acts,
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Docker and Docker Compose (optional)
 - Python 3.11+ if running the backend outside Docker
 - Node.js 18+ if running frontends outside Docker
+- MySQL 8 with the `dentai` database
 - Ollama if using local AI responses outside the Compose setup
+
+### Database Setup
+
+Create or use the existing `dentai` database, then apply dental catalog migrations:
+
+```bash
+mysql -u root -p dentai < backend/migrations/versions/007_restore_dental_form_catalog.sql
+mysql -u root -p dentai < backend/migrations/versions/008_cleanup_duplicate_dental_catalog.sql
+```
 
 ### Start With Docker
 
@@ -97,7 +124,7 @@ Services exposed by the checked-in Compose file:
 - Web app: `http://localhost:3000`
 - Backend API: `http://localhost:8000`
 - API docs: `http://localhost:8000/docs`
-- MySQL: `localhost:3306`
+- MySQL: `localhost:3306` (database: `dentai`)
 - Qdrant: `http://localhost:6333`
 
 MySQL and Qdrant are bound to `127.0.0.1` in Compose so they are available to local tools without being published on the LAN.
@@ -108,22 +135,24 @@ Create or update the development admin user:
 docker-compose exec backend python scripts/setup_admin.py
 ```
 
-The script creates `admin@chu.ma`. In development it can use the default password shown by the script; in production set `ADMIN_PASSWORD`.
+The script creates `admin@cdbakraoui.ma`. In development it can use the default password shown by the script; in production set `ADMIN_PASSWORD`.
 
 ### Run Backend Manually
 
 ```bash
 cd backend
+copy .env.example .env
+# Edit .env and set DATABASE_URL with your MySQL password
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Common backend environment variables:
+Example `backend/.env`:
 
 ```env
-DATABASE_URL=mysql+pymysql://USER:PASSWORD@HOST:3306/DATABASE
+DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/dentai
 SECRET_KEY=change-this-secret-key
 CORS_ORIGINS=http://localhost:3000,http://localhost:19006
 OLLAMA_HOST=http://localhost:11434
@@ -160,6 +189,8 @@ npm start
 
 The web app expects the backend API at `http://localhost:8000/api` unless configured otherwise.
 
+**Note:** Do not run `npm audit fix --force` — it can break `react-scripts`.
+
 ### Run Mobile Manually
 
 ```bash
@@ -173,6 +204,8 @@ For physical-device testing, configure the mobile API base URL to use the backen
 ## AI And RAG Behavior
 
 The backend checks Ollama during startup in a background thread. If Ollama is unavailable, the API still starts and chat requests can retry connections later.
+
+The AI assistant is configured for **dentistry** and **Centre Dentaire Bakraoui** workflows.
 
 Structured RAG is the default retrieval path. It uses patient identifiers and clinical database records to ground assistant responses when a patient context is available.
 
@@ -225,7 +258,7 @@ npm start
 
 ## Benchmarking Policy
 
-Do not add claims such as response time, supported doctor count, clinic capacity, database size, or hardware requirements unless the benchmark includes:
+Do not add claims such as response time, supported staff count, clinic capacity, database size, or hardware requirements unless the benchmark includes:
 
 - Test date and commit hash.
 - Machine CPU, RAM, disk, GPU if relevant, and Ollama model.
@@ -235,3 +268,8 @@ Do not add claims such as response time, supported doctor count, clinic capacity
 - Median, p95, and failure rate where applicable.
 
 Until then, describe capabilities qualitatively and mark performance characteristics as unverified.
+
+## Contact
+
+**Centre Dentaire Bakraoui**  
+Email: [cd.bakraoui@gmail.com](mailto:cd.bakraoui@gmail.com)
