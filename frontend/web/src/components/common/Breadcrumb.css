@@ -1,0 +1,48 @@
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #6B7280;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb-item:hover {
+  color: #3B82F6;
+}
+
+.breadcrumb-item.home {
+  color: #9CA3AF;
+}
+
+.breadcrumb-item.home:hover {
+  color: #3B82F6;
+}
+
+.breadcrumb-item.home svg {
+  font-size: 16px;
+}
+
+.breadcrumb-item.current {
+  color: #1E2A4A;
+  font-weight: 500;
+  cursor: default;
+}
+
+.breadcrumb-item.current:hover {
+  color: #1E2A4A;
+}
+
+.breadcrumb-separator {
+  color: #D1D5DB;
+  font-size: 14px;
+  flex-shrink: 0;
+}

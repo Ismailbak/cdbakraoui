@@ -1,0 +1,467 @@
+/* ═══════════════════════════════════════════════════════════
+   Admin Settings – polished two-column layout
+   ═══════════════════════════════════════════════════════════ */
+
+/* Grid layout */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.settings-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Card base */
+.settings-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.settings-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+/* Card header */
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 0;
+}
+
+.settings-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-card-icon--blue  { background: #DBEAFE; color: #2563EB; }
+.settings-card-icon--amber { background: #FEF3C7; color: #D97706; }
+.settings-card-icon--green { background: #D1FAE5; color: #059669; }
+.settings-card-icon--red   { background: #FEE2E2; color: #DC2626; }
+.settings-card-icon--purple { background: #EDE9FE; color: #7C3AED; }
+.settings-card-icon--teal  { background: #CCFBF1; color: #0D9488; }
+
+.settings-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E2A4A;
+}
+
+.settings-card-desc {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #9CA3AF;
+}
+
+/* Card body */
+.settings-card-body {
+  padding: 20px 24px 24px;
+}
+
+/* Card footer */
+.settings-card-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #F3F4F6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* ─── Fields ─── */
+.settings-field {
+  margin-bottom: 16px;
+}
+
+.settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.settings-field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4B5563;
+  margin-bottom: 6px;
+}
+
+.settings-field-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1E2A4A;
+  background: #FAFBFC;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.settings-field-input:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: #fff;
+}
+
+.settings-field-input--sm { max-width: 120px; }
+.settings-field-input--md { max-width: 220px; }
+
+select.settings-field-input {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.settings-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ─── Toggle rows ─── */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.settings-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.settings-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.settings-toggle-hint {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+/* ─── Status bar ─── */
+.settings-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #F9FAFB;
+  border-radius: 10px;
+}
+
+.settings-status-label {
+  font-size: 13px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.settings-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.settings-status-badge--ok {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.settings-status-badge--danger {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.settings-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.settings-status-dot--ok {
+  background: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+  animation: pulse-green 2s infinite;
+}
+
+.settings-status-dot--danger {
+  background: #DC2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(5, 150, 105, 0.08); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.08); }
+}
+
+/* ─── Save button ─── */
+.settings-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  transition: transform 0.15s, box-shadow 0.2s, background 0.3s;
+}
+
+.settings-save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.settings-save-btn--saved {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.settings-save-btn--saved:hover {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.settings-error {
+  font-size: 13px;
+  color: #EF4444;
+}
+
+/* ─── Health cards ─── */
+.settings-health-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.settings-health-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #F9FAFB;
+  border-radius: 12px;
+  border: 1px solid #F3F4F6;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.settings-health-card:hover {
+  background: #F3F4F6;
+}
+
+.settings-health-card svg:first-child {
+  color: #6B7280;
+  flex-shrink: 0;
+}
+
+.settings-health-card--ok svg:first-child { color: #059669; }
+.settings-health-card--err svg:first-child { color: #DC2626; }
+
+.settings-health-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.settings-health-card-label {
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 500;
+}
+
+.settings-health-card-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E2A4A;
+}
+
+.settings-health-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.settings-health-dot--ok {
+  background: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+}
+
+.settings-health-dot--err {
+  background: #DC2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+.settings-health-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 20px;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+/* ─── Refresh button ─── */
+.settings-refresh-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  background: #F9FAFB;
+  cursor: pointer;
+  color: #6B7280;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.settings-refresh-btn:hover {
+  background: #E5E7EB;
+  color: #374151;
+}
+
+.settings-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Spin animation */
+.settings-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Broadcast form ─── */
+.settings-broadcast-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-broadcast-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+  transition: transform 0.15s, box-shadow 0.2s, background 0.3s;
+  margin-top: 8px;
+}
+
+.settings-broadcast-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+}
+
+.settings-broadcast-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.settings-broadcast-btn--sent {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+/* ─── Loading ─── */
+.settings-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.settings-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E5E7EB;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.settings-loading-spinner--sm {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-health-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card-header {
+    padding: 16px 18px 0;
+  }
+
+  .settings-card-body {
+    padding: 16px 18px 20px;
+  }
+
+  .settings-card-footer {
+    padding: 14px 18px;
+  }
+}
