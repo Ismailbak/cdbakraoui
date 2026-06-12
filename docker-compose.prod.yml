@@ -30,7 +30,7 @@ services:
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:latest}
       APP_ENV: production
-      CREATE_TABLES_ON_STARTUP: "false"
+      CREATE_TABLES_ON_STARTUP: ${CREATE_TABLES_ON_STARTUP:-false}
       RAG_SEMANTIC_ENABLED: "false"
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     extra_hosts:

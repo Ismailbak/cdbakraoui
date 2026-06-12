@@ -109,7 +109,7 @@ docker compose -f docker-compose.prod.yml exec -T db mysql -udentai -pYOUR_PASSW
 ## 5. Create admin user
 
 ```powershell
-docker compose -f docker-compose.prod.yml exec -e ADMIN_PASSWORD=your-admin-password backend python scripts/setup_admin.py
+docker compose -f docker-compose.prod.yml exec -e ADMIN_PASSWORD=your-admin-password -e PYTHONPATH=/app backend python scripts/setup_admin.py
 ```
 
 Default username: `admin@cdbakraoui.ma`

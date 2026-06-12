@@ -6,6 +6,12 @@ In production, set ADMIN_PASSWORD in the environment or enter it at the prompt.
 import getpass
 import os
 import sys
+from pathlib import Path
+
+# Allow `python scripts/setup_admin.py` from backend root (Docker / local).
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
