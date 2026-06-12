@@ -137,6 +137,18 @@ docker-compose exec backend python scripts/setup_admin.py
 
 The script creates `admin@cdbakraoui.ma`. In development it can use the default password shown by the script; in production set `ADMIN_PASSWORD`.
 
+### Deploy to another machine (Docker + Ollama)
+
+For a clinic PC or remote workstation with **Docker** and **Ollama** (`gemma4`), use the production Compose file:
+
+```powershell
+copy .env.docker.example .env
+# Edit .env (passwords, CORS_ORIGINS with the machine LAN IP, OLLAMA_MODEL=gemma4:latest)
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+Full AnyDesk/LAN steps (migrations, admin user, firewall): see **[DOCKER-DEPLOY.md](DOCKER-DEPLOY.md)**.
+
 ### Run Backend Manually
 
 ```bash
