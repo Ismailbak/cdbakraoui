@@ -41,6 +41,12 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
 
   web:
     build:
@@ -49,7 +55,8 @@ services:
     ports:
       - "${WEB_PORT:-80}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
