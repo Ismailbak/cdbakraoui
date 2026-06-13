@@ -78,26 +78,25 @@ class LLMModel:
             dict: {"response": str, "tokens": int, "model": str}
         """
         try:
+            full_prompt = prompt
+            if system:
+                full_prompt = f"{system.strip()}\n\n{prompt.strip()}"
+
             payload = {
                 "model": self.model_name,
-                "prompt": prompt,
+                "prompt": full_prompt,
                 "stream": False,
+                "keep_alive": "30m",
                 "options": {
                     "temperature": kwargs.get("temperature", 0.7),
                     "top_p": kwargs.get("top_p", 0.9),
                     "top_k": kwargs.get("top_k", 40),
-                }
+                    "num_predict": kwargs.get("num_predict", 512),
+                },
             }
-            
-            if system:
-                payload["system"] = system
 
-            logger.debug(f"Calling Ollama ({self.model_name}): {prompt[:100]}...")
-            response = requests.post(
-                self.api_endpoint,
-                json=payload,
-                timeout=180  # Medical queries can take time on first load
-            )
+            logger.debug(f"Calling Ollama ({self.model_name}): {full_prompt[:100]}...")
+            response = self._post_generate(payload)
 
             if response.status_code == 200:
                 self.is_available = True
@@ -134,6 +133,29 @@ class LLMModel:
                 "tokens": 0,
                 "model": "error"
             }
+
+    def _post_generate(self, payload: dict):
+        """POST to Ollama with one retry after model load failures."""
+        import time
+
+        last_response = None
+        for attempt in range(2):
+            response = requests.post(
+                self.api_endpoint,
+                json=payload,
+                timeout=300,
+            )
+            last_response = response
+            if response.status_code == 200:
+                return response
+            if response.status_code == 500 and attempt == 0:
+                logger.warning(
+                    "Ollama returned 500 — retrying once after brief pause (model may be loading)"
+                )
+                time.sleep(3)
+                continue
+            break
+        return last_response
 
 from app.core.config import settings
 

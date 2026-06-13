@@ -224,11 +224,14 @@ async def get_grounded_chat_response(
                 model_name=rag_response.metadata.model,
                 tokens_used=rag_response.metadata.tokens_used
             )
-            db.add(chat_msg)
-            db.commit()
-            db.refresh(chat_msg)
-            message_id = chat_msg.id
-            logger.info(f"Chat message {chat_msg.id} stored for user {user_id}")
+            if resolved_session_id is not None:
+                db.add(chat_msg)
+                db.commit()
+                db.refresh(chat_msg)
+                message_id = chat_msg.id
+                logger.info(f"Chat message {chat_msg.id} stored for user {user_id}")
+            else:
+                logger.info("Skipping chat message storage — no session_id (general chat)")
             
         except Exception as e:
             logger.error(f"Error storing chat message: {e}")
