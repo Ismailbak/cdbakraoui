@@ -9,6 +9,7 @@ pymysql==1.1.0
 cryptography==41.0.7
 pydantic>=2.9.0
 pydantic-settings>=2.1.0
+email-validator>=2.0.0
 transformers==4.37.0
 torch==2.12.0
 sentence-transformers==2.2.2
